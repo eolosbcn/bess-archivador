@@ -78,7 +78,7 @@ REQUISITOS
 Python 3.9+, `requests`, `pandas`. Tokens en variables de entorno:
 ESIOS_TOKEN, ENTSOE_TOKEN, AEMET_TOKEN.
 
-Versión: v3.1 — 2026-08-11.
+Versión: v3.2 — 2026-08-11.
 """
 
 import os
@@ -161,10 +161,25 @@ PREVISIONES_CONOCIDAS = [
     2563, 10034, 10249, 10358, 10359,
 ]
 
-# Tope POR GRUPO, no global: así una familia no puede desplazar a la otra, que
-# es exactamente lo que pasó con el tope único. A ~1 petición/segundo, 500
-# indicadores son unos 8 minutos, holgados dentro del tiempo del workflow.
-MAX_POR_GRUPO = {"prevision": 350, "programa": 150}
+# Tope POR GRUPO y POR MODO. Medido el 11-ago-2026: de los 1.506 indicadores
+# que devuelve la búsqueda, solo **110 son previsiones**; los otros 1.396 son
+# programas de generación. Así que las previsiones caben enteras en cualquier
+# captura, y lo único que hay que racionar son los programas.
+#
+# De ahí los dos modos:
+#   · LIGERO   — solo previsiones (110). Unos 2 minutos. Es lo que se regenera
+#                cada hora, así que es lo único que tiene sentido capturar a
+#                ritmo horario.
+#   · COMPLETO — previsiones + todos los programas. Una vez al día basta: son
+#                el resultado de una casación ya cerrada, no cambian cada hora.
+#
+# El modo ligero además acorta muchísimo la ejecución, y eso importa: GitHub
+# descarta las ejecuciones programadas cuando hay carga —el 11-ago-2026 solo
+# corrieron 2 de las ~8 previstas— y las tareas largas son las primeras en caer.
+MAX_POR_GRUPO = {
+    "ligero":   {"prevision": 400, "programa": 0},
+    "completo": {"prevision": 400, "programa": 1600},
+}
 
 # AEMET no se pide en todas las capturas. Su predicción se elabora unas pocas
 # veces al día (medido: 08:55 y 10:35), así que pedirla cada hora devuelve lo
@@ -269,16 +284,45 @@ def pedir_esios(ruta, params, intentos=3):
 # Descubrimiento del catálogo de previsiones
 # ============================================================================
 
-def descubrir_previsiones():
+def ya_hay_captura_completa_hoy(hoy):
     """
-    Busca en el catálogo de e·sios todos los indicadores que parezcan una
-    previsión. Se hace en cada ejecución a propósito: si REE publica un
-    indicador nuevo, entra solo, sin que nadie tenga que enterarse.
+    ¿Se ha hecho ya hoy la captura completa? Se mira el disco en vez de la hora
+    del reloj porque el cron de GitHub es impredecible: si se decidiera por
+    hora fija y esa ejecución se descartara, el día se quedaría sin barrido
+    completo y nadie se enteraría. Así lo hace la primera que consiga correr.
     """
-    titulo("e·sios — descubrimiento del catálogo, por grupos")
+    base = os.path.join(CARPETA_RAIZ, f"{hoy:%Y}", f"{hoy:%m}", f"{hoy:%Y-%m-%d}")
+    if not os.path.isdir(base):
+        return False
+    for sub in sorted(os.listdir(base)):
+        ruta = os.path.join(base, sub, "manifiesto.json")
+        if not os.path.isfile(ruta):
+            continue
+        try:
+            with open(ruta, encoding="utf-8") as f:
+                if json.load(f).get("modo") == "completo":
+                    return True
+        except Exception:
+            continue
+    return False
+
+
+def descubrir_previsiones(modo):
+    """
+    Busca en el catálogo de e·sios los indicadores que parezcan una previsión.
+    Se hace en cada ejecución a propósito: si REE publica un indicador nuevo,
+    entra solo, sin que nadie tenga que enterarse.
+    """
+    titulo(f"e·sios — descubrimiento del catálogo, por grupos (modo {modo})")
     encontrados, por_grupo = {}, {}
 
+    topes = MAX_POR_GRUPO[modo]
     for grupo, terminos in GRUPOS_BUSQUEDA.items():
+        if topes.get(grupo, 0) <= 0:
+            print(f"  [{grupo}] omitido en modo {modo}")
+            por_grupo[grupo] = {"encontrados": None, "archivados": 0,
+                                "omitido": True}
+            continue
         del_grupo = {}
         for termino in terminos:
             datos, error = pedir_esios("/indicators", {"text": termino})
@@ -304,7 +348,7 @@ def descubrir_previsiones():
                   f"{nuevos} nuevos")
             time.sleep(1)
 
-        tope = MAX_POR_GRUPO.get(grupo, 200)
+        tope = topes.get(grupo, 200)
         ids_grupo = sorted(del_grupo)
         por_grupo[grupo] = {"encontrados": len(ids_grupo),
                             "archivados": min(len(ids_grupo), tope)}
@@ -323,11 +367,14 @@ def descubrir_previsiones():
                                      "descripcion": "", "termino": "fijo"})
 
     ids = sorted(encontrados)
-    detalle = " · ".join(f"{g}: {v['archivados']}/{v['encontrados']}"
-                         for g, v in por_grupo.items())
+    detalle = " · ".join(
+        f"{g}: omitido" if v.get("omitido")
+        else f"{g}: {v['archivados']}/{v['encontrados']}"
+        for g, v in por_grupo.items())
     registrar("esios_catalogo", "OK" if ids else "FALLO",
-              f"{len(ids)} a archivar ({detalle})",
-              extra={"por_grupo": por_grupo, "total_archivados": len(ids)})
+              f"[{modo}] {len(ids)} a archivar ({detalle})",
+              extra={"modo": modo, "por_grupo": por_grupo,
+                     "total_archivados": len(ids)})
     return [encontrados[i] for i in ids]
 
 
@@ -825,7 +872,7 @@ def ejecutar():
     ahora_madrid = ahora_utc.astimezone(TZ_MADRID)
     hoy = ahora_madrid.date()
 
-    print("ARCHIVADOR DIARIO — FASE 0 DEL PROYECTO BESS (v3.1)")
+    print("ARCHIVADOR DIARIO — FASE 0 DEL PROYECTO BESS (v3.2)")
     print(f"Ejecución: {ahora_madrid.isoformat(timespec='seconds')} (Madrid)")
     print(f"           {ahora_utc.isoformat(timespec='seconds')} (UTC)")
 
@@ -841,17 +888,22 @@ def ejecutar():
     print(f"Destino:   {carpeta}/")
 
     MANIFIESTO.update({
-        "version": "v3.1",
+        "version": "v3.2",
         "ejecucion_madrid": ahora_madrid.isoformat(timespec="seconds"),
         "ejecucion_utc": ahora_utc.isoformat(timespec="seconds"),
         "fecha": hoy.isoformat(),
         "dia_objetivo": (hoy + dt.timedelta(days=1)).isoformat(),
     })
 
+    modo = "ligero" if ya_hay_captura_completa_hoy(hoy) else "completo"
+    MANIFIESTO["modo"] = modo
+    print(f"Modo:      {modo}"
+          + ("" if modo == "completo" else "  (hoy ya se hizo el barrido completo)"))
+
     catalogo = []
     try:
         if capturar_esios_principales(carpeta, hoy):
-            catalogo = descubrir_previsiones()
+            catalogo = descubrir_previsiones(modo)
             capturar_esios_previsiones(carpeta, hoy, catalogo)
     except Exception as e:
         registrar("e·sios", "FALLO", f"excepción: {type(e).__name__}: {e}")
