@@ -18,7 +18,7 @@ on:
     #
     # 09:45 UTC = 11:45 Madrid en verano · 10:45 en invierno. Esa es la captura
     # que de verdad importa: la más cercana a las 11:30 sin pasarse.
-    - cron: "45 0,3,6,9,12,15,18,21 * * *"
+    - cron: "45 * * * *"
   workflow_dispatch:        # botón "Run workflow" (también desde el móvil)
   push:
     paths:
