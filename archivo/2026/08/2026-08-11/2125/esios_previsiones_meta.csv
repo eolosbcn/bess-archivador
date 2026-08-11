@@ -1,0 +1,261 @@
+id,nombre,estado,detalle,values_updated_at,filas
+1,Generación programada PBF Hidráulica UGH,ok,,2026-08-11T14:11:24.000+02:00,288
+2,Generación programada PBF Hidráulica no UGH,ok,,2026-08-11T14:11:24.000+02:00,288
+3,Generación programada PBF Turbinación bombeo,ok,,2026-08-11T14:11:24.000+02:00,178
+4,Generación programada PBF Nuclear,ok,,2026-08-11T14:11:24.000+02:00,288
+5,Generación programada PBF Hulla antracita Anexo II RD 134/2010,vacio,sin valores (aún no publicado),,0
+6,Generación programada PBF Hulla sub-bituminosa Anexo II RD 134/2010,vacio,sin valores (aún no publicado),,0
+7,Generación programada PBF Hulla antracita,vacio,sin valores (aún no publicado),,0
+8,Generación programada PBF Hulla sub-bituminosa,vacio,sin valores (aún no publicado),,0
+9,Generación programada PBF Ciclo combinado,ok,,2026-08-11T14:11:24.000+02:00,186
+10,Generación programada PBF Fuel,vacio,sin valores (aún no publicado),,0
+11,Generación programada PBF Gas Natural - Turbina de vapor,vacio,sin valores (aún no publicado),,0
+12,Generación programada PBF Eólica terrestre,ok,,2026-08-11T14:11:24.000+02:00,288
+13,Generación programada PBF Eólica marina,ok,,2026-08-11T14:11:24.000+02:00,57
+14,Generación programada PBF Solar fotovoltaica,ok,,2026-08-11T14:11:24.000+02:00,278
+15,Generación programada PBF Solar térmica,ok,,2026-08-11T14:11:24.000+02:00,288
+16,Generación programada PBF Océano y geotérmica,vacio,sin valores (aún no publicado),,0
+17,Generación programada PBF Gas Natural Cogeneración,ok,,2026-08-11T14:11:24.000+02:00,288
+18,Generación programada PBF Derivados del petróleo ó carbón,ok,,2026-08-11T14:11:24.000+02:00,288
+19,Generación programada PBF Subproductos minería,vacio,sin valores (aún no publicado),,0
+20,Generación programada PBF Energía residual,ok,,2026-08-11T14:11:24.000+02:00,288
+21,Generación programada PBF Biomasa,ok,,2026-08-11T14:11:24.000+02:00,288
+22,Generación programada PBF Biogás,ok,,2026-08-11T14:11:24.000+02:00,288
+23,Generación programada PBF Residuos domésticos y similares,ok,,2026-08-11T14:11:24.000+02:00,288
+24,Generación programada PBF Residuos varios,ok,,2026-08-11T14:11:24.000+02:00,288
+25,Generación programada PBF Consumo bombeo,ok,,2026-08-11T14:11:24.000+02:00,121
+26,Generación programada PBF Enlace Baleares,ok,,2026-08-11T14:11:24.000+02:00,288
+27,Generación programada PBF Genéricas,vacio,sin valores (aún no publicado),,0
+28,Generación programada PBF Importación Francia,ok,,2026-08-11T14:11:24.000+02:00,198
+29,Generación programada PBF Importación Portugal,ok,,2026-08-11T14:11:24.000+02:00,16
+30,Generación programada PBF Importación Marruecos,vacio,sin valores (aún no publicado),,0
+31,Generación programada PBF Importación Andorra,vacio,sin valores (aún no publicado),,0
+32,Generación programada PBF Exportación Francia,ok,,2026-08-11T14:11:24.000+02:00,90
+33,Generación programada PBF Exportación Portugal,ok,,2026-08-11T14:11:24.000+02:00,272
+34,Generación programada PBF Exportación Marruecos,ok,,2026-08-11T14:11:24.000+02:00,288
+35,Generación programada PBF Exportación Andorra,ok,,2026-08-11T14:11:24.000+02:00,288
+36,Generación programada PVP Hidráulica UGH,ok,,2026-08-11T16:12:19.000+02:00,288
+37,Generación programada PVP Hidráulica no UGH,ok,,2026-08-11T16:12:19.000+02:00,288
+38,Generación programada PVP Turbinación bombeo,ok,,2026-08-11T16:12:19.000+02:00,199
+39,Generación programada PVP Nuclear,ok,,2026-08-11T16:12:19.000+02:00,288
+40,Generación programada PVP Hulla antracita Anexo II RD 134/2010,vacio,sin valores (aún no publicado),,0
+41,Generación programada PVP Hulla sub-bituminosa Anexo II RD 134/2010,vacio,sin valores (aún no publicado),,0
+42,Generación programada PVP Hulla antracita,ok,,2026-08-11T16:12:19.000+02:00,15
+43,Generación programada PVP Hulla sub-bituminosa,vacio,sin valores (aún no publicado),,0
+44,Generación programada PVP Ciclo combinado,ok,,2026-08-11T16:12:19.000+02:00,288
+45,Generación programada PVP Fuel,vacio,sin valores (aún no publicado),,0
+46,Generación programada PVP Gas Natural - Turbina de vapor,ok,,2026-08-11T16:12:19.000+02:00,288
+47,Generación programada PVP Eólica terrestre,ok,,2026-08-11T16:12:19.000+02:00,288
+48,Generación programada PVP Eólica marina,ok,,2026-08-11T16:12:19.000+02:00,57
+49,Generación programada PVP Solar fotovoltaica,ok,,2026-08-11T16:12:19.000+02:00,278
+50,Generación programada PVP Solar térmica,ok,,2026-08-11T16:12:19.000+02:00,288
+51,Generación programada PVP Océano y geotérmica,vacio,sin valores (aún no publicado),,0
+52,Generación programada PVP Gas Natural Cogeneración,ok,,2026-08-11T16:12:19.000+02:00,288
+53,Generación programada PVP Derivados del petróleo ó carbón,ok,,2026-08-11T16:12:19.000+02:00,288
+54,Generación programada PVP Subproductos minería,vacio,sin valores (aún no publicado),,0
+55,Generación programada PVP Energía residual,ok,,2026-08-11T16:12:19.000+02:00,288
+56,Generación programada PVP Biomasa,ok,,2026-08-11T16:12:19.000+02:00,288
+57,Generación programada PVP Biogás,ok,,2026-08-11T16:12:19.000+02:00,288
+58,Generación programada PVP Residuos domésticos y similares,ok,,2026-08-11T16:12:19.000+02:00,288
+59,Generación programada PVP Residuos varios,ok,,2026-08-11T16:12:19.000+02:00,288
+60,Generación programada PVP Consumo bombeo,ok,,2026-08-11T16:12:19.000+02:00,128
+61,Generación programada PVP Enlace Baleares,ok,,2026-08-11T16:12:19.000+02:00,288
+62,Generación programada PVP Genéricas,vacio,sin valores (aún no publicado),,0
+63,Generación programada PVP Importación Francia,ok,,2026-08-11T16:12:19.000+02:00,198
+64,Generación programada PVP Importación Portugal,ok,,2026-08-11T16:12:19.000+02:00,16
+65,Generación programada PVP Importación Marruecos,vacio,sin valores (aún no publicado),,0
+66,Generación programada PVP Importación Andorra,vacio,sin valores (aún no publicado),,0
+67,Generación programada PVP Exportación Francia,ok,,2026-08-11T16:12:19.000+02:00,90
+68,Generación programada PVP Exportación Portugal,ok,,2026-08-11T16:12:19.000+02:00,272
+69,Generación programada PVP Exportación Marruecos,ok,,2026-08-11T16:12:19.000+02:00,288
+70,Generación programada PVP Exportación Andorra,ok,,2026-08-11T16:12:19.000+02:00,288
+71,Generación programada P48 Hidráulica UGH,ok,,2026-08-11T21:08:28.000+02:00,192
+72,Generación programada P48 Hidráulica no UGH,ok,,2026-08-11T21:08:28.000+02:00,192
+73,Generación programada P48 Turbinación bombeo,ok,,2026-08-11T21:08:28.000+02:00,136
+74,Generación programada P48 Nuclear,ok,,2026-08-11T21:08:28.000+02:00,192
+75,Generación programada P48 Hulla antracita Anexo II RD 134/2010,vacio,sin valores (aún no publicado),,0
+76,Generación programada P48 Hulla sub-bituminosa Anexo II RD 134/2010,vacio,sin valores (aún no publicado),,0
+77,Generación programada P48 Hulla antracita,vacio,sin valores (aún no publicado),,0
+78,Generación programada P48 Hulla sub-bituminosa,vacio,sin valores (aún no publicado),,0
+79,Generación programada P48 Ciclo combinado,ok,,2026-08-11T21:08:28.000+02:00,192
+80,Generación programada P48 Fuel,vacio,sin valores (aún no publicado),,0
+81,Generación programada P48 Gas Natural - Turbina de vapor,ok,,2026-08-11T21:08:28.000+02:00,192
+82,Generación programada P48 Eólica terrestre,ok,,2026-08-11T21:08:28.000+02:00,192
+83,Generación programada P48 Eólica marina,ok,,2026-08-11T21:08:28.000+02:00,24
+84,Generación programada P48 Solar fotovoltaica,ok,,2026-08-11T21:08:28.000+02:00,191
+85,Generación programada P48 Solar térmica,ok,,2026-08-11T21:08:28.000+02:00,192
+86,Generación programada P48 Océano y geotérmica,vacio,sin valores (aún no publicado),,0
+87,Generación programada P48 Gas Natural Cogeneración,ok,,2026-08-11T21:08:28.000+02:00,192
+88,Generación programada P48 Derivados del petróleo ó carbón,ok,,2026-08-11T21:08:28.000+02:00,192
+89,Generación programada P48 Subproductos minería,vacio,sin valores (aún no publicado),,0
+90,Generación programada P48 Energía residual,ok,,2026-08-11T21:08:28.000+02:00,192
+91,Generación programada P48 Biomasa,ok,,2026-08-11T21:08:28.000+02:00,192
+92,Generación programada P48 Biogás,ok,,2026-08-11T21:08:28.000+02:00,192
+93,Generación programada P48 Residuos domésticos y similares,ok,,2026-08-11T21:08:28.000+02:00,192
+94,Generación programada P48 Residuos varios,ok,,2026-08-11T21:08:28.000+02:00,192
+95,Generación programada P48 Consumo bombeo,ok,,2026-08-11T21:08:28.000+02:00,107
+96,Generación programada P48 Enlace Baleares,ok,,2026-08-11T21:08:28.000+02:00,192
+97,Generación programada P48 Genéricas,vacio,sin valores (aún no publicado),,0
+98,Generación programada P48 Importación Francia,ok,,2026-08-11T21:08:28.000+02:00,177
+99,Generación programada P48 Importación Portugal,ok,,2026-08-11T21:08:28.000+02:00,118
+100,Generación programada P48 Importación Marruecos,vacio,sin valores (aún no publicado),,0
+101,Generación programada P48 Importación Andorra,vacio,sin valores (aún no publicado),,0
+102,Generación programada P48 Exportación Francia,ok,,2026-08-11T21:08:28.000+02:00,149
+103,Generación programada P48 Exportación Portugal,ok,,2026-08-11T21:08:28.000+02:00,192
+104,Generación programada P48 Exportación Marruecos,ok,,2026-08-11T21:08:28.000+02:00,192
+105,Generación programada P48 Exportación Andorra,ok,,2026-08-11T21:08:28.000+02:00,192
+106,Generación programada PHF1 Hidráulica UGH,ok,,2026-08-11T17:47:22.000+02:00,288
+107,Generación programada PHF1 Hidráulica no UGH,ok,,2026-08-11T17:47:22.000+02:00,288
+108,Generación programada PHF1 Turbinación bombeo,ok,,2026-08-11T17:47:22.000+02:00,199
+109,Generación programada PHF1 Nuclear,ok,,2026-08-11T17:47:22.000+02:00,288
+110,Generación programada PHF1 Hulla antracita Anexo II RD 134/2010,vacio,sin valores (aún no publicado),,0
+111,Generación programada PHF1 Hulla sub-bituminosa Anexo II RD 134/2010,vacio,sin valores (aún no publicado),,0
+112,Generación programada PHF1 Hulla antracita,ok,,2026-08-11T17:47:22.000+02:00,15
+113,Generación programada PHF1 Hulla sub-bituminosa,vacio,sin valores (aún no publicado),,0
+114,Generación programada PHF1 Ciclo combinado,ok,,2026-08-11T17:47:22.000+02:00,288
+115,Generación programada PHF1 Fuel,vacio,sin valores (aún no publicado),,0
+116,Generación programada PHF1 Gas Natural - Turbina de vapor,ok,,2026-08-11T17:47:22.000+02:00,288
+117,Generación programada PHF1 Eólica terrestre,ok,,2026-08-11T17:47:22.000+02:00,288
+118,Generación programada PHF1 Eólica marina,ok,,2026-08-11T17:47:22.000+02:00,57
+119,Generación programada PHF1 Solar fotovoltaica,ok,,2026-08-11T17:47:22.000+02:00,278
+120,Generación programada PHF1 Solar térmica,ok,,2026-08-11T17:47:22.000+02:00,288
+121,Generación programada PHF1 Océano y geotérmica,vacio,sin valores (aún no publicado),,0
+122,Generación programada PHF1 Gas Natural Cogeneración,ok,,2026-08-11T17:47:22.000+02:00,288
+123,Generación programada PHF1 Derivados del petróleo ó carbón,ok,,2026-08-11T17:47:22.000+02:00,288
+124,Generación programada PHF1 Subproductos minería,vacio,sin valores (aún no publicado),,0
+125,Generación programada PHF1 Energía residual,ok,,2026-08-11T17:47:22.000+02:00,288
+126,Generación programada PHF1 Biomasa,ok,,2026-08-11T17:47:22.000+02:00,288
+127,Generación programada PHF1 Biogás,ok,,2026-08-11T17:47:22.000+02:00,288
+128,Generación programada PHF1 Residuos domésticos y similares,ok,,2026-08-11T17:47:22.000+02:00,288
+129,Generación programada PHF1 Residuos varios,ok,,2026-08-11T17:47:22.000+02:00,288
+130,Generación programada PHF1 Consumo bombeo,ok,,2026-08-11T17:47:22.000+02:00,128
+131,Generación programada PHF1 Enlace Baleares,ok,,2026-08-11T17:47:22.000+02:00,288
+132,Generación programada PHF1 Genéricas,vacio,sin valores (aún no publicado),,0
+133,Generación programada PHF1 Importación Francia,ok,,2026-08-11T17:47:22.000+02:00,198
+134,Generación programada PHF1 Importación Portugal,ok,,2026-08-11T17:47:22.000+02:00,16
+135,Generación programada PHF1 Importación Marruecos,vacio,sin valores (aún no publicado),,0
+136,Generación programada PHF1 Importación Andorra,vacio,sin valores (aún no publicado),,0
+137,Generación programada PHF1 Exportación Francia,ok,,2026-08-11T17:47:22.000+02:00,90
+138,Generación programada PHF1 Exportación Portugal,ok,,2026-08-11T17:47:22.000+02:00,272
+139,Generación programada PHF1 Exportación Marruecos,ok,,2026-08-11T17:47:22.000+02:00,288
+140,Generación programada PHF1 Exportación Andorra,ok,,2026-08-11T17:47:22.000+02:00,288
+145,Generación programada PHF2 Hulla antracita Anexo II RD 134/2010,vacio,sin valores (aún no publicado),,0
+146,Generación programada PHF2 Hulla sub-bituminosa Anexo II RD 134/2010,vacio,sin valores (aún no publicado),,0
+176,Generación programada PHF3 Hidráulica UGH,ok,,2026-08-11T14:15:50.000+02:00,96
+177,Generación programada PHF3 Hidráulica no UGH,ok,,2026-08-11T14:15:50.000+02:00,96
+178,Generación programada PHF3 Turbinación bombeo,ok,,2026-08-11T14:15:50.000+02:00,49
+179,Generación programada PHF3 Nuclear,ok,,2026-08-11T14:15:50.000+02:00,96
+180,Generación programada PHF3 Hulla antracita Anexo II RD 134/2010,vacio,sin valores (aún no publicado),,0
+181,Generación programada PHF3 Hulla sub-bituminosa Anexo II RD 134/2010,vacio,sin valores (aún no publicado),,0
+182,Generación programada PHF3 Hulla antracita,vacio,sin valores (aún no publicado),,0
+183,Generación programada PHF3 Hulla sub-bituminosa,vacio,sin valores (aún no publicado),,0
+460,Previsión diaria de la demanda eléctrica peninsular,ok,,2026-08-11T21:20:49.000+02:00,864
+461,Previsión mensual de la demanda eléctrica peninsular,vacio,sin valores (aún no publicado),,0
+480,Potencia disponible de generación Hidráulica UGH horizonte año móvil,ok,,2026-08-01T03:57:43.000+02:00,288
+481,Potencia disponible de generación Turbinación bombeo horizonte año móvil,ok,,2026-08-01T03:57:43.000+02:00,84
+482,Potencia disponible de generación Nuclear horizonte año móvil,ok,,2026-08-01T03:57:43.000+02:00,48
+483,Potencia disponible de generación Hulla antracita horizonte año móvil,ok,,2026-08-01T03:57:43.000+02:00,12
+484,Potencia disponible de generación Hulla sub-bituminosa horizonte año móvil,ok,,2026-08-01T03:57:44.000+02:00,12
+485,Potencia disponible de generación Ciclo combinado horizonte año móvil,ok,,2026-08-01T03:57:44.000+02:00,192
+486,Potencia disponible de generación Fuel horizonte año móvil,ok,,2026-08-01T03:57:44.000+02:00,12
+487,Potencia disponible de generación Gas Natural horizonte año móvil,ok,,2026-08-01T03:57:44.000+02:00,12
+498,Capacidad de intercambio prevista (NTC) con Francia horizonte semanal importación,vacio,sin valores (aún no publicado),,0
+499,Capacidad de intercambio prevista (NTC) con Portugal horizonte semanal importación,vacio,sin valores (aún no publicado),,0
+500,Capacidad de intercambio prevista (NTC) con Marruecos horizonte semanal importación,vacio,sin valores (aún no publicado),,0
+501,Capacidad de intercambio prevista (NTC) con Andorra horizonte semanal importación,vacio,sin valores (aún no publicado),,0
+502,Capacidad de intercambio prevista (NTC) con Francia horizonte semanal exportación,vacio,sin valores (aún no publicado),,0
+503,Capacidad de intercambio prevista (NTC) con Portugal horizonte semanal exportación,vacio,sin valores (aún no publicado),,0
+504,Capacidad de intercambio prevista (NTC) con Marruecos horizonte semanal exportación,vacio,sin valores (aún no publicado),,0
+505,Capacidad de intercambio prevista (NTC) con Andorra horizonte semanal exportación,vacio,sin valores (aún no publicado),,0
+510,Capacidad de intercambio prevista (NTC) con Francia horizonte mensual importación,ok,,2026-07-17T14:45:33.000+02:00,288
+511,Capacidad de intercambio prevista (NTC) con Portugal horizonte mensual importación,ok,,2026-07-17T14:45:33.000+02:00,288
+512,Capacidad de intercambio prevista (NTC) con Marruecos horizonte mensual importación,ok,,2026-07-17T14:45:33.000+02:00,288
+513,Capacidad de intercambio prevista (NTC) con Andorra horizonte mensual importación,ok,,2026-07-17T14:45:33.000+02:00,288
+514,Capacidad de intercambio prevista (NTC) con Francia horizonte mensual exportación,ok,,2026-07-17T14:45:33.000+02:00,288
+515,Capacidad de intercambio prevista (NTC) con Portugal horizonte mensual exportación,ok,,2026-07-17T14:45:33.000+02:00,288
+516,Capacidad de intercambio prevista (NTC) con Marruecos horizonte mensual exportación,ok,,2026-07-17T14:45:34.000+02:00,288
+517,Capacidad de intercambio prevista (NTC) con Andorra horizonte mensual exportación,ok,,2026-07-17T14:45:34.000+02:00,288
+518,Capacidad de intercambio prevista (NTC) con Francia horizonte año móvil importación,ok,,2026-07-17T14:45:34.000+02:00,288
+519,Capacidad de intercambio prevista (NTC) con Portugal horizonte año móvil importación,ok,,2026-07-17T14:45:34.000+02:00,288
+520,Capacidad de intercambio prevista (NTC) con Marruecos horizonte año móvil importación,ok,,2026-07-17T14:45:34.000+02:00,288
+521,Capacidad de intercambio prevista (NTC) con Andorra horizonte año móvil importación,ok,,2026-07-17T14:45:34.000+02:00,288
+522,Capacidad de intercambio prevista (NTC) con Francia horizonte año móvil exportación,ok,,2026-07-17T14:45:34.000+02:00,288
+523,Capacidad de intercambio prevista (NTC) con Portugal horizonte año móvil exportación,ok,,2026-07-17T14:45:34.000+02:00,288
+524,Capacidad de intercambio prevista (NTC) con Marruecos horizonte año móvil exportación,ok,,2026-07-17T14:45:34.000+02:00,288
+525,Capacidad de intercambio prevista (NTC) con Andorra horizonte año móvil exportación,ok,,2026-07-17T14:45:34.000+02:00,288
+541,Previsión de la producción eólica peninsular,ok,,2026-08-11T20:40:01.000+02:00,1056
+542,Generación prevista Solar fotovoltaica,ok,,2026-08-11T20:41:15.000+02:00,1056
+543,Generación prevista Solar térmica,ok,,2026-08-11T20:41:15.000+02:00,1056
+544,Demanda prevista,ok,,2026-08-11T21:26:40.000+02:00,204
+570,Capacidad prevista en el enlace Península - Baleares,ok,,2026-08-11T21:15:05.000+02:00,72
+603,Previsión semanal de la demanda eléctrica peninsular,ok,,2026-08-11T21:24:37.000+02:00,1152
+604,Previsión máxima mensual de la demanda eléctrica peninsular,ok,,2026-07-09T13:44:54.000+02:00,2
+619,Previsión mínima mensual de la demanda eléctrica peninsular,ok,,2026-07-09T13:44:54.000+02:00,2
+620,Previsión máxima anual de la demanda eléctrica peninsular,ok,,2025-12-16T10:42:26.000+01:00,2
+621,Previsión mínima anual de la demanda eléctrica peninsular,ok,,2025-12-16T10:42:26.000+01:00,2
+622,Margen generación disponible - máxima demanda prevista,vacio,sin valores (aún no publicado),,0
+630,Requerimientos reserva de regulación secundaria a subir,ok,,2026-08-11T16:11:17.000+02:00,288
+631,Requerimientos reserva de regulación secundaria a bajar,ok,,2026-08-11T16:11:17.000+02:00,288
+632,Asignación reserva de regulación secundaria a subir,ok,,2026-08-11T16:44:37.000+02:00,288
+633,Asignación reserva de regulación secundaria a bajar,ok,,2026-08-11T16:44:37.000+02:00,288
+634,Precio reserva de regulación secundaria a bajar,ok,,2026-08-11T16:44:37.000+02:00,288
+680,Energía activada  de regulación secundaria a subir en el sepe,ok,,2026-08-11T21:10:34.000+02:00,177
+681,Energía activada  de regulación secundaria a bajar en el sepe,ok,,2026-08-11T21:10:34.000+02:00,177
+682,Precio de energía de regulación secundaria a subir,ok,,2026-08-11T21:10:35.000+02:00,177
+683,Precio de energía de regulación secundaria a bajar,ok,,2026-08-11T21:28:51.000+02:00,178
+712,Coste de reserva de regulación secundaria a subir,ok,,2026-08-11T20:10:00.000+02:00,288
+713,Coste unitario soportado por la demanda de reserva de regulación secundaria,ok,,2026-08-11T20:10:01.000+02:00,72
+718,Derechos de cobro por energía de regulación secundaria,ok,,2026-08-11T17:26:39.000+02:00,93
+719,Obligaciones de pago por energía de regulación secundaria,ok,,2026-08-11T17:26:40.000+02:00,96
+899,Coste asignación de reserva de regulación secundaria a subir,ok,,2026-08-11T20:10:00.000+02:00,288
+1006,"Perfiles de consumo a efectos de facturación del PVPC Tarifa 2.0 GENERAL BAJA TENSIÓN, POTENCIA INFERIOR A 15 kW",ok,,2026-08-11T20:46:51.000+02:00,72
+1335,Demanda del sistema a efectos del cálculo de perfiles,vacio,sin valores (aún no publicado),,0
+1742,Demanda prevista SNP,fallo,HTTP 500,,0
+1774,Previsión demanda anual,vacio,sin valores (aún no publicado),,0
+1775,Previsión diaria D+1 demanda,ok,,2026-08-11T10:50:23.000+02:00,72
+1776,Previsión intradiaria H+3 demanda,ok,,2026-08-11T20:50:38.000+02:00,48
+1777,Previsión diaria D+1 eólica,ok,,2026-08-11T10:50:23.000+02:00,72
+1778,Previsión intradiaria H+3 eólica,ok,,2026-08-11T20:50:38.000+02:00,48
+1779,Previsión diaria D+1 fotovoltaica,ok,,2026-08-11T10:50:23.000+02:00,72
+1780,Previsión intradiaria H+3 fotovoltaica,ok,,2026-08-11T20:50:38.000+02:00,48
+1844,Capacidad de intercambio prevista (NTC) con Francia horizonte diario importación,ok,,2026-08-11T18:32:53.000+02:00,288
+1845,Capacidad de intercambio prevista (NTC) con Portugal horizonte diario importación,ok,,2026-08-11T18:32:53.000+02:00,288
+1846,Capacidad de intercambio prevista (NTC) con Marruecos horizonte diario importación,ok,,2026-08-11T18:32:53.000+02:00,288
+1848,Capacidad de intercambio prevista (NTC) con Francia horizonte diario exportación,ok,,2026-08-11T18:32:53.000+02:00,288
+1849,Capacidad de intercambio prevista (NTC) con Portugal horizonte diario exportación,ok,,2026-08-11T18:32:53.000+02:00,288
+1850,Capacidad de intercambio prevista (NTC) con Marruecos horizonte diario exportación,ok,,2026-08-11T18:32:53.000+02:00,288
+1941,Demanda Programada Total Peninsular,ok,,2026-08-11T21:26:40.000+02:00,204
+1942,Demanda Programada total territorios no peninsulares,fallo,HTTP 500,,0
+2052,Demanda real prevista nacional,ok,,2026-08-11T21:26:35.000+02:00,204
+2117,Capacidad de intercambio comercial prevista en la interconexión con Francia horizonte intradiario importación,ok,,2026-08-11T10:25:10.000+02:00,192
+2118,Capacidad de intercambio comercial prevista en la interconexión con Francia horizonte intradiario exportación,ok,,2026-08-11T10:25:10.000+02:00,192
+2119,Capacidad de intercambio comercial prevista en la interconexión con Portugal horizonte intradiario importación,ok,,2026-08-11T10:25:10.000+02:00,192
+2120,Capacidad de intercambio comercial prevista en la interconexión con Portugal horizonte intradiario exportación,ok,,2026-08-11T10:25:10.000+02:00,192
+2127,Coste de reserva de regulación secundaria a bajar,ok,,2026-08-11T20:10:00.000+02:00,288
+2129,Coste asignación de reserva de regulación secundaria a bajar,ok,,2026-08-11T20:10:00.000+02:00,288
+2130,Precio Reserva de regulación secundaria a subir,ok,,2026-08-11T16:44:37.000+02:00,288
+2207,Necesidad de energía de regulación secundaria subir en el sepe,ok,,2026-08-11T21:29:56.000+02:00,177
+2208,Necesidad de energía de regulación secundaria bajar en el sepe,ok,,2026-08-11T21:29:56.000+02:00,177
+2367,Capacidad de intercambio prevista (NTC) con Francia horizonte anual importación,ok,,2025-12-01T11:28:54.000+01:00,288
+2368,Capacidad de intercambio prevista (NTC) con Portugal horizonte anual importación,ok,,2025-12-01T11:28:54.000+01:00,288
+2369,Capacidad de intercambio prevista (NTC) con Marruecos horizonte anual importación,ok,,2025-12-01T11:28:55.000+01:00,288
+2370,Capacidad de intercambio prevista (NTC) con Andorra horizonte anual importación,ok,,2025-12-01T11:28:55.000+01:00,288
+2371,Capacidad de intercambio prevista (NTC) con Francia horizonte anual exportación,ok,,2025-12-01T11:28:56.000+01:00,288
+2372,Capacidad de intercambio prevista (NTC) con Portugal horizonte anual exportación,ok,,2025-12-01T11:28:56.000+01:00,288
+2373,Capacidad de intercambio prevista (NTC) con Marruecos horizonte anual exportación,ok,,2025-12-01T11:28:57.000+01:00,288
+2374,Capacidad de intercambio prevista (NTC) con Andorra horizonte anual exportación,ok,,2025-12-01T11:28:57.000+01:00,288
+2563,Previsión diaria de la demanda eléctrica peninsular en el mercado,ok,,2026-08-11T21:20:49.000+02:00,864
+10034,Generación prevista Solar,ok,,2026-08-09T23:41:10.000+02:00,1056
+10056,Volumen absoluto de energía utilizada de regulación secundaria,ok,,2026-08-11T05:21:03.000+02:00,178
+10232,Potencia disponible de generación total horizonte año móvil,ok,,2026-08-01T03:57:44.000+02:00,408
+10249,Previsión de la demanda residual,ok,,2026-08-09T23:41:10.000+02:00,1056
+10252,Volumen neto de energía utilizada de regulación secundaria,ok,,2026-08-11T05:21:03.000+02:00,178
+10323,Energía de balance a subir,ok,,2026-08-11T13:50:09.000+02:00,182
+10324,Energía de balance a bajar,ok,,2026-08-11T13:50:09.000+02:00,182
+10325,Energía total asignada por seguridad y de balance,ok,,2026-08-11T17:32:06.000+02:00,288
+10358,Previsión diaria D+1 eólica más fotovoltaica,ok,,2026-08-09T10:50:29.000+02:00,72
+10359,Previsión intradiaria H+3 eólica más fotovoltaica,ok,,2026-08-10T20:50:48.000+02:00,48
+10388,Precio medio ponderado reserva de regulación secundaria a subir,ok,,2026-08-11T20:10:00.000+02:00,288
+10389,Precio medio ponderado de energía de regulación secundaria a subir,ok,,2026-08-11T17:26:39.000+02:00,178
+10390,Precio medio ponderado de energía de regulación secundaria a bajar,ok,,2026-08-11T17:26:40.000+02:00,178
+10463,Precio medio ponderado reserva de regulación secundaria a bajar,ok,,2026-08-11T20:10:00.000+02:00,288
