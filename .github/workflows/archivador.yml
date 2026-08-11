@@ -6,18 +6,23 @@ name: Archivador diario BESS
 #   3. Al tocar el script, para probar que sigue funcionando.
 on:
   schedule:
-    # CADA 3 HORAS, temporalmente. Las previsiones de renovables se regeneran
-    # varias veces al día, así que durante unas semanas se capturan ocho veces
-    # diarias para ver cada cuánto y cuánto cambian. Después bastará con dejar
-    # una o dos líneas de esta lista.
+    # CADA HORA, temporalmente. Medido el 11-ago-2026: las previsiones de
+    # renovables se regeneran cada hora hacia el minuto 40, no cada 3 horas
+    # como se suponía. Durante unas semanas se pide cada hora para
+    # caracterizarlo; después bastará con una o dos capturas al día.
     #
-    # OJO: el cron de GitHub Actions va SIEMPRE en UTC y es NOTORIAMENTE
-    # IMPUNTUAL — se retrasa habitualmente entre 5 y 30 minutos, y más en horas
-    # de carga. Se pide en el minuto 45 justamente para evitar el pico de
-    # peticiones que se acumula en las horas en punto.
+    # OJO: el cron de GitHub Actions va SIEMPRE en UTC, es NOTORIAMENTE
+    # IMPUNTUAL —15 a 30 minutos de retraso es lo normal— y además DESCARTA
+    # ejecuciones cuando hay carga: el 11-ago-2026 solo corrieron 2 de las ~8
+    # programadas. Pedir cada hora es la forma de acabar teniendo varias
+    # capturas al día, no de tener 24.
     #
-    # 09:45 UTC = 11:45 Madrid en verano · 10:45 en invierno. Esa es la captura
-    # que de verdad importa: la más cercana a las 11:30 sin pasarse.
+    # Se pide en el minuto 45 por dos razones: cae justo después del refresco
+    # del minuto 40, y evita el pico de peticiones de las horas en punto, que
+    # es cuando GitHub más descarta.
+    #
+    # Para volver a cada 3 horas cuando toque:
+    #   - cron: "45 0,3,6,9,12,15,18,21 * * *"
     - cron: "45 * * * *"
   workflow_dispatch:        # botón "Run workflow" (también desde el móvil)
   push:
@@ -90,10 +95,20 @@ jobs:
       - name: Publicar la salida como resumen
         if: always()
         run: |
-          echo "### Archivador del $(date -u +%Y-%m-%d)" >> $GITHUB_STEP_SUMMARY
+          # Se busca el manifiesto MÁS RECIENTE en vez de construir su ruta a
+          # mano. Motivo: desde la v3 el manifiesto vive en una subcarpeta con
+          # la hora de captura, y esta línea seguía apuntando a la carpeta del
+          # día. El resultado era que el resumen mostraba siempre el mismo
+          # manifiesto viejo, de una versión anterior del programa, sin que
+          # nada avisara — el tipo de fallo silencioso que este proyecto
+          # persigue, colado en el propio workflow.
+          RUTA=$(find archivo -name 'manifiesto.json' -printf '%T@ %p\n' 2>/dev/null \
+                 | sort -rn | head -1 | cut -d' ' -f2-)
+          echo "### Archivador — $(date -u +'%Y-%m-%d %H:%M') UTC" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          RUTA="archivo/$(date -u +%Y)/$(date -u +%m)/$(date -u +%Y-%m-%d)/manifiesto.json"
-          if [ -f "$RUTA" ]; then
+          if [ -n "$RUTA" ] && [ -f "$RUTA" ]; then
+            echo "Fichero: \`$RUTA\`" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
             echo '```json' >> $GITHUB_STEP_SUMMARY
             cat "$RUTA" >> $GITHUB_STEP_SUMMARY
             echo '```' >> $GITHUB_STEP_SUMMARY
