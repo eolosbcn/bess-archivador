@@ -6,18 +6,19 @@ name: Archivador diario BESS
 #   3. Al tocar el script, para probar que sigue funcionando.
 on:
   schedule:
+    # CADA 3 HORAS, temporalmente. Las previsiones de renovables se regeneran
+    # varias veces al día, así que durante unas semanas se capturan ocho veces
+    # diarias para ver cada cuánto y cuánto cambian. Después bastará con dejar
+    # una o dos líneas de esta lista.
+    #
     # OJO: el cron de GitHub Actions va SIEMPRE en UTC y es NOTORIAMENTE
-    # IMPUNTUAL — se retrasa habitualmente entre 5 y 30 minutos, y en horas de
-    # mucha carga bastante más. Por eso se programa con margen de sobra
-    # respecto a las 13:00 (Madrid) en que se publican los precios.
+    # IMPUNTUAL — se retrasa habitualmente entre 5 y 30 minutos, y más en horas
+    # de carga. Se pide en el minuto 45 justamente para evitar el pico de
+    # peticiones que se acumula en las horas en punto.
     #
-    #   08:30 UTC = 10:30 Madrid en verano · 09:30 en invierno
-    #   09:45 UTC = 11:45 Madrid en verano · 10:45 en invierno
-    #
-    # No se ajusta al cambio de hora a propósito: en ambos casos la ejecución
-    # cae dentro de la mañana, que es lo único que importa.
-    - cron: "30 8 * * *"
-    - cron: "45 9 * * *"
+    # 09:45 UTC = 11:45 Madrid en verano · 10:45 en invierno. Esa es la captura
+    # que de verdad importa: la más cercana a las 11:30 sin pasarse.
+    - cron: "45 0,3,6,9,12,15,18,21 * * *"
   workflow_dispatch:        # botón "Run workflow" (también desde el móvil)
   push:
     paths:
