@@ -1,0 +1,151 @@
+id,nombre,estado,detalle,values_updated_at,filas
+1,Generación programada PBF Hidráulica UGH,ok,,2026-08-10T14:13:27.000+02:00,192
+2,Generación programada PBF Hidráulica no UGH,ok,,2026-08-10T14:13:27.000+02:00,192
+3,Generación programada PBF Turbinación bombeo,ok,,2026-08-10T14:13:27.000+02:00,119
+4,Generación programada PBF Nuclear,ok,,2026-08-10T14:13:27.000+02:00,192
+5,Generación programada PBF Hulla antracita Anexo II RD 134/2010,vacio,sin valores (aún no publicado),,0
+6,Generación programada PBF Hulla sub-bituminosa Anexo II RD 134/2010,vacio,sin valores (aún no publicado),,0
+7,Generación programada PBF Hulla antracita,vacio,sin valores (aún no publicado),,0
+8,Generación programada PBF Hulla sub-bituminosa,vacio,sin valores (aún no publicado),,0
+9,Generación programada PBF Ciclo combinado,ok,,2026-08-10T14:13:27.000+02:00,124
+10,Generación programada PBF Fuel,vacio,sin valores (aún no publicado),,0
+11,Generación programada PBF Gas Natural - Turbina de vapor,vacio,sin valores (aún no publicado),,0
+12,Generación programada PBF Eólica terrestre,ok,,2026-08-10T14:13:27.000+02:00,192
+13,Generación programada PBF Eólica marina,ok,,2026-08-10T14:13:27.000+02:00,24
+14,Generación programada PBF Solar fotovoltaica,ok,,2026-08-10T14:13:27.000+02:00,192
+15,Generación programada PBF Solar térmica,ok,,2026-08-10T14:13:27.000+02:00,192
+16,Generación programada PBF Océano y geotérmica,vacio,sin valores (aún no publicado),,0
+17,Generación programada PBF Gas Natural Cogeneración,ok,,2026-08-10T14:13:27.000+02:00,192
+18,Generación programada PBF Derivados del petróleo ó carbón,ok,,2026-08-10T14:13:27.000+02:00,192
+19,Generación programada PBF Subproductos minería,vacio,sin valores (aún no publicado),,0
+20,Generación programada PBF Energía residual,ok,,2026-08-10T14:13:27.000+02:00,192
+21,Generación programada PBF Biomasa,ok,,2026-08-10T14:13:27.000+02:00,192
+22,Generación programada PBF Biogás,ok,,2026-08-10T14:13:27.000+02:00,192
+23,Generación programada PBF Residuos domésticos y similares,ok,,2026-08-10T14:13:27.000+02:00,192
+24,Generación programada PBF Residuos varios,ok,,2026-08-10T14:13:27.000+02:00,192
+25,Generación programada PBF Consumo bombeo,ok,,2026-08-10T14:13:27.000+02:00,81
+26,Generación programada PBF Enlace Baleares,ok,,2026-08-10T14:13:27.000+02:00,192
+27,Generación programada PBF Genéricas,vacio,sin valores (aún no publicado),,0
+28,Generación programada PBF Importación Francia,ok,,2026-08-10T14:13:27.000+02:00,137
+29,Generación programada PBF Importación Portugal,ok,,2026-08-10T14:13:27.000+02:00,11
+30,Generación programada PBF Importación Marruecos,vacio,sin valores (aún no publicado),,0
+31,Generación programada PBF Importación Andorra,vacio,sin valores (aún no publicado),,0
+32,Generación programada PBF Exportación Francia,ok,,2026-08-10T14:13:27.000+02:00,55
+33,Generación programada PBF Exportación Portugal,ok,,2026-08-10T14:13:27.000+02:00,181
+34,Generación programada PBF Exportación Marruecos,ok,,2026-08-10T14:13:27.000+02:00,192
+35,Generación programada PBF Exportación Andorra,ok,,2026-08-10T14:13:27.000+02:00,192
+36,Generación programada PVP Hidráulica UGH,ok,,2026-08-10T19:24:29.000+02:00,192
+37,Generación programada PVP Hidráulica no UGH,ok,,2026-08-10T19:24:29.000+02:00,192
+38,Generación programada PVP Turbinación bombeo,ok,,2026-08-10T19:24:29.000+02:00,141
+39,Generación programada PVP Nuclear,ok,,2026-08-10T19:24:29.000+02:00,192
+40,Generación programada PVP Hulla antracita Anexo II RD 134/2010,vacio,sin valores (aún no publicado),,0
+41,Generación programada PVP Hulla sub-bituminosa Anexo II RD 134/2010,vacio,sin valores (aún no publicado),,0
+42,Generación programada PVP Hulla antracita,vacio,sin valores (aún no publicado),,0
+43,Generación programada PVP Hulla sub-bituminosa,vacio,sin valores (aún no publicado),,0
+44,Generación programada PVP Ciclo combinado,ok,,2026-08-10T19:24:29.000+02:00,192
+45,Generación programada PVP Fuel,vacio,sin valores (aún no publicado),,0
+46,Generación programada PVP Gas Natural - Turbina de vapor,ok,,2026-08-10T19:24:29.000+02:00,192
+47,Generación programada PVP Eólica terrestre,ok,,2026-08-10T19:24:29.000+02:00,192
+48,Generación programada PVP Eólica marina,ok,,2026-08-10T19:24:29.000+02:00,24
+49,Generación programada PVP Solar fotovoltaica,ok,,2026-08-10T19:24:29.000+02:00,192
+50,Generación programada PVP Solar térmica,ok,,2026-08-10T19:24:29.000+02:00,192
+51,Generación programada PVP Océano y geotérmica,vacio,sin valores (aún no publicado),,0
+52,Generación programada PVP Gas Natural Cogeneración,ok,,2026-08-10T19:24:29.000+02:00,192
+53,Generación programada PVP Derivados del petróleo ó carbón,ok,,2026-08-10T19:24:29.000+02:00,192
+54,Generación programada PVP Subproductos minería,vacio,sin valores (aún no publicado),,0
+55,Generación programada PVP Energía residual,ok,,2026-08-10T19:24:29.000+02:00,192
+56,Generación programada PVP Biomasa,ok,,2026-08-10T19:24:29.000+02:00,192
+57,Generación programada PVP Biogás,ok,,2026-08-10T19:24:29.000+02:00,192
+58,Generación programada PVP Residuos domésticos y similares,ok,,2026-08-10T19:24:29.000+02:00,192
+59,Generación programada PVP Residuos varios,ok,,2026-08-10T19:24:29.000+02:00,192
+60,Generación programada PVP Consumo bombeo,ok,,2026-08-10T19:24:29.000+02:00,87
+61,Generación programada PVP Enlace Baleares,ok,,2026-08-10T19:24:29.000+02:00,192
+62,Generación programada PVP Genéricas,vacio,sin valores (aún no publicado),,0
+63,Generación programada PVP Importación Francia,ok,,2026-08-10T19:24:29.000+02:00,137
+64,Generación programada PVP Importación Portugal,ok,,2026-08-10T19:24:29.000+02:00,11
+65,Generación programada PVP Importación Marruecos,vacio,sin valores (aún no publicado),,0
+66,Generación programada PVP Importación Andorra,vacio,sin valores (aún no publicado),,0
+67,Generación programada PVP Exportación Francia,ok,,2026-08-10T19:24:29.000+02:00,55
+68,Generación programada PVP Exportación Portugal,ok,,2026-08-10T19:24:29.000+02:00,181
+69,Generación programada PVP Exportación Marruecos,ok,,2026-08-10T19:24:29.000+02:00,192
+70,Generación programada PVP Exportación Andorra,ok,,2026-08-10T19:24:29.000+02:00,192
+71,Generación programada P48 Hidráulica UGH,ok,,2026-08-11T10:39:01.000+02:00,192
+72,Generación programada P48 Hidráulica no UGH,ok,,2026-08-11T10:39:01.000+02:00,192
+73,Generación programada P48 Turbinación bombeo,ok,,2026-08-11T10:39:01.000+02:00,135
+74,Generación programada P48 Nuclear,ok,,2026-08-11T10:39:01.000+02:00,192
+75,Generación programada P48 Hulla antracita Anexo II RD 134/2010,vacio,sin valores (aún no publicado),,0
+76,Generación programada P48 Hulla sub-bituminosa Anexo II RD 134/2010,vacio,sin valores (aún no publicado),,0
+77,Generación programada P48 Hulla antracita,vacio,sin valores (aún no publicado),,0
+78,Generación programada P48 Hulla sub-bituminosa,vacio,sin valores (aún no publicado),,0
+79,Generación programada P48 Ciclo combinado,ok,,2026-08-11T10:39:01.000+02:00,192
+80,Generación programada P48 Fuel,vacio,sin valores (aún no publicado),,0
+81,Generación programada P48 Gas Natural - Turbina de vapor,ok,,2026-08-11T10:39:01.000+02:00,192
+82,Generación programada P48 Eólica terrestre,ok,,2026-08-11T10:39:01.000+02:00,192
+83,Generación programada P48 Eólica marina,ok,,2026-08-11T10:39:01.000+02:00,24
+84,Generación programada P48 Solar fotovoltaica,ok,,2026-08-11T10:39:01.000+02:00,191
+85,Generación programada P48 Solar térmica,ok,,2026-08-11T10:39:01.000+02:00,192
+86,Generación programada P48 Océano y geotérmica,vacio,sin valores (aún no publicado),,0
+87,Generación programada P48 Gas Natural Cogeneración,ok,,2026-08-11T10:39:01.000+02:00,192
+88,Generación programada P48 Derivados del petróleo ó carbón,ok,,2026-08-11T10:39:01.000+02:00,192
+89,Generación programada P48 Subproductos minería,vacio,sin valores (aún no publicado),,0
+90,Generación programada P48 Energía residual,ok,,2026-08-11T10:39:01.000+02:00,192
+91,Generación programada P48 Biomasa,ok,,2026-08-11T10:39:01.000+02:00,192
+92,Generación programada P48 Biogás,ok,,2026-08-11T10:39:01.000+02:00,192
+93,Generación programada P48 Residuos domésticos y similares,ok,,2026-08-11T10:39:01.000+02:00,192
+94,Generación programada P48 Residuos varios,ok,,2026-08-11T10:39:01.000+02:00,192
+95,Generación programada P48 Consumo bombeo,ok,,2026-08-11T10:39:01.000+02:00,106
+96,Generación programada P48 Enlace Baleares,ok,,2026-08-11T10:39:01.000+02:00,192
+97,Generación programada P48 Genéricas,ok,,2026-08-11T10:39:01.000+02:00,6
+98,Generación programada P48 Importación Francia,ok,,2026-08-11T10:39:01.000+02:00,175
+99,Generación programada P48 Importación Portugal,ok,,2026-08-11T10:39:01.000+02:00,110
+100,Generación programada P48 Importación Marruecos,vacio,sin valores (aún no publicado),,0
+101,Generación programada P48 Importación Andorra,vacio,sin valores (aún no publicado),,0
+102,Generación programada P48 Exportación Francia,ok,,2026-08-11T10:39:01.000+02:00,139
+103,Generación programada P48 Exportación Portugal,ok,,2026-08-11T10:39:01.000+02:00,188
+104,Generación programada P48 Exportación Marruecos,ok,,2026-08-11T10:39:02.000+02:00,192
+105,Generación programada P48 Exportación Andorra,ok,,2026-08-11T10:39:02.000+02:00,192
+106,Generación programada PHF1 Hidráulica UGH,ok,,2026-08-10T20:32:11.000+02:00,192
+107,Generación programada PHF1 Hidráulica no UGH,ok,,2026-08-10T20:32:11.000+02:00,192
+108,Generación programada PHF1 Turbinación bombeo,ok,,2026-08-10T20:32:11.000+02:00,141
+109,Generación programada PHF1 Nuclear,ok,,2026-08-10T20:32:11.000+02:00,192
+110,Generación programada PHF1 Hulla antracita Anexo II RD 134/2010,vacio,sin valores (aún no publicado),,0
+111,Generación programada PHF1 Hulla sub-bituminosa Anexo II RD 134/2010,vacio,sin valores (aún no publicado),,0
+112,Generación programada PHF1 Hulla antracita,vacio,sin valores (aún no publicado),,0
+113,Generación programada PHF1 Hulla sub-bituminosa,vacio,sin valores (aún no publicado),,0
+114,Generación programada PHF1 Ciclo combinado,ok,,2026-08-10T20:32:11.000+02:00,192
+115,Generación programada PHF1 Fuel,vacio,sin valores (aún no publicado),,0
+116,Generación programada PHF1 Gas Natural - Turbina de vapor,ok,,2026-08-10T20:32:11.000+02:00,192
+117,Generación programada PHF1 Eólica terrestre,ok,,2026-08-10T20:32:11.000+02:00,192
+118,Generación programada PHF1 Eólica marina,ok,,2026-08-10T20:32:11.000+02:00,24
+119,Generación programada PHF1 Solar fotovoltaica,ok,,2026-08-10T20:32:11.000+02:00,192
+120,Generación programada PHF1 Solar térmica,ok,,2026-08-10T20:32:11.000+02:00,192
+121,Generación programada PHF1 Océano y geotérmica,vacio,sin valores (aún no publicado),,0
+122,Generación programada PHF1 Gas Natural Cogeneración,ok,,2026-08-10T20:32:11.000+02:00,192
+123,Generación programada PHF1 Derivados del petróleo ó carbón,ok,,2026-08-10T20:32:11.000+02:00,192
+124,Generación programada PHF1 Subproductos minería,vacio,sin valores (aún no publicado),,0
+125,Generación programada PHF1 Energía residual,ok,,2026-08-10T20:32:11.000+02:00,192
+126,Generación programada PHF1 Biomasa,ok,,2026-08-10T20:32:11.000+02:00,192
+127,Generación programada PHF1 Biogás,ok,,2026-08-10T20:32:11.000+02:00,192
+128,Generación programada PHF1 Residuos domésticos y similares,ok,,2026-08-10T20:32:11.000+02:00,192
+129,Generación programada PHF1 Residuos varios,ok,,2026-08-10T20:32:11.000+02:00,192
+130,Generación programada PHF1 Consumo bombeo,ok,,2026-08-10T20:32:11.000+02:00,87
+131,Generación programada PHF1 Enlace Baleares,ok,,2026-08-10T20:32:11.000+02:00,192
+132,Generación programada PHF1 Genéricas,vacio,sin valores (aún no publicado),,0
+133,Generación programada PHF1 Importación Francia,ok,,2026-08-10T20:32:11.000+02:00,137
+134,Generación programada PHF1 Importación Portugal,ok,,2026-08-10T20:32:11.000+02:00,11
+135,Generación programada PHF1 Importación Marruecos,vacio,sin valores (aún no publicado),,0
+136,Generación programada PHF1 Importación Andorra,vacio,sin valores (aún no publicado),,0
+137,Generación programada PHF1 Exportación Francia,ok,,2026-08-10T20:32:11.000+02:00,55
+138,Generación programada PHF1 Exportación Portugal,ok,,2026-08-10T20:32:11.000+02:00,181
+139,Generación programada PHF1 Exportación Marruecos,ok,,2026-08-10T20:32:11.000+02:00,192
+140,Generación programada PHF1 Exportación Andorra,ok,,2026-08-10T20:32:11.000+02:00,192
+145,Generación programada PHF2 Hulla antracita Anexo II RD 134/2010,vacio,sin valores (aún no publicado),,0
+146,Generación programada PHF2 Hulla sub-bituminosa Anexo II RD 134/2010,vacio,sin valores (aún no publicado),,0
+176,Generación programada PHF3 Hidráulica UGH,ok,,2026-08-10T14:18:55.000+02:00,48
+177,Generación programada PHF3 Hidráulica no UGH,ok,,2026-08-10T14:18:55.000+02:00,48
+178,Generación programada PHF3 Turbinación bombeo,ok,,2026-08-10T14:18:55.000+02:00,27
+179,Generación programada PHF3 Nuclear,ok,,2026-08-10T14:18:55.000+02:00,48
+180,Generación programada PHF3 Hulla antracita Anexo II RD 134/2010,vacio,sin valores (aún no publicado),,0
+181,Generación programada PHF3 Hulla sub-bituminosa Anexo II RD 134/2010,vacio,sin valores (aún no publicado),,0
+182,Generación programada PHF3 Hulla antracita,vacio,sin valores (aún no publicado),,0
+183,Generación programada PHF3 Hulla sub-bituminosa,vacio,sin valores (aún no publicado),,0

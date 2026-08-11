@@ -1,0 +1,100 @@
+{
+  "fuentes": {
+    "esios_600_precio_spot": {
+      "estado": "OK",
+      "detalle": "2026-08-02 a 2026-08-11",
+      "filas": 864,
+      "values_updated_at": "2026-08-10T14:14:33.000+02:00",
+      "hash": "0ff894a288d40e63"
+    },
+    "esios_541_prev_eolica": {
+      "estado": "OK",
+      "detalle": "2026-08-02 a 2026-08-12",
+      "filas": 960,
+      "values_updated_at": "2026-08-11T10:39:41.000+02:00",
+      "hash": "4ce9c97e97739e3c"
+    },
+    "esios_542_prev_solar_fv": {
+      "estado": "OK",
+      "detalle": "2026-08-02 a 2026-08-12",
+      "filas": 960,
+      "values_updated_at": "2026-08-11T09:41:04.000+02:00",
+      "hash": "c4e19624b9e9c507"
+    },
+    "esios_543_prev_solar_termica": {
+      "estado": "OK",
+      "detalle": "2026-08-02 a 2026-08-12",
+      "filas": 960,
+      "values_updated_at": "2026-08-11T09:41:03.000+02:00",
+      "hash": "059eaf754f599f11"
+    },
+    "esios_catalogo": {
+      "estado": "OK",
+      "detalle": "150 indicadores de previsión a archivar",
+      "filas": null,
+      "recortado": true
+    },
+    "esios_previsiones": {
+      "estado": "OK",
+      "detalle": "104 con datos, 46 vacíos, 0 fallidos (87 KB comprimidos)",
+      "filas": 16497,
+      "indicadores_ok": 104,
+      "indicadores_vacios": 46,
+      "indicadores_fallidos": 0,
+      "kb_comprimido": 86.6
+    },
+    "entsoe_A65_prev_demanda_es": {
+      "estado": "OK",
+      "detalle": "hasta 2026-08-12 21:45:00+00:00",
+      "filas": 952,
+      "hash": "97ac63f2ff88ae80"
+    },
+    "entsoe_A69_prev_renovable_es": {
+      "estado": "OK",
+      "detalle": "hasta 2026-08-11 21:45:00+00:00",
+      "filas": 1712,
+      "hash": "f0b85eb7d3e42b38"
+    },
+    "entsoe_A44_precio_francia": {
+      "estado": "OK",
+      "detalle": "hasta 2026-08-11 21:45:00+00:00",
+      "filas": 864,
+      "hash": "1426377cf2eb3af0"
+    },
+    "entsoe_A44_precio_es": {
+      "estado": "OK",
+      "detalle": "hasta 2026-08-11 21:45:00+00:00",
+      "filas": 864,
+      "hash": "232c651d663eac26"
+    },
+    "entsoe_A72_reserva_hidraulica": {
+      "estado": "OK",
+      "detalle": "última lectura 2026-07-26 22:00:00+00:00",
+      "filas": 4
+    },
+    "aemet_prediccion_diaria": {
+      "estado": "OK",
+      "detalle": "6 ciudades, hasta 2026-08-17",
+      "filas": 42,
+      "elaborado": [
+        "2026-08-11T07:15:11"
+      ]
+    },
+    "mibgas": {
+      "estado": "FALLO",
+      "detalle": "HTTP 200, 549 bytes",
+      "filas": null
+    }
+  },
+  "version": "v2",
+  "ejecucion_madrid": "2026-08-11T10:45:14+02:00",
+  "ejecucion_utc": "2026-08-11T08:45:14+00:00",
+  "fecha": "2026-08-11",
+  "dia_objetivo": "2026-08-12",
+  "resumen": {
+    "ok": 12,
+    "vacio": 0,
+    "fallo": 1,
+    "kb_total": 529.4
+  }
+}
