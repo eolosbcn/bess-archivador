@@ -1,0 +1,101 @@
+name: Archivador diario BESS
+
+# Tres formas de dispararse:
+#   1. Automática, dos veces cada mañana (la segunda es la red de seguridad).
+#   2. A mano desde la app de GitHub en el móvil o desde la web.
+#   3. Al tocar el script, para probar que sigue funcionando.
+on:
+  schedule:
+    # OJO: el cron de GitHub Actions va SIEMPRE en UTC y es NOTORIAMENTE
+    # IMPUNTUAL — se retrasa habitualmente entre 5 y 30 minutos, y en horas de
+    # mucha carga bastante más. Por eso se programa con margen de sobra
+    # respecto a las 13:00 (Madrid) en que se publican los precios.
+    #
+    #   08:30 UTC = 10:30 Madrid en verano · 09:30 en invierno
+    #   09:45 UTC = 11:45 Madrid en verano · 10:45 en invierno
+    #
+    # No se ajusta al cambio de hora a propósito: en ambos casos la ejecución
+    # cae dentro de la mañana, que es lo único que importa.
+    - cron: "30 8 * * *"
+    - cron: "45 9 * * *"
+  workflow_dispatch:        # botón "Run workflow" (también desde el móvil)
+  push:
+    paths:
+      - "archivador_diario.py"
+      - ".github/workflows/archivador.yml"
+
+# El workflow escribe en el propio repositorio: necesita permiso explícito.
+permissions:
+  contents: write
+
+# Si la ejecución de respaldo se solapa con la principal, que espere en vez de
+# pisarla: dos procesos haciendo commit a la vez es un conflicto seguro.
+concurrency:
+  group: archivador
+  cancel-in-progress: false
+
+jobs:
+  archivar:
+    runs-on: ubuntu-latest
+    # Holgado a propósito: se recorren ~60 indicadores de previsión a un ritmo
+    # de ~1 petición/segundo, y los 404 transitorios de e·sios se reintentan.
+    # Una ejecución normal ronda los 5 minutos.
+    timeout-minutes: 30
+
+    steps:
+      - name: Descargar el repositorio
+        uses: actions/checkout@v4
+
+      - name: Preparar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar dependencias
+        run: pip install --quiet requests pandas openpyxl
+
+      - name: Capturar la foto del día
+        env:
+          ESIOS_TOKEN: ${{ secrets.ESIOS_TOKEN }}
+          ENTSOE_TOKEN: ${{ secrets.ENTSOE_TOKEN }}
+          AEMET_TOKEN: ${{ secrets.AEMET_TOKEN }}
+        run: python archivador_diario.py
+
+      - name: Guardar en el repositorio
+        run: |
+          git config user.name  "archivador-bess"
+          git config user.email "archivador@users.noreply.github.com"
+          git add archivo/
+          # Si no hay nada nuevo (por ejemplo, la ejecución de respaldo cuando
+          # la principal ya fue bien), no se hace commit y no es un error.
+          if git diff --staged --quiet; then
+            echo "Sin cambios que guardar."
+            exit 0
+          fi
+          git commit -m "Archivo del $(date -u +%Y-%m-%d) ($(date -u +%H:%M) UTC)"
+          # Reintento simple: si la otra ejecución hizo push mientras tanto,
+          # se reintegra y se vuelve a intentar en vez de fallar.
+          for intento in 1 2 3; do
+            if git push; then
+              exit 0
+            fi
+            echo "Push rechazado (intento $intento). Reintegrando..."
+            git pull --rebase --autostash
+            sleep 5
+          done
+          echo "No se pudo hacer push tras 3 intentos."
+          exit 1
+
+      - name: Publicar la salida como resumen
+        if: always()
+        run: |
+          echo "### Archivador del $(date -u +%Y-%m-%d)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          RUTA="archivo/$(date -u +%Y)/$(date -u +%m)/$(date -u +%Y-%m-%d)/manifiesto.json"
+          if [ -f "$RUTA" ]; then
+            echo '```json' >> $GITHUB_STEP_SUMMARY
+            cat "$RUTA" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          else
+            echo "No se generó manifiesto: la ejecución falló antes de empezar." >> $GITHUB_STEP_SUMMARY
+          fi
