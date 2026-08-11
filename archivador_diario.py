@@ -78,7 +78,7 @@ REQUISITOS
 Python 3.9+, `requests`, `pandas`. Tokens en variables de entorno:
 ESIOS_TOKEN, ENTSOE_TOKEN, AEMET_TOKEN.
 
-Versión: v3 — 2026-08-11.
+Versión: v3.1 — 2026-08-11.
 """
 
 import os
@@ -129,9 +129,30 @@ INDICADORES_PRINCIPALES = {
     543: "prev_solar_termica",
 }
 
-# Términos con los que se busca en el catálogo de e·sios. La búsqueda por
-# texto está confirmada como rápida y fiable (Aprendizaje_API_REE §3.1).
-TERMINOS_PREVISION = ["previsión", "prevista", "previsto", "D+1", "H+3"]
+# Términos de búsqueda, SEPARADOS EN GRUPOS con tope propio cada uno.
+#
+# Por qué en grupos: la v3 buscaba los cinco términos juntos, ordenaba por id y
+# se quedaba con los 300 primeros. Resultado medido el 11-ago-2026: los 300
+# archivados eran TODOS «Generación programada PBF/PVP/P48/PHF…» —ids del 1 al
+# 350—, y ni una sola previsión de verdad. Las de eólica, solar y demanda
+# tienen ids de cuatro y cinco cifras, así que entraban únicamente por la lista
+# fija de abajo. El tope, combinado con el orden por id, estaba dejando fuera
+# justo lo que buscábamos.
+#
+# Y son dos familias distintas, no un matiz:
+#
+#   · PREVISIÓN — lo que se espera que pase. Se publica ANTES del cierre de
+#     ofertas, así que es utilizable para predecir el precio del día siguiente.
+#   · PROGRAMA — lo que el mercado ya ha casado (PBF, P48, PHF de las sesiones
+#     intradiarias). Se publica DESPUÉS de la casación del mercado diario, o
+#     sea después de las 13:00. Usarlo para predecir el precio de D+1 sería
+#     fuga de información pura. Se archiva igualmente porque es valioso para la
+#     Fase 3 (backtest de estrategia de oferta) y para entender el mercado,
+#     pero NO puede entrar como variable del modelo de precio.
+GRUPOS_BUSQUEDA = {
+    "prevision": ["previsión", "prevista", "previsto"],
+    "programa": ["D+1", "H+3"],
+}
 
 # Red de seguridad: si el descubrimiento falla, se bajan al menos estos, que
 # son los ya catalogados en Aprendizaje_API_REE §4.6.
@@ -140,12 +161,16 @@ PREVISIONES_CONOCIDAS = [
     2563, 10034, 10249, 10358, 10359,
 ]
 
-# Tope de prudencia: si el catálogo devolviera cientos de coincidencias, mejor
-# avisar y quedarse corto que hacer una ejecución de una hora.
-# La primera ejecución real (11-ago-2026) topó con el límite de 150, así que se
-# sube: a ~1 petición/segundo, 300 indicadores son unos 5 minutos, holgados
-# dentro del tiempo máximo del workflow.
-MAX_INDICADORES = 300
+# Tope POR GRUPO, no global: así una familia no puede desplazar a la otra, que
+# es exactamente lo que pasó con el tope único. A ~1 petición/segundo, 500
+# indicadores son unos 8 minutos, holgados dentro del tiempo del workflow.
+MAX_POR_GRUPO = {"prevision": 350, "programa": 150}
+
+# AEMET no se pide en todas las capturas. Su predicción se elabora unas pocas
+# veces al día (medido: 08:55 y 10:35), así que pedirla cada hora devuelve lo
+# mismo y además nos gana un HTTP 429 — ya pasó en dos de las tres primeras
+# capturas horarias. Se pide cuando la hora es múltiplo de este número.
+CADA_CUANTAS_HORAS_AEMET = 3
 
 MUNICIPIOS_AEMET = {
     "28079": "madrid", "08019": "barcelona", "46250": "valencia",
@@ -168,7 +193,7 @@ def registrar(nombre, estado, detalle, filas=None, extra=None):
     MANIFIESTO["fuentes"][nombre] = {
         "estado": estado, "detalle": detalle, "filas": filas, **(extra or {})
     }
-    marca = {"OK": "✓", "VACIO": "·", "FALLO": "✗"}.get(estado, "?")
+    marca = {"OK": "✓", "VACIO": "·", "FALLO": "✗", "OMITIDA": "–"}.get(estado, "?")
     print(f"  [{marca}] {nombre}: {detalle}" + (f" ({filas} filas)" if filas else ""))
 
 
@@ -250,50 +275,59 @@ def descubrir_previsiones():
     previsión. Se hace en cada ejecución a propósito: si REE publica un
     indicador nuevo, entra solo, sin que nadie tenga que enterarse.
     """
-    titulo("e·sios — descubrimiento del catálogo de previsiones")
-    encontrados = {}
-    for termino in TERMINOS_PREVISION:
-        datos, error = pedir_esios("/indicators", {"text": termino})
-        if error:
-            print(f"  ⚠ búsqueda '{termino}': {error}")
-            continue
-        lista = datos.get("indicators", []) if isinstance(datos, dict) else []
-        nuevos = 0
-        for ind in lista:
-            idx = ind.get("id")
-            if idx is None or idx in encontrados:
-                continue
-            encontrados[idx] = {
-                "id": idx,
-                "nombre": (ind.get("name") or "").strip(),
-                "descripcion": (ind.get("description") or "")[:300].strip(),
-                "termino": termino,
-            }
-            nuevos += 1
-        print(f"  '{termino}': {len(lista)} resultados, {nuevos} nuevos")
-        time.sleep(1)
+    titulo("e·sios — descubrimiento del catálogo, por grupos")
+    encontrados, por_grupo = {}, {}
 
-    # Los conocidos entran siempre, aunque la búsqueda no los haya devuelto.
+    for grupo, terminos in GRUPOS_BUSQUEDA.items():
+        del_grupo = {}
+        for termino in terminos:
+            datos, error = pedir_esios("/indicators", {"text": termino})
+            if error:
+                print(f"  ⚠ búsqueda '{termino}': {error}")
+                continue
+            lista = datos.get("indicators", []) if isinstance(datos, dict) else []
+            nuevos = 0
+            for ind in lista:
+                idx = ind.get("id")
+                # Un indicador ya visto en otro grupo no se reasigna: el primer
+                # grupo que lo encuentra se lo queda, y 'prevision' va primero.
+                if idx is None or idx in encontrados or idx in del_grupo:
+                    continue
+                del_grupo[idx] = {
+                    "id": idx, "grupo": grupo,
+                    "nombre": (ind.get("name") or "").strip(),
+                    "descripcion": (ind.get("description") or "")[:300].strip(),
+                    "termino": termino,
+                }
+                nuevos += 1
+            print(f"  [{grupo}] '{termino}': {len(lista)} resultados, "
+                  f"{nuevos} nuevos")
+            time.sleep(1)
+
+        tope = MAX_POR_GRUPO.get(grupo, 200)
+        ids_grupo = sorted(del_grupo)
+        por_grupo[grupo] = {"encontrados": len(ids_grupo),
+                            "archivados": min(len(ids_grupo), tope)}
+        if len(ids_grupo) > tope:
+            print(f"  ⚠ [{grupo}] {len(ids_grupo)} encontrados, tope {tope}: "
+                  f"se archivan los {tope} de id más bajo.")
+            ids_grupo = ids_grupo[:tope]
+        for idx in ids_grupo:
+            encontrados[idx] = del_grupo[idx]
+
+    # Los conocidos entran siempre, aunque la búsqueda no los haya devuelto y
+    # aunque los topes se hayan agotado. Son los que el modelo usa de verdad.
     for idx in PREVISIONES_CONOCIDAS:
-        encontrados.setdefault(idx, {"id": idx, "nombre": "(de la lista fija)",
+        encontrados.setdefault(idx, {"id": idx, "grupo": "fijo",
+                                     "nombre": "(de la lista fija)",
                                      "descripcion": "", "termino": "fijo"})
 
     ids = sorted(encontrados)
-    total = len(ids)
-    if total > MAX_INDICADORES:
-        print(f"  ⚠ {total} indicadores encontrados, por encima del tope de "
-              f"{MAX_INDICADORES}. Se archivan los {MAX_INDICADORES} primeros")
-        print("    y se anota el recorte en el manifiesto — que un tope actúe")
-        print("    en silencio sería justo el fallo que este proyecto persigue.")
-        ids = ids[:MAX_INDICADORES]
-
-    # Se registra el TOTAL, no solo si hubo recorte: sin esa cifra no hay forma
-    # de saber cuánto tope hace falta, que es justo lo que pasó en la primera
-    # ejecución real.
+    detalle = " · ".join(f"{g}: {v['archivados']}/{v['encontrados']}"
+                         for g, v in por_grupo.items())
     registrar("esios_catalogo", "OK" if ids else "FALLO",
-              f"{len(ids)} indicadores a archivar de {total} encontrados",
-              extra={"encontrados": total, "archivados": len(ids),
-                     "recortado": total > len(ids)})
+              f"{len(ids)} a archivar ({detalle})",
+              extra={"por_grupo": por_grupo, "total_archivados": len(ids)})
     return [encontrados[i] for i in ids]
 
 
@@ -602,13 +636,19 @@ def capturar_entsoe(carpeta, hoy):
 # AEMET — la predicción, que es lo irrecuperable
 # ============================================================================
 
-def capturar_aemet(carpeta):
+def capturar_aemet(carpeta, hora_actual):
     titulo("AEMET — PREDICCIÓN de temperatura (irrecuperable después)")
     print("  La API solo devuelve la predicción vigente: si no se guarda hoy,")
     print("  no hay forma de saber mañana qué decía. Es el motivo principal")
     print("  por el que existe este programa.")
     if not AEMET_TOKEN:
         registrar("aemet", "FALLO", "falta AEMET_TOKEN")
+        return
+    # No en todas las capturas: ver CADA_CUANTAS_HORAS_AEMET.
+    if hora_actual % CADA_CUANTAS_HORAS_AEMET != 0:
+        registrar("aemet_prediccion_diaria", "OMITIDA",
+                  f"solo se pide cada {CADA_CUANTAS_HORAS_AEMET} h "
+                  f"(su predicción se elabora pocas veces al día)")
         return
 
     filas = []
@@ -785,7 +825,7 @@ def ejecutar():
     ahora_madrid = ahora_utc.astimezone(TZ_MADRID)
     hoy = ahora_madrid.date()
 
-    print("ARCHIVADOR DIARIO — FASE 0 DEL PROYECTO BESS (v3)")
+    print("ARCHIVADOR DIARIO — FASE 0 DEL PROYECTO BESS (v3.1)")
     print(f"Ejecución: {ahora_madrid.isoformat(timespec='seconds')} (Madrid)")
     print(f"           {ahora_utc.isoformat(timespec='seconds')} (UTC)")
 
@@ -801,7 +841,7 @@ def ejecutar():
     print(f"Destino:   {carpeta}/")
 
     MANIFIESTO.update({
-        "version": "v3",
+        "version": "v3.1",
         "ejecucion_madrid": ahora_madrid.isoformat(timespec="seconds"),
         "ejecucion_utc": ahora_utc.isoformat(timespec="seconds"),
         "fecha": hoy.isoformat(),
@@ -818,7 +858,7 @@ def ejecutar():
 
     for nombre, funcion, args in (
         ("ENTSO-E", capturar_entsoe, (carpeta, hoy)),
-        ("AEMET", capturar_aemet, (carpeta,)),
+        ("AEMET", capturar_aemet, (carpeta, ahora_madrid.hour)),
         ("MIBGAS", capturar_mibgas, (carpeta, hoy)),
     ):
         try:
@@ -831,7 +871,8 @@ def ejecutar():
               for f in os.listdir(carpeta)) / 1024
     MANIFIESTO["resumen"] = {
         "ok": estados.count("OK"), "vacio": estados.count("VACIO"),
-        "fallo": estados.count("FALLO"), "kb_total": round(tam, 1),
+        "fallo": estados.count("FALLO"), "omitida": estados.count("OMITIDA"),
+        "kb_total": round(tam, 1),
     }
 
     with open(os.path.join(carpeta, "manifiesto.json"), "w", encoding="utf-8") as f:
