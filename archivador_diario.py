@@ -78,7 +78,7 @@ REQUISITOS
 Python 3.9+, `requests`, `pandas`. Tokens en variables de entorno:
 ESIOS_TOKEN, ENTSOE_TOKEN, AEMET_TOKEN.
 
-Versión: v3.2 — 2026-08-11.
+Versión: v3.3 — 2026-08-11.
 """
 
 import os
@@ -181,6 +181,21 @@ MAX_POR_GRUPO = {
     "completo": {"prevision": 400, "programa": 1600},
 }
 
+# Ritmo de peticiones. El documento de conocimiento del proyecto fija ~1/s
+# como norma prudente, y se mantiene para los indicadores principales. Para el
+# barrido masivo se baja: 1.506 indicadores a 1/s son más de 25 minutos, y la
+# primera ejecución completa (11-ago-2026) se quedó sin tiempo y NO GUARDÓ
+# NADA. Los 429 se reintentan igual, así que el riesgo de acelerar es bajo y
+# el de no hacerlo ya se materializó.
+PAUSA_BARRIDO = 0.4
+
+# Presupuesto de tiempo del barrido, en minutos. Al agotarse se para y se
+# guarda lo capturado hasta ese momento, anotando cuántos quedaron fuera.
+# Sin esto, un barrido que no termina se lleva por delante la captura entera:
+# los ficheros se escriben al final, así que el trabajo de media hora se
+# perdía sin dejar rastro. Mejor una foto incompleta y anotada que ninguna.
+MINUTOS_MAX_BARRIDO = 22
+
 # AEMET no se pide en todas las capturas. Su predicción se elabora unas pocas
 # veces al día (medido: 08:55 y 10:35), así que pedirla cada hora devuelve lo
 # mismo y además nos gana un HTTP 429 — ya pasó en dos de las tres primeras
@@ -208,7 +223,8 @@ def registrar(nombre, estado, detalle, filas=None, extra=None):
     MANIFIESTO["fuentes"][nombre] = {
         "estado": estado, "detalle": detalle, "filas": filas, **(extra or {})
     }
-    marca = {"OK": "✓", "VACIO": "·", "FALLO": "✗", "OMITIDA": "–"}.get(estado, "?")
+    marca = {"OK": "✓", "VACIO": "·", "FALLO": "✗", "OMITIDA": "–",
+             "PARCIAL": "◐"}.get(estado, "?")
     print(f"  [{marca}] {nombre}: {detalle}" + (f" ({filas} filas)" if filas else ""))
 
 
@@ -450,7 +466,17 @@ def capturar_esios_previsiones(carpeta, hoy, catalogo):
 
     trozos, meta = [], []
     ok = vacios = fallos = 0
+    t0 = time.time()
+    limite = MINUTOS_MAX_BARRIDO * 60
+    cortado_en = None
     for i, entrada in enumerate(catalogo, 1):
+        if time.time() - t0 > limite:
+            cortado_en = i
+            print(f"  ⏱ Presupuesto de {MINUTOS_MAX_BARRIDO} min agotado en el "
+                  f"indicador {i} de {len(catalogo)}.")
+            print("    Se guarda lo capturado y se anota el corte: una foto")
+            print("    incompleta y declarada vale mucho más que ninguna foto.")
+            break
         idx = entrada["id"]
         df, ind, error = _serie_esios(idx, ini, fin)
         if df is None:
@@ -473,9 +499,10 @@ def capturar_esios_previsiones(carpeta, hoy, catalogo):
                          "estado": "ok", "detalle": "",
                          "values_updated_at": ind.get("values_updated_at"),
                          "filas": len(df)})
-        if i % 20 == 0:
-            print(f"    {i}/{len(catalogo)} indicadores procesados...")
-        time.sleep(1)
+        if i % 50 == 0:
+            print(f"    {i}/{len(catalogo)} procesados "
+                  f"({time.time() - t0:.0f}s)...")
+        time.sleep(PAUSA_BARRIDO)
 
     df_meta = pd.DataFrame(meta)
     # El catálogo con nombres y descripciones se guarda aparte: es lo que
@@ -491,13 +518,18 @@ def capturar_esios_previsiones(carpeta, hoy, catalogo):
     completo = pd.concat(trozos, ignore_index=True)
     ruta = guardar(completo, carpeta, "esios_previsiones")
     tam_kb = os.path.getsize(ruta) / 1024
-    registrar("esios_previsiones", "OK",
+    segundos = round(time.time() - t0)
+    aviso = "" if cortado_en is None else \
+        f", CORTADO en {cortado_en}/{len(catalogo)}"
+    registrar("esios_previsiones", "OK" if cortado_en is None else "PARCIAL",
               f"{ok} con datos, {vacios} vacíos, {fallos} fallidos "
-              f"({tam_kb:.0f} KB comprimidos)",
+              f"({tam_kb:.0f} KB, {segundos}s{aviso})",
               filas=len(completo),
               extra={"indicadores_ok": ok, "indicadores_vacios": vacios,
                      "indicadores_fallidos": fallos,
-                     "kb_comprimido": round(tam_kb, 1)})
+                     "kb_comprimido": round(tam_kb, 1),
+                     "segundos": segundos, "cortado_en": cortado_en,
+                     "pedidos": len(catalogo)})
 
 
 # ============================================================================
@@ -872,7 +904,7 @@ def ejecutar():
     ahora_madrid = ahora_utc.astimezone(TZ_MADRID)
     hoy = ahora_madrid.date()
 
-    print("ARCHIVADOR DIARIO — FASE 0 DEL PROYECTO BESS (v3.2)")
+    print("ARCHIVADOR DIARIO — FASE 0 DEL PROYECTO BESS (v3.3)")
     print(f"Ejecución: {ahora_madrid.isoformat(timespec='seconds')} (Madrid)")
     print(f"           {ahora_utc.isoformat(timespec='seconds')} (UTC)")
 
@@ -888,7 +920,7 @@ def ejecutar():
     print(f"Destino:   {carpeta}/")
 
     MANIFIESTO.update({
-        "version": "v3.2",
+        "version": "v3.3",
         "ejecucion_madrid": ahora_madrid.isoformat(timespec="seconds"),
         "ejecucion_utc": ahora_utc.isoformat(timespec="seconds"),
         "fecha": hoy.isoformat(),
@@ -924,6 +956,7 @@ def ejecutar():
     MANIFIESTO["resumen"] = {
         "ok": estados.count("OK"), "vacio": estados.count("VACIO"),
         "fallo": estados.count("FALLO"), "omitida": estados.count("OMITIDA"),
+        "parcial": estados.count("PARCIAL"),
         "kb_total": round(tam, 1),
     }
 
