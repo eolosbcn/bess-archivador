@@ -19,7 +19,21 @@ con:
 Ninguna de las dos cosas se puede arreglar mirando atrás. Sí se pueden
 arreglar hacia delante.
 
-QUÉ CAMBIA EN LA v2
+QUÉ CAMBIA EN LA v3
+-------------------
+Tres cambios, todos motivados por una aportación del usuario: las previsiones
+de renovables cubren unos 10 días y se REGENERAN varias veces al día.
+
+  1. Se piden 10 días hacia delante en vez de uno. La evolución de la
+     previsión de un día concreto según se acerca es irrecuperable si no se
+     captura, y es la serie más interesante que puede dar esta fuente.
+  2. Una subcarpeta por CAPTURA (`.../AAAA-MM-DD/HHMM/`) en vez de por día:
+     con varias ejecuciones diarias, la segunda machacaba a la primera.
+  3. Compresión por defecto, salvo los ficheros pequeños que conviene poder
+     mirar desde la web. Sin esto, 10 días × 8 capturas diarias multiplicaban
+     por cinco el tamaño del repositorio.
+
+QUÉ CAMBIÓ EN LA v2
 -------------------
 La v1 archivaba solo los cuatro indicadores que el modelo usa hoy. La v2
 archiva **todas las previsiones que publica e·sios**, descubriéndolas del
@@ -64,7 +78,7 @@ REQUISITOS
 Python 3.9+, `requests`, `pandas`. Tokens en variables de entorno:
 ESIOS_TOKEN, ENTSOE_TOKEN, AEMET_TOKEN.
 
-Versión: v2 — 2026-08-10.
+Versión: v3 — 2026-08-11.
 """
 
 import os
@@ -87,10 +101,16 @@ import pandas as pd
 TZ_MADRID = ZoneInfo("Europe/Madrid")
 CARPETA_RAIZ = "archivo"
 
-# Ventanas de captura, en días. Cortas a propósito.
+# Ventanas de captura, en días.
 DIAS_PRECIO_ATRAS = 8        # precios publicados: contexto + detectar revisiones
-DIAS_ADELANTE = 2            # hoy y mañana; mañana es lo que importa
-DIAS_PREVISION_ATRAS = 1     # las previsiones extra no necesitan tanto histórico
+DIAS_PREVISION_ATRAS = 1     # las previsiones no necesitan histórico
+# Hasta dónde se piden las previsiones hacia delante. Se piden 10 días aunque
+# el modelo solo use D+1: la previsión de un día concreto se REGENERA varias
+# veces a medida que ese día se acerca, y esa evolución —cómo cambia la
+# previsión del día 20 vista desde el 10, el 15 y el 19— es irrecuperable si
+# no se captura. Si un indicador no llega tan lejos, simplemente devuelve
+# menos: se pide y se registra hasta dónde llegó, en vez de suponerlo.
+DIAS_ADELANTE = 11
 
 ESIOS_BASE = "https://api.esios.ree.es"
 ENTSOE_API = "https://web-api.tp.entsoe.eu/api"
@@ -122,7 +142,10 @@ PREVISIONES_CONOCIDAS = [
 
 # Tope de prudencia: si el catálogo devolviera cientos de coincidencias, mejor
 # avisar y quedarse corto que hacer una ejecución de una hora.
-MAX_INDICADORES = 150
+# La primera ejecución real (11-ago-2026) topó con el límite de 150, así que se
+# sube: a ~1 petición/segundo, 300 indicadores son unos 5 minutos, holgados
+# dentro del tiempo máximo del workflow.
+MAX_INDICADORES = 300
 
 MUNICIPIOS_AEMET = {
     "28079": "madrid", "08019": "barcelona", "46250": "valencia",
@@ -149,7 +172,16 @@ def registrar(nombre, estado, detalle, filas=None, extra=None):
     print(f"  [{marca}] {nombre}: {detalle}" + (f" ({filas} filas)" if filas else ""))
 
 
-def guardar(df, carpeta, nombre, comprimir=False):
+def guardar(df, carpeta, nombre, comprimir=True):
+    """
+    Comprime por defecto. Con 10 días de previsión y varias capturas al día,
+    el CSV plano multiplicaría por cinco el tamaño del repositorio sin aportar
+    nada: pandas lee un .csv.gz exactamente igual que un .csv.
+
+    Se dejan en plano solo los ficheros que interesa poder mirar de un vistazo
+    desde la web de GitHub sin descargar nada — el precio, la predicción de
+    AEMET y los dos índices del catálogo—, que además son los pequeños.
+    """
     if df is None or df.empty:
         return None
     if comprimir:
@@ -247,16 +279,21 @@ def descubrir_previsiones():
                                      "descripcion": "", "termino": "fijo"})
 
     ids = sorted(encontrados)
-    if len(ids) > MAX_INDICADORES:
-        print(f"  ⚠ {len(ids)} indicadores encontrados, por encima del tope de "
+    total = len(ids)
+    if total > MAX_INDICADORES:
+        print(f"  ⚠ {total} indicadores encontrados, por encima del tope de "
               f"{MAX_INDICADORES}. Se archivan los {MAX_INDICADORES} primeros")
         print("    y se anota el recorte en el manifiesto — que un tope actúe")
         print("    en silencio sería justo el fallo que este proyecto persigue.")
         ids = ids[:MAX_INDICADORES]
 
+    # Se registra el TOTAL, no solo si hubo recorte: sin esa cifra no hay forma
+    # de saber cuánto tope hace falta, que es justo lo que pasó en la primera
+    # ejecución real.
     registrar("esios_catalogo", "OK" if ids else "FALLO",
-              f"{len(ids)} indicadores de previsión a archivar",
-              extra={"recortado": len(encontrados) > len(ids)})
+              f"{len(ids)} indicadores a archivar de {total} encontrados",
+              extra={"encontrados": total, "archivados": len(ids),
+                     "recortado": total > len(ids)})
     return [encontrados[i] for i in ids]
 
 
@@ -302,7 +339,8 @@ def capturar_esios_principales(carpeta, hoy):
         if df is None:
             registrar(etiqueta, "VACIO" if ind else "FALLO", error)
         else:
-            guardar(df, carpeta, etiqueta)
+            # El precio spot en plano: es el que más se consulta a ojo.
+            guardar(df, carpeta, etiqueta, comprimir=(indicador != 600))
             registrar(etiqueta, "OK",
                       f"{df['datetime_utc'].min()[:10]} a {df['datetime_utc'].max()[:10]}",
                       filas=len(df),
@@ -361,15 +399,16 @@ def capturar_esios_previsiones(carpeta, hoy, catalogo):
     df_meta = pd.DataFrame(meta)
     # El catálogo con nombres y descripciones se guarda aparte: es lo que
     # permitirá saber, dentro de un año, qué era el indicador 10358.
-    guardar(pd.DataFrame(catalogo), carpeta, "esios_catalogo_previsiones")
-    guardar(df_meta, carpeta, "esios_previsiones_meta")
+    guardar(pd.DataFrame(catalogo), carpeta, "esios_catalogo_previsiones",
+            comprimir=False)
+    guardar(df_meta, carpeta, "esios_previsiones_meta", comprimir=False)
 
     if not trozos:
         registrar("esios_previsiones", "FALLO", "ningún indicador devolvió datos")
         return
 
     completo = pd.concat(trozos, ignore_index=True)
-    ruta = guardar(completo, carpeta, "esios_previsiones", comprimir=True)
+    ruta = guardar(completo, carpeta, "esios_previsiones")
     tam_kb = os.path.getsize(ruta) / 1024
     registrar("esios_previsiones", "OK",
               f"{ok} con datos, {vacios} vacíos, {fallos} fallidos "
@@ -627,7 +666,7 @@ def capturar_aemet(carpeta):
         registrar("aemet_prediccion", "FALLO", "ninguna ciudad devolvió datos")
         return
     df = pd.DataFrame(filas)
-    guardar(df, carpeta, "aemet_prediccion_diaria")
+    guardar(df, carpeta, "aemet_prediccion_diaria", comprimir=False)
     registrar("aemet_prediccion_diaria", "OK",
               f"{df['ciudad'].nunique()} ciudades, hasta {df['fecha_prevista'].max()}",
               filas=len(df),
@@ -639,18 +678,76 @@ def capturar_aemet(carpeta):
 # ============================================================================
 
 def capturar_mibgas(carpeta, hoy):
+    """
+    En la primera ejecución real desde GitHub Actions (11-ago-2026) esta fuente
+    devolvió `HTTP 200, 549 bytes`: un 200 con un cuerpo minúsculo, o sea que
+    no era el XLSX. Es el mismo patrón de trampa que e·sios con los ficheros
+    I3/I90 — un código de éxito que no trae lo que dice traer.
+
+    Dos sospechas, y el código las cubre las dos sin poder distinguirlas de
+    antemano: que MIBGAS rechace peticiones sin cabeceras de navegador
+    completas (venían muy escuetas), o que sirva una página intermedia cuando
+    no hay una visita previa al sitio. Por eso ahora se mantiene una sesión,
+    se visita primero la página de acceso a ficheros y se envían cabeceras
+    realistas.
+
+    Y si aun así falla, **se guarda el principio de la respuesta en el
+    manifiesto**: 549 bytes de HTML dicen exactamente qué pasa, mientras que
+    "no funcionó" no dice nada. Diagnosticar a ciegas ya nos costó caro en
+    este proyecto.
+    """
     titulo("MIBGAS — precio del gas (PVB)")
     anio = hoy.year
-    url = (f"https://www.mibgas.es/es/file-access/MIBGAS_Data_{anio}.xlsx"
-           f"?path=AGNO_{anio}/XLS")
+    cabeceras = {
+        "User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                       "AppleWebKit/537.36 (KHTML, like Gecko) "
+                       "Chrome/128.0 Safari/537.36"),
+        "Accept": ("text/html,application/xhtml+xml,application/xml;q=0.9,"
+                   "application/vnd.openxmlformats-officedocument."
+                   "spreadsheetml.sheet,*/*;q=0.8"),
+        "Accept-Language": "es-ES,es;q=0.9,en;q=0.8",
+        "Referer": "https://www.mibgas.es/es/file-access",
+    }
+    urls = [
+        (f"https://www.mibgas.es/es/file-access/MIBGAS_Data_{anio}.xlsx"
+         f"?path=AGNO_{anio}/XLS"),
+        (f"https://www.mibgas.es/en/file-access/MIBGAS_Data_{anio}.xlsx"
+         f"?path=AGNO_{anio}/XLS"),
+    ]
+
+    sesion = requests.Session()
+    sesion.headers.update(cabeceras)
     try:
-        r = requests.get(url, headers=UA, timeout=120)
-    except Exception as e:
-        registrar("mibgas", "FALLO", f"error de red: {e}")
-        return
-    if r.status_code != 200 or len(r.content) < 10000:
+        # Visita previa: algunos sitios sirven el fichero solo si hay cookie
+        # de sesión. Si falla, no importa; se sigue igual.
+        sesion.get("https://www.mibgas.es/es/file-access", timeout=60)
+    except Exception:
+        pass
+
+    r = None
+    for url in urls:
+        try:
+            r = sesion.get(url, timeout=120)
+        except Exception as e:
+            registrar("mibgas", "FALLO", f"error de red: {e}")
+            return
+        if r.status_code == 200 and len(r.content) >= 10000:
+            break
+
+    if r is None or r.status_code != 200 or len(r.content) < 10000:
+        muestra = ""
+        if r is not None:
+            try:
+                muestra = r.content[:400].decode("utf-8", errors="replace")
+            except Exception:
+                muestra = repr(r.content[:200])
         registrar("mibgas", "FALLO",
-                  f"HTTP {r.status_code}, {len(r.content)} bytes")
+                  f"HTTP {getattr(r, 'status_code', '?')}, "
+                  f"{len(r.content) if r is not None else 0} bytes "
+                  f"(no parece un XLSX)",
+                  extra={"tipo_contenido": (r.headers.get("Content-Type")
+                                            if r is not None else None),
+                         "muestra_respuesta": muestra})
         return
 
     ruta_tmp = os.path.join(carpeta, "_mibgas_tmp.xlsx")
@@ -688,16 +785,23 @@ def ejecutar():
     ahora_madrid = ahora_utc.astimezone(TZ_MADRID)
     hoy = ahora_madrid.date()
 
-    print("ARCHIVADOR DIARIO — FASE 0 DEL PROYECTO BESS (v2)")
+    print("ARCHIVADOR DIARIO — FASE 0 DEL PROYECTO BESS (v3)")
     print(f"Ejecución: {ahora_madrid.isoformat(timespec='seconds')} (Madrid)")
     print(f"           {ahora_utc.isoformat(timespec='seconds')} (UTC)")
 
-    carpeta = os.path.join(CARPETA_RAIZ, f"{hoy:%Y}", f"{hoy:%m}", f"{hoy:%Y-%m-%d}")
+    # Una subcarpeta por CAPTURA, no por día: con varias ejecuciones diarias,
+    # escribir todas en la misma carpeta hacía que la segunda machacara a la
+    # primera. Sobrevivían en el historial de Git, pero comparar dos versiones
+    # del mismo día —que es justo lo que queremos estudiar— era incómodo.
+    # La hora es la REAL de ejecución, no la programada: así el retraso del
+    # cron queda registrado en vez de disimulado.
+    carpeta = os.path.join(CARPETA_RAIZ, f"{hoy:%Y}", f"{hoy:%m}",
+                           f"{hoy:%Y-%m-%d}", f"{ahora_madrid:%H%M}")
     os.makedirs(carpeta, exist_ok=True)
     print(f"Destino:   {carpeta}/")
 
     MANIFIESTO.update({
-        "version": "v2",
+        "version": "v3",
         "ejecucion_madrid": ahora_madrid.isoformat(timespec="seconds"),
         "ejecucion_utc": ahora_utc.isoformat(timespec="seconds"),
         "fecha": hoy.isoformat(),
