@@ -69,41 +69,41 @@ id,nombre,estado,detalle,values_updated_at,filas
 68,Generación programada PVP Exportación Portugal,ok,,2026-08-10T19:24:29.000+02:00,181
 69,Generación programada PVP Exportación Marruecos,ok,,2026-08-10T19:24:29.000+02:00,192
 70,Generación programada PVP Exportación Andorra,ok,,2026-08-10T19:24:29.000+02:00,192
-71,Generación programada P48 Hidráulica UGH,ok,,2026-08-11T10:39:01.000+02:00,192
-72,Generación programada P48 Hidráulica no UGH,ok,,2026-08-11T10:39:01.000+02:00,192
-73,Generación programada P48 Turbinación bombeo,ok,,2026-08-11T10:39:01.000+02:00,135
-74,Generación programada P48 Nuclear,ok,,2026-08-11T10:39:01.000+02:00,192
+71,Generación programada P48 Hidráulica UGH,ok,,2026-08-11T11:16:56.000+02:00,192
+72,Generación programada P48 Hidráulica no UGH,ok,,2026-08-11T11:16:56.000+02:00,192
+73,Generación programada P48 Turbinación bombeo,ok,,2026-08-11T11:16:56.000+02:00,135
+74,Generación programada P48 Nuclear,ok,,2026-08-11T11:16:56.000+02:00,192
 75,Generación programada P48 Hulla antracita Anexo II RD 134/2010,vacio,sin valores (aún no publicado),,0
 76,Generación programada P48 Hulla sub-bituminosa Anexo II RD 134/2010,vacio,sin valores (aún no publicado),,0
 77,Generación programada P48 Hulla antracita,vacio,sin valores (aún no publicado),,0
 78,Generación programada P48 Hulla sub-bituminosa,vacio,sin valores (aún no publicado),,0
-79,Generación programada P48 Ciclo combinado,ok,,2026-08-11T10:39:01.000+02:00,192
+79,Generación programada P48 Ciclo combinado,ok,,2026-08-11T11:16:56.000+02:00,192
 80,Generación programada P48 Fuel,vacio,sin valores (aún no publicado),,0
-81,Generación programada P48 Gas Natural - Turbina de vapor,ok,,2026-08-11T10:39:01.000+02:00,192
-82,Generación programada P48 Eólica terrestre,ok,,2026-08-11T10:39:01.000+02:00,192
-83,Generación programada P48 Eólica marina,ok,,2026-08-11T10:39:01.000+02:00,24
-84,Generación programada P48 Solar fotovoltaica,ok,,2026-08-11T10:39:01.000+02:00,191
-85,Generación programada P48 Solar térmica,ok,,2026-08-11T10:39:01.000+02:00,192
+81,Generación programada P48 Gas Natural - Turbina de vapor,ok,,2026-08-11T11:16:56.000+02:00,192
+82,Generación programada P48 Eólica terrestre,ok,,2026-08-11T11:16:56.000+02:00,192
+83,Generación programada P48 Eólica marina,ok,,2026-08-11T11:16:56.000+02:00,24
+84,Generación programada P48 Solar fotovoltaica,ok,,2026-08-11T11:16:56.000+02:00,191
+85,Generación programada P48 Solar térmica,ok,,2026-08-11T11:16:56.000+02:00,192
 86,Generación programada P48 Océano y geotérmica,vacio,sin valores (aún no publicado),,0
-87,Generación programada P48 Gas Natural Cogeneración,ok,,2026-08-11T10:39:01.000+02:00,192
-88,Generación programada P48 Derivados del petróleo ó carbón,ok,,2026-08-11T10:39:01.000+02:00,192
+87,Generación programada P48 Gas Natural Cogeneración,ok,,2026-08-11T11:16:56.000+02:00,192
+88,Generación programada P48 Derivados del petróleo ó carbón,ok,,2026-08-11T11:16:56.000+02:00,192
 89,Generación programada P48 Subproductos minería,vacio,sin valores (aún no publicado),,0
-90,Generación programada P48 Energía residual,ok,,2026-08-11T10:39:01.000+02:00,192
-91,Generación programada P48 Biomasa,ok,,2026-08-11T10:39:01.000+02:00,192
-92,Generación programada P48 Biogás,ok,,2026-08-11T10:39:01.000+02:00,192
-93,Generación programada P48 Residuos domésticos y similares,ok,,2026-08-11T10:39:01.000+02:00,192
-94,Generación programada P48 Residuos varios,ok,,2026-08-11T10:39:01.000+02:00,192
-95,Generación programada P48 Consumo bombeo,ok,,2026-08-11T10:39:01.000+02:00,106
-96,Generación programada P48 Enlace Baleares,ok,,2026-08-11T10:39:01.000+02:00,192
-97,Generación programada P48 Genéricas,ok,,2026-08-11T10:39:01.000+02:00,6
-98,Generación programada P48 Importación Francia,ok,,2026-08-11T10:39:01.000+02:00,175
-99,Generación programada P48 Importación Portugal,ok,,2026-08-11T10:39:01.000+02:00,110
+90,Generación programada P48 Energía residual,ok,,2026-08-11T11:16:56.000+02:00,192
+91,Generación programada P48 Biomasa,ok,,2026-08-11T11:16:56.000+02:00,192
+92,Generación programada P48 Biogás,ok,,2026-08-11T11:16:56.000+02:00,192
+93,Generación programada P48 Residuos domésticos y similares,ok,,2026-08-11T11:16:56.000+02:00,192
+94,Generación programada P48 Residuos varios,ok,,2026-08-11T11:16:56.000+02:00,192
+95,Generación programada P48 Consumo bombeo,ok,,2026-08-11T11:16:56.000+02:00,107
+96,Generación programada P48 Enlace Baleares,ok,,2026-08-11T11:16:56.000+02:00,192
+97,Generación programada P48 Genéricas,ok,,2026-08-11T11:16:56.000+02:00,6
+98,Generación programada P48 Importación Francia,ok,,2026-08-11T11:16:56.000+02:00,174
+99,Generación programada P48 Importación Portugal,ok,,2026-08-11T11:16:56.000+02:00,116
 100,Generación programada P48 Importación Marruecos,vacio,sin valores (aún no publicado),,0
 101,Generación programada P48 Importación Andorra,vacio,sin valores (aún no publicado),,0
-102,Generación programada P48 Exportación Francia,ok,,2026-08-11T10:39:01.000+02:00,139
-103,Generación programada P48 Exportación Portugal,ok,,2026-08-11T10:39:01.000+02:00,188
-104,Generación programada P48 Exportación Marruecos,ok,,2026-08-11T10:39:02.000+02:00,192
-105,Generación programada P48 Exportación Andorra,ok,,2026-08-11T10:39:02.000+02:00,192
+102,Generación programada P48 Exportación Francia,ok,,2026-08-11T11:16:56.000+02:00,143
+103,Generación programada P48 Exportación Portugal,ok,,2026-08-11T11:16:56.000+02:00,192
+104,Generación programada P48 Exportación Marruecos,ok,,2026-08-11T11:16:56.000+02:00,192
+105,Generación programada P48 Exportación Andorra,ok,,2026-08-11T11:16:56.000+02:00,192
 106,Generación programada PHF1 Hidráulica UGH,ok,,2026-08-10T20:32:11.000+02:00,192
 107,Generación programada PHF1 Hidráulica no UGH,ok,,2026-08-10T20:32:11.000+02:00,192
 108,Generación programada PHF1 Turbinación bombeo,ok,,2026-08-10T20:32:11.000+02:00,141

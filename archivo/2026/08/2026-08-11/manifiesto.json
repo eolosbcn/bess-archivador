@@ -18,15 +18,15 @@
       "estado": "OK",
       "detalle": "2026-08-02 a 2026-08-12",
       "filas": 960,
-      "values_updated_at": "2026-08-11T09:41:04.000+02:00",
-      "hash": "c4e19624b9e9c507"
+      "values_updated_at": "2026-08-11T10:41:03.000+02:00",
+      "hash": "6958f2c2c0fbd865"
     },
     "esios_543_prev_solar_termica": {
       "estado": "OK",
       "detalle": "2026-08-02 a 2026-08-12",
       "filas": 960,
-      "values_updated_at": "2026-08-11T09:41:03.000+02:00",
-      "hash": "059eaf754f599f11"
+      "values_updated_at": "2026-08-11T10:41:03.000+02:00",
+      "hash": "396fd96632de3e97"
     },
     "esios_catalogo": {
       "estado": "OK",
@@ -37,11 +37,11 @@
     "esios_previsiones": {
       "estado": "OK",
       "detalle": "104 con datos, 46 vacíos, 0 fallidos (87 KB comprimidos)",
-      "filas": 16497,
+      "filas": 16511,
       "indicadores_ok": 104,
       "indicadores_vacios": 46,
       "indicadores_fallidos": 0,
-      "kb_comprimido": 86.6
+      "kb_comprimido": 86.7
     },
     "entsoe_A65_prev_demanda_es": {
       "estado": "OK",
@@ -77,24 +77,24 @@
       "detalle": "6 ciudades, hasta 2026-08-17",
       "filas": 42,
       "elaborado": [
-        "2026-08-11T07:15:11"
+        "2026-08-11T08:55:11"
       ]
     },
-    "mibgas": {
-      "estado": "FALLO",
-      "detalle": "HTTP 200, 549 bytes",
-      "filas": null
+    "mibgas_gdaes": {
+      "estado": "OK",
+      "detalle": "hasta 2026-08-11",
+      "filas": 48
     }
   },
   "version": "v2",
-  "ejecucion_madrid": "2026-08-11T10:45:14+02:00",
-  "ejecucion_utc": "2026-08-11T08:45:14+00:00",
+  "ejecucion_madrid": "2026-08-11T11:18:50+02:00",
+  "ejecucion_utc": "2026-08-11T09:18:50+00:00",
   "fecha": "2026-08-11",
   "dia_objetivo": "2026-08-12",
   "resumen": {
-    "ok": 12,
+    "ok": 13,
     "vacio": 0,
-    "fallo": 1,
-    "kb_total": 529.4
+    "fallo": 0,
+    "kb_total": 537.5
   }
 }
