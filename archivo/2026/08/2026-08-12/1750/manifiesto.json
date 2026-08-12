@@ -1,0 +1,115 @@
+{
+  "fuentes": {
+    "esios_600_precio_spot": {
+      "estado": "OK",
+      "detalle": "2026-08-03 a 2026-08-13",
+      "filas": 960,
+      "values_updated_at": "2026-08-12T14:17:18.000+02:00",
+      "hash": "f87c55cc2e0b63db"
+    },
+    "esios_541_prev_eolica": {
+      "estado": "OK",
+      "detalle": "2026-08-03 a 2026-08-21",
+      "filas": 1728,
+      "values_updated_at": "2026-08-12T17:40:03.000+02:00",
+      "hash": "95dcc6eacca9106f"
+    },
+    "esios_542_prev_solar_fv": {
+      "estado": "OK",
+      "detalle": "2026-08-03 a 2026-08-21",
+      "filas": 1728,
+      "values_updated_at": "2026-08-12T17:41:08.000+02:00",
+      "hash": "0bdf15e87bb6f67d"
+    },
+    "esios_543_prev_solar_termica": {
+      "estado": "OK",
+      "detalle": "2026-08-03 a 2026-08-21",
+      "filas": 1728,
+      "values_updated_at": "2026-08-12T17:41:08.000+02:00",
+      "hash": "2baf553d6b95392b"
+    },
+    "esios_catalogo": {
+      "estado": "OK",
+      "detalle": "[ligero] 110 a archivar (prevision: 110/110 · programa: omitido)",
+      "filas": null,
+      "modo": "ligero",
+      "por_grupo": {
+        "prevision": {
+          "encontrados": 110,
+          "archivados": 110
+        },
+        "programa": {
+          "encontrados": null,
+          "archivados": 0,
+          "omitido": true
+        }
+      },
+      "total_archivados": 110
+    },
+    "esios_previsiones": {
+      "estado": "OK",
+      "detalle": "96 con datos, 12 vacíos, 2 fallidos (153 KB, 91s)",
+      "filas": 25792,
+      "indicadores_ok": 96,
+      "indicadores_vacios": 12,
+      "indicadores_fallidos": 2,
+      "kb_comprimido": 152.8,
+      "segundos": 91,
+      "cortado_en": null,
+      "pedidos": 110
+    },
+    "entsoe_A65_prev_demanda_es": {
+      "estado": "OK",
+      "detalle": "hasta 2026-08-13 21:45:00+00:00",
+      "filas": 952,
+      "hash": "709759dfeebdbe6b"
+    },
+    "entsoe_A69_prev_renovable_es": {
+      "estado": "OK",
+      "detalle": "hasta 2026-08-12 21:45:00+00:00",
+      "filas": 1712,
+      "hash": "f7a7f6073564934f"
+    },
+    "entsoe_A44_precio_francia": {
+      "estado": "OK",
+      "detalle": "hasta 2026-08-13 21:45:00+00:00",
+      "filas": 960,
+      "hash": "49758aa343f81c52"
+    },
+    "entsoe_A44_precio_es": {
+      "estado": "OK",
+      "detalle": "hasta 2026-08-13 21:45:00+00:00",
+      "filas": 960,
+      "hash": "59985206fe0fbb89"
+    },
+    "entsoe_A72_reserva_hidraulica": {
+      "estado": "OK",
+      "detalle": "última lectura 2026-08-02 22:00:00+00:00",
+      "filas": 5
+    },
+    "aemet_prediccion_diaria": {
+      "estado": "OMITIDA",
+      "detalle": "solo se pide cada 3 h (su predicción se elabora pocas veces al día)",
+      "filas": null
+    },
+    "mibgas_gdaes": {
+      "estado": "OK",
+      "detalle": "hasta 2026-08-12",
+      "filas": 48
+    }
+  },
+  "version": "v3.3",
+  "ejecucion_madrid": "2026-08-12T17:50:50+02:00",
+  "ejecucion_utc": "2026-08-12T15:50:50+00:00",
+  "fecha": "2026-08-12",
+  "dia_objetivo": "2026-08-13",
+  "modo": "ligero",
+  "resumen": {
+    "ok": 12,
+    "vacio": 0,
+    "fallo": 0,
+    "omitida": 1,
+    "parcial": 0,
+    "kb_total": 324.3
+  }
+}
