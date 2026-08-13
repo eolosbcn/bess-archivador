@@ -19,6 +19,31 @@ con:
 Ninguna de las dos cosas se puede arreglar mirando atrás. Sí se pueden
 arreglar hacia delante.
 
+QUÉ CAMBIA EN LA v3.9
+---------------------
+Seguimiento de la CADENA DE PROGRAMACIÓN (PBF → PVP → P48 → PHF), a petición
+del análisis de vertidos fotovoltaicos.
+
+El problema: esos indicadores viven en el grupo «programa», con tope 0 en modo
+ligero, y solo la primera captura del día va en completo. La cadena se
+fotografiaba **una vez al día**, hacia las 00:50. Del P48 teníamos su estado
+recién nacido y nunca cómo se modifica durante el día de operación.
+
+  1. **28 indicadores fijos** (fotovoltaica, eólica terrestre y solar térmica)
+     entran en TODAS las capturas, al margen de los topes.
+  2. **`archivo/seguimiento_programas.csv`**, acumulativo y en ruta fija: una
+     fila por captura y por indicador, con `values_updated_at`, `fecha_max`,
+     `n_periodos`, `suma_valores` y `hash_valores`.
+
+Las dos últimas columnas son la clave: detectan una republicación **aunque
+`values_updated_at` no cambie**, y distinguen el refresco sin cambio de datos
+del cambio real. Con eso, «¿a qué hora se emite la primera versión del P48 de
+un día?» se contesta buscando la primera fila del indicador 84 cuyo
+`fecha_max` alcanza ese día.
+
+Se registran también las filas VACÍAS, a propósito: «a esta hora todavía no
+estaba publicado» es la mitad de la respuesta.
+
 QUÉ CAMBIA EN LA v3.8
 ---------------------
 AEMET pasa de ser la fuente más pobre del archivo a una de las más ricas.
@@ -162,7 +187,7 @@ REQUISITOS
 Python 3.9+, `requests`, `pandas`. Tokens en variables de entorno:
 ESIOS_TOKEN, ENTSOE_TOKEN, AEMET_TOKEN.
 
-Versión: v3.8 — 2026-08-13.
+Versión: v3.9 — 2026-08-13.
 """
 
 import os
@@ -259,6 +284,29 @@ GRUPOS_BUSQUEDA = {
 
 # Red de seguridad: si el descubrimiento falla, se bajan al menos estos, que
 # son los ya catalogados en Aprendizaje_API_REE §4.6.
+# Cadena de programación bajo SEGUIMIENTO. Entran en TODAS las capturas, al
+# margen de los topes, igual que PREVISIONES_CONOCIDAS.
+#
+# Por qué (petición del 13-ago-2026 desde el análisis de vertidos): estos
+# indicadores viven en el grupo «programa», cuyo tope en modo ligero es 0. Como
+# solo la primera captura del día va en completo, la cadena se fotografiaba UNA
+# vez al día, hacia las 00:50. Del P48 solo teníamos su estado recién nacido y
+# nunca veíamos cómo se modifica durante el día de operación — que es
+# justamente lo que hay que ver, y lo que no se puede recuperar después.
+#
+# Los 28 ids están verificados uno a uno contra el catálogo real archivado el
+# 13-ago-2026. Aviso para quien los revise: PHF2 y PHF4 NO existen para estas
+# tecnologías (4 indicadores en el catálogo frente a 57 de cada uno de los
+# demás PHF), así que su ausencia en esta lista es correcta.
+PROGRAMAS_SEGUIDOS = [
+    # Solar fotovoltaica — la prioritaria. 84 es el P48, el que urge.
+    14, 49, 84, 119, 189, 259, 294, 329, 1413, 434,
+    # Eólica terrestre
+    12, 47, 82, 117, 187, 257, 292, 327, 1411,
+    # Solar térmica
+    15, 50, 85, 120, 190, 260, 295, 330, 1414,
+]
+
 PREVISIONES_CONOCIDAS = [
     460, 541, 542, 543, 603, 1775, 1776, 1777, 1778,
     2563, 10034, 10249, 10358, 10359,
@@ -553,6 +601,13 @@ def descubrir_previsiones(modo):
         encontrados.setdefault(idx, {"id": idx, "grupo": "fijo",
                                      "nombre": "(de la lista fija)",
                                      "descripcion": "", "termino": "fijo"})
+    # Y la cadena de programación bajo seguimiento, por el mismo mecanismo. Sus
+    # ids son bajos (12 a 434), así que al ordenar quedan de los primeros y se
+    # capturan antes de que pueda actuar el corte por presupuesto de tiempo.
+    for idx in PROGRAMAS_SEGUIDOS:
+        encontrados.setdefault(idx, {"id": idx, "grupo": "programa_seguido",
+                                     "nombre": "(cadena de programación)",
+                                     "descripcion": "", "termino": "seguimiento"})
 
     ids = sorted(encontrados)
     detalle = " · ".join(
@@ -727,6 +782,97 @@ def guardar_catalogo(catalogo):
     return ruta
 
 
+COLUMNAS_SEGUIMIENTO = [
+    "captura_madrid", "indicador", "nombre", "estado", "values_updated_at",
+    "fecha_min", "fecha_max", "dias_cubiertos", "n_periodos",
+    "suma_valores", "hash_valores",
+]
+
+
+def _fila_seguimiento(idx, nombre, estado, ind, df):
+    """
+    Una foto compacta de un indicador de la cadena de programación, tal como
+    estaba en ESTA captura.
+
+    `suma_valores` y `hash_valores` son lo que permite detectar una
+    republicación AUNQUE `values_updated_at` no cambie: si el hash cambia, el
+    contenido cambió. Y al revés — si cambia `values_updated_at` pero no el
+    hash, hubo refresco sin cambio de datos. Las dos cosas interesan y las dos
+    se pierden si no se graban en su momento.
+    """
+    fila = {
+        "captura_madrid": MANIFIESTO.get("ejecucion_madrid", ""),
+        "indicador": idx, "nombre": nombre, "estado": estado,
+        "values_updated_at": (ind or {}).get("values_updated_at", ""),
+        "fecha_min": "", "fecha_max": "", "dias_cubiertos": 0,
+        "n_periodos": 0, "suma_valores": "", "hash_valores": "",
+    }
+    if df is None or df.empty:
+        # Una fila vacía NO es ruido: es la que dice «a esta hora todavía no
+        # estaba publicado», y es la mitad de la respuesta a cuándo aparece
+        # por primera vez el programa del día siguiente.
+        return fila
+    col = "datetime" if "datetime" in df.columns else "datetime_utc"
+    fechas = df[col].astype(str)
+    valores = pd.to_numeric(df["value"], errors="coerce")
+    fila.update({
+        "fecha_min": fechas.min(), "fecha_max": fechas.max(),
+        "dias_cubiertos": fechas.str[:10].nunique(),
+        "n_periodos": len(df),
+        "suma_valores": round(float(valores.fillna(0).sum()), 1),
+        "hash_valores": hash_texto(",".join(
+            "" if pd.isna(v) else f"{v:.4f}" for v in valores)),
+    })
+    return fila
+
+
+def actualizar_seguimiento(filas):
+    """
+    Añade al fichero acumulativo `archivo/seguimiento_programas.csv`. Mismo
+    criterio que el índice: se AÑADE, y solo se reescribe entero si cambia la
+    cabecera o si esta captura ya estaba registrada.
+
+    No se poda nada. Durante los primeros meses, que es cuando se está
+    caracterizando el comportamiento, cualquier poda destruye justamente lo
+    que se quiere medir. Con 28 indicadores y 8 capturas diarias son ~224
+    filas al día: unas 80.000 al año, que en CSV son pocos MB.
+    """
+    if not filas:
+        return 0
+    ruta = os.path.join(CARPETA_RAIZ, "seguimiento_programas.csv")
+    previas, cabecera = [], None
+    if os.path.isfile(ruta):
+        try:
+            with open(ruta, newline="", encoding="utf-8") as f:
+                lector = csv.DictReader(f)
+                cabecera = lector.fieldnames
+                previas = list(lector)
+        except Exception:
+            previas, cabecera = [], None
+
+    capturas = {f["captura_madrid"] for f in filas}
+    repetida = any(p.get("captura_madrid") in capturas for p in previas)
+    if cabecera != COLUMNAS_SEGUIMIENTO or repetida:
+        previas = [p for p in previas
+                   if p.get("captura_madrid") and
+                   p.get("captura_madrid") not in capturas]
+        with open(ruta, "w", newline="", encoding="utf-8") as f:
+            w = csv.DictWriter(f, fieldnames=COLUMNAS_SEGUIMIENTO,
+                               extrasaction="ignore")
+            w.writeheader()
+            for p in previas:
+                w.writerow({c: p.get(c, "") for c in COLUMNAS_SEGUIMIENTO})
+            for fila in filas:
+                w.writerow(fila)
+    else:
+        with open(ruta, "a", newline="", encoding="utf-8") as f:
+            w = csv.DictWriter(f, fieldnames=COLUMNAS_SEGUIMIENTO,
+                               extrasaction="ignore")
+            for fila in filas:
+                w.writerow(fila)
+    return len(previas) + len(filas)
+
+
 def capturar_esios_previsiones(carpeta, hoy, catalogo):
     """
     Todas las previsiones descubiertas, en un ÚNICO fichero comprimido en
@@ -744,7 +890,7 @@ def capturar_esios_previsiones(carpeta, hoy, catalogo):
                                dt.time(0, 0), tzinfo=TZ_MADRID)
            - dt.timedelta(seconds=1)).isoformat()
 
-    trozos, meta = [], []
+    trozos, meta, seguimiento = [], [], []
     ok = vacios = fallos = 0
     t0 = time.time()
     limite = MINUTOS_MAX_BARRIDO * 60
@@ -770,6 +916,10 @@ def capturar_esios_previsiones(carpeta, hoy, catalogo):
                          "estado": estado, "detalle": error,
                          "values_updated_at": (ind or {}).get("values_updated_at"),
                          "filas": 0})
+            if idx in PROGRAMAS_SEGUIDOS:
+                seguimiento.append(_fila_seguimiento(
+                    idx, (ind or {}).get("name") or entrada["nombre"],
+                    estado, ind, None))
         else:
             df = df.copy()
             df.insert(0, "indicador", idx)
@@ -779,6 +929,9 @@ def capturar_esios_previsiones(carpeta, hoy, catalogo):
                          "estado": "ok", "detalle": "",
                          "values_updated_at": ind.get("values_updated_at"),
                          "filas": len(df)})
+            if idx in PROGRAMAS_SEGUIDOS:
+                seguimiento.append(_fila_seguimiento(
+                    idx, ind.get("name") or entrada["nombre"], "ok", ind, df))
         if i % 50 == 0:
             print(f"    {i}/{len(catalogo)} procesados "
                   f"({time.time() - t0:.0f}s)...")
@@ -794,6 +947,25 @@ def capturar_esios_previsiones(carpeta, hoy, catalogo):
         registrar("esios_catalogo_fichero", "FALLO",
                   f"{type(e).__name__}: {e}")
     guardar(df_meta, carpeta, "esios_previsiones_meta", comprimir=False)
+
+    # El seguimiento va en su propio try: llegados aquí las series ya están
+    # capturadas y esto es contabilidad. Que un fallo aquí tumbe una captura
+    # buena sería absurdo.
+    try:
+        total = actualizar_seguimiento(seguimiento)
+        con_datos = sum(1 for f in seguimiento if f["estado"] == "ok")
+        p48 = next((f for f in seguimiento if f["indicador"] == 84), None)
+        detalle = (f"{len(seguimiento)} indicadores ({con_datos} con datos), "
+                   f"{total} filas acumuladas")
+        if p48:
+            detalle += (f" · P48 FV hasta {p48['fecha_max'][:16] or '—'}"
+                        f" (publicado {str(p48['values_updated_at'])[:19] or '—'})")
+        registrar("esios_seguimiento_programas",
+                  "OK" if seguimiento else "VACIO", detalle,
+                  filas=len(seguimiento))
+    except Exception as e:
+        registrar("esios_seguimiento_programas", "FALLO",
+                  f"{type(e).__name__}: {e}")
 
     if not trozos:
         registrar("esios_previsiones", "FALLO", "ningún indicador devolvió datos")
@@ -1487,7 +1659,7 @@ def ejecutar():
     ahora_madrid = ahora_utc.astimezone(TZ_MADRID)
     hoy = ahora_madrid.date()
 
-    print("ARCHIVADOR DIARIO — FASE 0 DEL PROYECTO BESS (v3.8)")
+    print("ARCHIVADOR DIARIO — FASE 0 DEL PROYECTO BESS (v3.9)")
     print(f"Ejecución: {ahora_madrid.isoformat(timespec='seconds')} (Madrid)")
     print(f"           {ahora_utc.isoformat(timespec='seconds')} (UTC)")
 
@@ -1503,7 +1675,7 @@ def ejecutar():
     print(f"Destino:   {carpeta}/")
 
     MANIFIESTO.update({
-        "version": "v3.8",
+        "version": "v3.9",
         "ejecucion_madrid": ahora_madrid.isoformat(timespec="seconds"),
         "ejecucion_utc": ahora_utc.isoformat(timespec="seconds"),
         "fecha": hoy.isoformat(),
