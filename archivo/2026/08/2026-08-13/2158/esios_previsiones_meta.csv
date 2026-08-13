@@ -1,0 +1,139 @@
+id,nombre,estado,detalle,values_updated_at,filas
+12,(cadena de programación),ok,,2026-08-13T14:31:16.000+02:00,288
+14,(cadena de programación),ok,,2026-08-13T14:31:16.000+02:00,278
+15,(cadena de programación),ok,,2026-08-13T14:31:16.000+02:00,288
+47,(cadena de programación),ok,,2026-08-13T16:33:21.000+02:00,288
+49,(cadena de programación),ok,,2026-08-13T16:33:21.000+02:00,278
+50,(cadena de programación),ok,,2026-08-13T16:33:21.000+02:00,288
+82,(cadena de programación),ok,,2026-08-13T21:42:01.000+02:00,192
+84,(cadena de programación),ok,,2026-08-13T21:42:01.000+02:00,189
+85,(cadena de programación),ok,,2026-08-13T21:42:01.000+02:00,192
+117,(cadena de programación),ok,,2026-08-13T17:59:01.000+02:00,288
+119,(cadena de programación),ok,,2026-08-13T17:59:01.000+02:00,278
+120,(cadena de programación),ok,,2026-08-13T17:59:01.000+02:00,288
+187,(cadena de programación),ok,,2026-08-13T14:35:39.000+02:00,96
+189,(cadena de programación),ok,,2026-08-13T14:35:39.000+02:00,96
+190,(cadena de programación),ok,,2026-08-13T14:35:39.000+02:00,96
+257,(cadena de programación),vacio,sin valores (aún no publicado),,0
+259,(cadena de programación),vacio,sin valores (aún no publicado),,0
+260,(cadena de programación),vacio,sin valores (aún no publicado),,0
+292,(cadena de programación),vacio,sin valores (aún no publicado),,0
+294,(cadena de programación),vacio,sin valores (aún no publicado),,0
+295,(cadena de programación),vacio,sin valores (aún no publicado),,0
+327,(cadena de programación),vacio,sin valores (aún no publicado),,0
+329,(cadena de programación),vacio,sin valores (aún no publicado),,0
+330,(cadena de programación),vacio,sin valores (aún no publicado),,0
+434,(cadena de programación),ok,,2026-08-13T14:31:15.000+02:00,198
+460,Previsión diaria de la demanda eléctrica peninsular,ok,,2026-08-13T21:26:19.000+02:00,864
+461,Previsión mensual de la demanda eléctrica peninsular,vacio,sin valores (aún no publicado),,0
+480,Potencia disponible de generación Hidráulica UGH horizonte año móvil,ok,,2026-08-01T03:57:43.000+02:00,288
+481,Potencia disponible de generación Turbinación bombeo horizonte año móvil,ok,,2026-08-01T03:57:43.000+02:00,84
+482,Potencia disponible de generación Nuclear horizonte año móvil,ok,,2026-08-01T03:57:43.000+02:00,48
+483,Potencia disponible de generación Hulla antracita horizonte año móvil,ok,,2026-08-01T03:57:43.000+02:00,12
+484,Potencia disponible de generación Hulla sub-bituminosa horizonte año móvil,ok,,2026-08-01T03:57:44.000+02:00,12
+485,Potencia disponible de generación Ciclo combinado horizonte año móvil,ok,,2026-08-01T03:57:44.000+02:00,192
+486,Potencia disponible de generación Fuel horizonte año móvil,ok,,2026-08-01T03:57:44.000+02:00,12
+487,Potencia disponible de generación Gas Natural horizonte año móvil,ok,,2026-08-01T03:57:44.000+02:00,12
+498,Capacidad de intercambio prevista (NTC) con Francia horizonte semanal importación,vacio,sin valores (aún no publicado),,0
+499,Capacidad de intercambio prevista (NTC) con Portugal horizonte semanal importación,vacio,sin valores (aún no publicado),,0
+500,Capacidad de intercambio prevista (NTC) con Marruecos horizonte semanal importación,vacio,sin valores (aún no publicado),,0
+501,Capacidad de intercambio prevista (NTC) con Andorra horizonte semanal importación,vacio,sin valores (aún no publicado),,0
+502,Capacidad de intercambio prevista (NTC) con Francia horizonte semanal exportación,vacio,sin valores (aún no publicado),,0
+503,Capacidad de intercambio prevista (NTC) con Portugal horizonte semanal exportación,vacio,sin valores (aún no publicado),,0
+504,Capacidad de intercambio prevista (NTC) con Marruecos horizonte semanal exportación,vacio,sin valores (aún no publicado),,0
+505,Capacidad de intercambio prevista (NTC) con Andorra horizonte semanal exportación,vacio,sin valores (aún no publicado),,0
+510,Capacidad de intercambio prevista (NTC) con Francia horizonte mensual importación,ok,,2026-07-17T14:45:33.000+02:00,288
+511,Capacidad de intercambio prevista (NTC) con Portugal horizonte mensual importación,ok,,2026-07-17T14:45:33.000+02:00,288
+512,Capacidad de intercambio prevista (NTC) con Marruecos horizonte mensual importación,ok,,2026-07-17T14:45:33.000+02:00,288
+513,Capacidad de intercambio prevista (NTC) con Andorra horizonte mensual importación,ok,,2026-07-17T14:45:33.000+02:00,288
+514,Capacidad de intercambio prevista (NTC) con Francia horizonte mensual exportación,ok,,2026-07-17T14:45:33.000+02:00,288
+515,Capacidad de intercambio prevista (NTC) con Portugal horizonte mensual exportación,ok,,2026-07-17T14:45:33.000+02:00,288
+516,Capacidad de intercambio prevista (NTC) con Marruecos horizonte mensual exportación,ok,,2026-07-17T14:45:34.000+02:00,288
+517,Capacidad de intercambio prevista (NTC) con Andorra horizonte mensual exportación,ok,,2026-07-17T14:45:34.000+02:00,288
+518,Capacidad de intercambio prevista (NTC) con Francia horizonte año móvil importación,ok,,2026-07-17T14:45:34.000+02:00,288
+519,Capacidad de intercambio prevista (NTC) con Portugal horizonte año móvil importación,ok,,2026-07-17T14:45:34.000+02:00,288
+520,Capacidad de intercambio prevista (NTC) con Marruecos horizonte año móvil importación,ok,,2026-07-17T14:45:34.000+02:00,288
+521,Capacidad de intercambio prevista (NTC) con Andorra horizonte año móvil importación,ok,,2026-07-17T14:45:34.000+02:00,288
+522,Capacidad de intercambio prevista (NTC) con Francia horizonte año móvil exportación,ok,,2026-07-17T14:45:34.000+02:00,288
+523,Capacidad de intercambio prevista (NTC) con Portugal horizonte año móvil exportación,ok,,2026-07-17T14:45:34.000+02:00,288
+524,Capacidad de intercambio prevista (NTC) con Marruecos horizonte año móvil exportación,ok,,2026-07-17T14:45:34.000+02:00,288
+525,Capacidad de intercambio prevista (NTC) con Andorra horizonte año móvil exportación,ok,,2026-07-17T14:45:34.000+02:00,288
+541,Previsión de la producción eólica peninsular,ok,,2026-08-13T21:39:58.000+02:00,1056
+542,Generación prevista Solar fotovoltaica,ok,,2026-08-13T21:41:06.000+02:00,1056
+543,Generación prevista Solar térmica,ok,,2026-08-13T21:41:06.000+02:00,1056
+544,Demanda prevista,ok,,2026-08-13T21:56:38.000+02:00,204
+570,Capacidad prevista en el enlace Península - Baleares,ok,,2026-08-13T21:15:06.000+02:00,72
+603,Previsión semanal de la demanda eléctrica peninsular,ok,,2026-08-13T21:24:35.000+02:00,1152
+604,Previsión máxima mensual de la demanda eléctrica peninsular,ok,,2026-07-09T13:44:54.000+02:00,1
+619,Previsión mínima mensual de la demanda eléctrica peninsular,ok,,2026-07-09T13:44:54.000+02:00,1
+620,Previsión máxima anual de la demanda eléctrica peninsular,ok,,2025-12-16T10:42:26.000+01:00,1
+621,Previsión mínima anual de la demanda eléctrica peninsular,ok,,2025-12-16T10:42:26.000+01:00,1
+622,Margen generación disponible - máxima demanda prevista,vacio,sin valores (aún no publicado),,0
+630,Requerimientos reserva de regulación secundaria a subir,ok,,2026-08-13T16:32:19.000+02:00,288
+631,Requerimientos reserva de regulación secundaria a bajar,ok,,2026-08-13T16:32:19.000+02:00,288
+632,Asignación reserva de regulación secundaria a subir,ok,,2026-08-13T16:45:05.000+02:00,288
+633,Asignación reserva de regulación secundaria a bajar,ok,,2026-08-13T16:45:05.000+02:00,288
+634,Precio reserva de regulación secundaria a bajar,ok,,2026-08-13T16:45:05.000+02:00,288
+680,Energía activada  de regulación secundaria a subir en el sepe,ok,,2026-08-13T21:43:05.000+02:00,179
+681,Energía activada  de regulación secundaria a bajar en el sepe,ok,,2026-08-13T21:43:05.000+02:00,179
+682,Precio de energía de regulación secundaria a subir,ok,,2026-08-13T21:43:06.000+02:00,179
+683,Precio de energía de regulación secundaria a bajar,ok,,2026-08-13T21:43:06.000+02:00,179
+712,Coste de reserva de regulación secundaria a subir,ok,,2026-08-13T20:51:01.000+02:00,288
+713,Coste unitario soportado por la demanda de reserva de regulación secundaria,ok,,2026-08-13T20:51:02.000+02:00,72
+718,Derechos de cobro por energía de regulación secundaria,ok,,2026-08-13T17:28:19.000+02:00,93
+719,Obligaciones de pago por energía de regulación secundaria,ok,,2026-08-13T17:28:19.000+02:00,96
+899,Coste asignación de reserva de regulación secundaria a subir,ok,,2026-08-13T20:51:02.000+02:00,288
+1006,"Perfiles de consumo a efectos de facturación del PVPC Tarifa 2.0 GENERAL BAJA TENSIÓN, POTENCIA INFERIOR A 15 kW",ok,,2026-08-13T20:46:47.000+02:00,72
+1335,Demanda del sistema a efectos del cálculo de perfiles,vacio,sin valores (aún no publicado),,0
+1411,(cadena de programación),ok,,2026-08-13T21:42:02.000+02:00,188
+1413,(cadena de programación),ok,,2026-08-13T21:42:02.000+02:00,185
+1414,(cadena de programación),ok,,2026-08-13T21:42:02.000+02:00,188
+1742,Demanda prevista SNP,fallo,HTTP 500,,0
+1774,Previsión demanda anual,vacio,sin valores (aún no publicado),,0
+1775,Previsión diaria D+1 demanda,ok,,2026-08-13T10:51:03.000+02:00,72
+1776,Previsión intradiaria H+3 demanda,ok,,2026-08-13T21:50:22.000+02:00,49
+1777,Previsión diaria D+1 eólica,ok,,2026-08-13T10:51:03.000+02:00,72
+1778,Previsión intradiaria H+3 eólica,ok,,2026-08-13T21:50:22.000+02:00,49
+1779,Previsión diaria D+1 fotovoltaica,ok,,2026-08-13T10:51:03.000+02:00,72
+1780,Previsión intradiaria H+3 fotovoltaica,ok,,2026-08-13T21:50:22.000+02:00,49
+1844,Capacidad de intercambio prevista (NTC) con Francia horizonte diario importación,ok,,2026-08-13T17:49:30.000+02:00,288
+1845,Capacidad de intercambio prevista (NTC) con Portugal horizonte diario importación,ok,,2026-08-13T17:49:30.000+02:00,288
+1846,Capacidad de intercambio prevista (NTC) con Marruecos horizonte diario importación,ok,,2026-08-13T21:42:22.000+02:00,288
+1848,Capacidad de intercambio prevista (NTC) con Francia horizonte diario exportación,ok,,2026-08-13T17:49:30.000+02:00,288
+1849,Capacidad de intercambio prevista (NTC) con Portugal horizonte diario exportación,ok,,2026-08-13T17:49:30.000+02:00,288
+1850,Capacidad de intercambio prevista (NTC) con Marruecos horizonte diario exportación,ok,,2026-08-13T21:42:22.000+02:00,288
+1941,Demanda Programada Total Peninsular,ok,,2026-08-13T21:56:38.000+02:00,204
+1942,Demanda Programada total territorios no peninsulares,fallo,HTTP 500,,0
+2052,Demanda real prevista nacional,ok,,2026-08-13T21:56:34.000+02:00,204
+2117,Capacidad de intercambio comercial prevista en la interconexión con Francia horizonte intradiario importación,ok,,2026-08-13T21:42:22.000+02:00,288
+2118,Capacidad de intercambio comercial prevista en la interconexión con Francia horizonte intradiario exportación,ok,,2026-08-13T21:42:22.000+02:00,288
+2119,Capacidad de intercambio comercial prevista en la interconexión con Portugal horizonte intradiario importación,ok,,2026-08-13T21:42:22.000+02:00,288
+2120,Capacidad de intercambio comercial prevista en la interconexión con Portugal horizonte intradiario exportación,ok,,2026-08-13T21:42:22.000+02:00,288
+2127,Coste de reserva de regulación secundaria a bajar,ok,,2026-08-13T20:51:01.000+02:00,288
+2129,Coste asignación de reserva de regulación secundaria a bajar,ok,,2026-08-13T20:51:02.000+02:00,288
+2130,Precio Reserva de regulación secundaria a subir,ok,,2026-08-13T16:45:05.000+02:00,288
+2207,Necesidad de energía de regulación secundaria subir en el sepe,ok,,2026-08-13T21:44:11.000+02:00,178
+2208,Necesidad de energía de regulación secundaria bajar en el sepe,ok,,2026-08-13T21:44:11.000+02:00,178
+2367,Capacidad de intercambio prevista (NTC) con Francia horizonte anual importación,ok,,2025-12-01T11:28:54.000+01:00,288
+2368,Capacidad de intercambio prevista (NTC) con Portugal horizonte anual importación,ok,,2025-12-01T11:28:54.000+01:00,288
+2369,Capacidad de intercambio prevista (NTC) con Marruecos horizonte anual importación,ok,,2025-12-01T11:28:55.000+01:00,288
+2370,Capacidad de intercambio prevista (NTC) con Andorra horizonte anual importación,ok,,2025-12-01T11:28:55.000+01:00,288
+2371,Capacidad de intercambio prevista (NTC) con Francia horizonte anual exportación,ok,,2025-12-01T11:28:56.000+01:00,288
+2372,Capacidad de intercambio prevista (NTC) con Portugal horizonte anual exportación,ok,,2025-12-01T11:28:56.000+01:00,288
+2373,Capacidad de intercambio prevista (NTC) con Marruecos horizonte anual exportación,ok,,2025-12-01T11:28:57.000+01:00,288
+2374,Capacidad de intercambio prevista (NTC) con Andorra horizonte anual exportación,ok,,2025-12-01T11:28:57.000+01:00,288
+2563,Previsión diaria de la demanda eléctrica peninsular en el mercado,ok,,2026-08-13T21:26:19.000+02:00,864
+10034,Generación prevista Solar,ok,,2026-08-11T23:41:03.000+02:00,1056
+10056,Volumen absoluto de energía utilizada de regulación secundaria,ok,,2026-08-13T05:02:55.000+02:00,179
+10232,Potencia disponible de generación total horizonte año móvil,ok,,2026-08-01T03:57:44.000+02:00,408
+10249,Previsión de la demanda residual,ok,,2026-08-11T23:41:03.000+02:00,1056
+10252,Volumen neto de energía utilizada de regulación secundaria,ok,,2026-08-13T05:02:55.000+02:00,179
+10323,Energía de balance a subir,ok,,2026-08-13T14:10:08.000+02:00,184
+10324,Energía de balance a bajar,ok,,2026-08-13T14:10:08.000+02:00,184
+10325,Energía total asignada por seguridad y de balance,ok,,2026-08-13T17:33:40.000+02:00,288
+10358,Previsión diaria D+1 eólica más fotovoltaica,ok,,2026-08-11T10:50:23.000+02:00,72
+10359,Previsión intradiaria H+3 eólica más fotovoltaica,ok,,2026-08-12T20:51:00.000+02:00,49
+10388,Precio medio ponderado reserva de regulación secundaria a subir,ok,,2026-08-13T20:51:02.000+02:00,288
+10389,Precio medio ponderado de energía de regulación secundaria a subir,ok,,2026-08-13T17:28:19.000+02:00,179
+10390,Precio medio ponderado de energía de regulación secundaria a bajar,ok,,2026-08-13T17:28:19.000+02:00,179
+10463,Precio medio ponderado reserva de regulación secundaria a bajar,ok,,2026-08-13T20:51:02.000+02:00,288
