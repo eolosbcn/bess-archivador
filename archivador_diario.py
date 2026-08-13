@@ -19,6 +19,29 @@ con:
 Ninguna de las dos cosas se puede arreglar mirando atrás. Sí se pueden
 arreglar hacia delante.
 
+QUÉ CAMBIA EN LA v3.8
+---------------------
+AEMET pasa de ser la fuente más pobre del archivo a una de las más ricas.
+
+  1. **Ocho municipios en vez de seis.** Entra **A Coruña**, que cubre el
+     noroeste —la zona con más eólica y con un régimen atlántico distinto del
+     resto, que no estaba representada—, y **Mataró** como referencia local.
+  2. **Se guarda mucho más que la temperatura.** Hasta ahora se pedía la
+     predicción entera y se tiraba todo menos tmax y tmin. Ahora se conservan
+     viento (velocidad y dirección), racha máxima, estado del cielo, humedad,
+     sensación térmica, probabilidad de precipitación e índice UV.
+  3. **Producto HORARIO nuevo** (`municipio/horaria`): 48 horas hora a hora.
+     Es el que de verdad sirve para D+1, porque su resolución es la del
+     mercado; el diario da máximos y mínimos, que no se pueden repartir por
+     horas sin inventar.
+
+Sobre la RADIACIÓN SOLAR: **AEMET no publica previsión de radiación.** Su
+producto de radiación es de observación, no de predicción. Lo más cercano en
+la predicción es `uvMax` (índice UV diario, y además para cielo despejado, o
+sea que ignora justo la nubosidad). El sustituto utilizable es el **estado del
+cielo horario**, que es lo que modula la fotovoltaica, y ese sí se archiva
+ahora.
+
 QUÉ CAMBIA EN LA v3.7
 ---------------------
 Dos retoques al servicio del visor de móvil:
@@ -139,7 +162,7 @@ REQUISITOS
 Python 3.9+, `requests`, `pandas`. Tokens en variables de entorno:
 ESIOS_TOKEN, ENTSOE_TOKEN, AEMET_TOKEN.
 
-Versión: v3.7 — 2026-08-13.
+Versión: v3.8 — 2026-08-13.
 """
 
 import os
@@ -298,10 +321,21 @@ MINUTOS_MAX_BARRIDO = 22
 # de esperar al siguiente múltiplo.
 HORAS_MINIMAS_ENTRE_AEMET = 2.5
 
+# Ocho municipios. Los seis primeros son las grandes áreas de consumo; los dos
+# últimos se añadieron en la v3.8:
+#   · A Coruña (15030) cubre el NOROESTE, que no estaba representado y es la
+#     zona con más eólica y con un régimen atlántico distinto del resto.
+#   · Mataró (08121) es un punto de referencia local del propio proyecto.
 MUNICIPIOS_AEMET = {
     "28079": "madrid", "08019": "barcelona", "46250": "valencia",
     "41091": "sevilla", "48020": "bilbao", "50297": "zaragoza",
+    "15030": "a_coruna", "08121": "mataro",
 }
+
+# Segundos entre peticiones a AEMET. Su API devuelve 429 esporádicos incluso sin
+# exceso evidente, y en la v3.8 se pasa de 6 a 16 llamadas por captura (ocho
+# municipios × dos productos), así que el ritmo importa más que antes.
+PAUSA_AEMET = 3
 
 ESIOS_TOKEN = os.environ.get("ESIOS_TOKEN", "").strip()
 ENTSOE_TOKEN = os.environ.get("ENTSOE_TOKEN", "").strip()
@@ -965,8 +999,68 @@ def capturar_entsoe(carpeta, hoy):
 # AEMET — la predicción, que es lo irrecuperable
 # ============================================================================
 
+def _aemet_json(ruta):
+    """
+    Una lectura de AEMET son SIEMPRE dos peticiones: la primera devuelve un
+    JSON con la URL del dato real, y la segunda trae el dato. Devuelve
+    (datos, error).
+    """
+    for intento in range(1, 4):
+        try:
+            r = requests.get(f"{AEMET_BASE}{ruta}",
+                             params={"api_key": AEMET_TOKEN}, timeout=90)
+        except Exception as e:
+            error = f"error de red: {e}"
+            time.sleep(10 * intento)
+            continue
+        # AEMET devuelve 429 esporádicos incluso sin exceso de ritmo evidente
+        # (Aprendizaje_API_AEMET_y_Otros §4.6).
+        if r.status_code == 429:
+            error = "HTTP 429"
+            time.sleep(20 * intento)
+            continue
+        if r.status_code != 200:
+            return None, f"HTTP {r.status_code}"
+        j = r.json()
+        if j.get("estado") != 200 or not j.get("datos"):
+            return None, f"estado={j.get('estado')}"
+        r2 = requests.get(j["datos"], timeout=90)
+        # AEMET a veces declara mal la codificación: UTF-8 y si no, Latin-1.
+        texto = r2.content.decode("utf-8", errors="replace")
+        if "\ufffd" in texto:
+            texto = r2.content.decode("latin-1")
+        return json.loads(texto), None
+    return None, error
+
+
+def _val(x):
+    """Los valores vienen unas veces sueltos y otras dentro de una lista."""
+    if isinstance(x, list):
+        return x[0] if x else None
+    return x
+
+
+def _periodo_dia(lista, periodo="00-24"):
+    """
+    De una lista de tramos, la entrada del periodo pedido. AEMET no siempre
+    publica el tramo 00-24: los días parcialmente pasados solo traen los
+    tramos que quedan. En ese caso se coge el primero disponible en vez de
+    devolver vacío, y así el resumen diario nunca sale en blanco por un
+    detalle de formato.
+    """
+    if not lista:
+        return {}
+    for e in lista:
+        if e.get("periodo") == periodo:
+            return e
+    for e in lista:
+        if not e.get("periodo"):
+            return e
+    return lista[0]
+
+
 def capturar_aemet(carpeta, ahora_madrid):
-    titulo("AEMET — PREDICCIÓN de temperatura (irrecuperable después)")
+    titulo("AEMET — PREDICCIÓN de temperatura, viento y cielo (irrecuperable)")
     print("  La API solo devuelve la predicción vigente: si no se guarda hoy,")
     print("  no hay forma de saber mañana qué decía. Es el motivo principal")
     print("  por el que existe este programa.")
@@ -983,66 +1077,161 @@ def capturar_aemet(carpeta, ahora_madrid):
     print("  Última captura buena: "
           + ("ninguna todavía" if desde is None else f"hace {desde:.1f} h"))
 
-    filas = []
+    diarias, periodos, horarias = [], [], []
+    fallos_d, fallos_h = [], []
+
     for codigo, ciudad in MUNICIPIOS_AEMET.items():
-        ruta = f"/api/prediccion/especifica/municipio/diaria/{codigo}"
-        datos, error = None, None
-        for intento in range(1, 4):
-            try:
-                r = requests.get(f"{AEMET_BASE}{ruta}",
-                                 params={"api_key": AEMET_TOKEN}, timeout=90)
-            except Exception as e:
-                error = f"error de red: {e}"
-                time.sleep(10 * intento)
-                continue
-            # AEMET devuelve 429 esporádicos incluso sin exceso de ritmo
-            # evidente (Aprendizaje_API_AEMET_y_Otros §4.6).
-            if r.status_code == 429:
-                error = "HTTP 429"
-                time.sleep(20 * intento)
-                continue
-            if r.status_code != 200:
-                error = f"HTTP {r.status_code}"
-                break
-            j = r.json()
-            if j.get("estado") != 200 or not j.get("datos"):
-                error = f"estado={j.get('estado')}"
-                break
-            r2 = requests.get(j["datos"], timeout=90)
-            # AEMET a veces declara mal la codificación: UTF-8 y si no, Latin-1.
-            texto = r2.content.decode("utf-8", errors="replace")
-            if "�" in texto:
-                texto = r2.content.decode("latin-1")
-            datos = json.loads(texto)
-            error = None
-            break
-
+        # ---- Producto DIARIO: 7 días, resumen por día y por tramos ----------
+        datos, error = _aemet_json(
+            f"/api/prediccion/especifica/municipio/diaria/{codigo}")
         if not datos:
-            registrar(f"aemet_{ciudad}", "FALLO", error or "sin datos")
-            time.sleep(3)
-            continue
+            fallos_d.append(f"{ciudad}: {error}")
+        else:
+            bloque = datos[0]
+            elaborado = bloque.get("elaborado")
+            for dia in bloque.get("prediccion", {}).get("dia", []):
+                fecha = (dia.get("fecha") or "")[:10]
+                temp = dia.get("temperatura", {}) or {}
+                hr = dia.get("humedadRelativa", {}) or {}
+                st = dia.get("sensTermica", {}) or {}
+                viento = _periodo_dia(dia.get("viento"))
+                racha = _periodo_dia(dia.get("rachaMax"))
+                cielo = _periodo_dia(dia.get("estadoCielo"))
+                lluvia = _periodo_dia(dia.get("probPrecipitacion"))
+                diarias.append({
+                    "ciudad": ciudad, "municipio": codigo,
+                    "fecha_prevista": fecha,
+                    "elaborado": elaborado,   # cuándo se generó esta predicción
+                    "tmax": temp.get("maxima"), "tmin": temp.get("minima"),
+                    "hr_max": hr.get("maxima"), "hr_min": hr.get("minima"),
+                    "sens_max": st.get("maxima"), "sens_min": st.get("minima"),
+                    "uv_max": _val(dia.get("uvMax")),
+                    "viento_velocidad": _val(viento.get("velocidad")),
+                    "viento_direccion": _val(viento.get("direccion")),
+                    "racha_max": racha.get("value"),
+                    "estado_cielo": cielo.get("value"),
+                    "estado_cielo_desc": cielo.get("descripcion"),
+                    "prob_precipitacion": lluvia.get("value"),
+                })
+                # Y además TODOS los tramos, sin resumir: el tramo 12-18 de la
+                # eólica no se recupera de una media diaria.
+                for var in ("viento", "rachaMax", "estadoCielo",
+                            "probPrecipitacion", "cotaNieveProv"):
+                    for e in (dia.get(var) or []):
+                        periodos.append({
+                            "producto": "diaria", "ciudad": ciudad,
+                            "fecha_prevista": fecha, "elaborado": elaborado,
+                            "variable": var, "periodo": e.get("periodo"),
+                            "value": e.get("value"),
+                            "descripcion": e.get("descripcion"),
+                            "velocidad": _val(e.get("velocidad")),
+                            "direccion": _val(e.get("direccion")),
+                        })
+        time.sleep(PAUSA_AEMET)
 
-        bloque = datos[0]
-        elaborado = bloque.get("elaborado")
-        for dia in bloque.get("prediccion", {}).get("dia", []):
-            temp = dia.get("temperatura", {})
-            filas.append({
-                "ciudad": ciudad, "municipio": codigo,
-                "fecha_prevista": (dia.get("fecha") or "")[:10],
-                "elaborado": elaborado,   # cuándo se generó esta predicción
-                "tmax": temp.get("maxima"), "tmin": temp.get("minima"),
-            })
-        time.sleep(3)
+        # ---- Producto HORARIO: 48 h hora a hora -----------------------------
+        # Es el que de verdad sirve para D+1: viento y estado del cielo con
+        # resolución horaria, que es la del mercado. El producto diario da
+        # máximos y mínimos, que no sirven para repartir por horas.
+        datos, error = _aemet_json(
+            f"/api/prediccion/especifica/municipio/horaria/{codigo}")
+        if not datos:
+            fallos_h.append(f"{ciudad}: {error}")
+        else:
+            bloque = datos[0]
+            elaborado = bloque.get("elaborado")
+            for dia in bloque.get("prediccion", {}).get("dia", []):
+                fecha = (dia.get("fecha") or "")[:10]
+                rejilla = {}
+                def poner(var, e, campo="value"):
+                    h = e.get("periodo")
+                    if not h or len(h) != 2 or not h.isdigit():
+                        return False           # tramo, no hora concreta
+                    rejilla.setdefault(h, {})[var] = e.get(campo)
+                    return True
+                for e in (dia.get("temperatura") or []):
+                    poner("temperatura", e)
+                for e in (dia.get("sensTermica") or []):
+                    poner("sens_termica", e)
+                for e in (dia.get("humedadRelativa") or []):
+                    poner("humedad", e)
+                for e in (dia.get("precipitacion") or []):
+                    poner("precipitacion", e)
+                for e in (dia.get("nieve") or []):
+                    poner("nieve", e)
+                for e in (dia.get("estadoCielo") or []):
+                    if poner("estado_cielo", e):
+                        rejilla[e["periodo"]]["estado_cielo_desc"] = \
+                            e.get("descripcion")
+                # vientoAndRachaMax mezcla DOS cosas en la misma lista: las
+                # entradas con direccion/velocidad son el viento medio, y las
+                # que traen `value` son la racha máxima. Se separan aquí.
+                for e in (dia.get("vientoAndRachaMax") or []):
+                    h = e.get("periodo")
+                    if not h or len(h) != 2 or not h.isdigit():
+                        continue
+                    d = rejilla.setdefault(h, {})
+                    if e.get("value") is not None:
+                        d["racha_max"] = e.get("value")
+                    if e.get("velocidad") is not None:
+                        d["viento_velocidad"] = _val(e.get("velocidad"))
+                        d["viento_direccion"] = _val(e.get("direccion"))
+                for h in sorted(rejilla):
+                    horarias.append({
+                        "ciudad": ciudad, "municipio": codigo,
+                        "fecha_prevista": fecha, "hora": h,
+                        "datetime_local": f"{fecha}T{h}:00:00",
+                        "elaborado": elaborado,
+                        "orto": dia.get("orto"), "ocaso": dia.get("ocaso"),
+                        **rejilla[h],
+                    })
+                # Las probabilidades vienen por tramos (0107, 0713...), no por
+                # hora. Se guardan tal cual en vez de repartirlas a mano.
+                for var in ("probPrecipitacion", "probTormenta", "probNieve"):
+                    for e in (dia.get(var) or []):
+                        periodos.append({
+                            "producto": "horaria", "ciudad": ciudad,
+                            "fecha_prevista": fecha, "elaborado": elaborado,
+                            "variable": var, "periodo": e.get("periodo"),
+                            "value": e.get("value"), "descripcion": None,
+                            "velocidad": None, "direccion": None,
+                        })
+        time.sleep(PAUSA_AEMET)
 
-    if not filas:
-        registrar("aemet_prediccion", "FALLO", "ninguna ciudad devolvió datos")
-        return
-    df = pd.DataFrame(filas)
-    guardar(df, carpeta, "aemet_prediccion_diaria", comprimir=False)
-    registrar("aemet_prediccion_diaria", "OK",
-              f"{df['ciudad'].nunique()} ciudades, hasta {df['fecha_prevista'].max()}",
-              filas=len(df),
-              extra={"elaborado": sorted(set(df["elaborado"].dropna()))})
+    # --- Registro, fuente por fuente -----------------------------------------
+    if diarias:
+        df = pd.DataFrame(diarias)
+        guardar(df, carpeta, "aemet_prediccion_diaria", comprimir=False)
+        registrar("aemet_prediccion_diaria", "OK" if not fallos_d else "PARCIAL",
+                  f"{df['ciudad'].nunique()} de {len(MUNICIPIOS_AEMET)} ciudades, "
+                  f"hasta {df['fecha_prevista'].max()}"
+                  + (f" · fallan {'; '.join(fallos_d)}" if fallos_d else ""),
+                  filas=len(df),
+                  extra={"elaborado": sorted(set(df["elaborado"].dropna())),
+                         "ciudades": sorted(df["ciudad"].unique())})
+    else:
+        registrar("aemet_prediccion_diaria", "FALLO",
+                  "ninguna ciudad devolvió datos: " + "; ".join(fallos_d))
+
+    if horarias:
+        dh = pd.DataFrame(horarias)
+        guardar(dh, carpeta, "aemet_prediccion_horaria")
+        registrar("aemet_prediccion_horaria", "OK" if not fallos_h else "PARCIAL",
+                  f"{dh['ciudad'].nunique()} ciudades, {len(dh)} horas, "
+                  f"hasta {dh['fecha_prevista'].max()}"
+                  + (f" · fallan {'; '.join(fallos_h)}" if fallos_h else ""),
+                  filas=len(dh),
+                  extra={"elaborado": sorted(set(dh["elaborado"].dropna()))})
+    else:
+        registrar("aemet_prediccion_horaria", "FALLO",
+                  "ninguna ciudad devolvió datos: " + "; ".join(fallos_h))
+
+    if periodos:
+        dp = pd.DataFrame(periodos)
+        guardar(dp, carpeta, "aemet_prediccion_periodos")
+        registrar("aemet_prediccion_periodos", "OK",
+                  f"{dp['variable'].nunique()} variables por tramos",
+                  filas=len(dp))
 
 
 # ============================================================================
@@ -1298,7 +1487,7 @@ def ejecutar():
     ahora_madrid = ahora_utc.astimezone(TZ_MADRID)
     hoy = ahora_madrid.date()
 
-    print("ARCHIVADOR DIARIO — FASE 0 DEL PROYECTO BESS (v3.7)")
+    print("ARCHIVADOR DIARIO — FASE 0 DEL PROYECTO BESS (v3.8)")
     print(f"Ejecución: {ahora_madrid.isoformat(timespec='seconds')} (Madrid)")
     print(f"           {ahora_utc.isoformat(timespec='seconds')} (UTC)")
 
@@ -1314,7 +1503,7 @@ def ejecutar():
     print(f"Destino:   {carpeta}/")
 
     MANIFIESTO.update({
-        "version": "v3.7",
+        "version": "v3.8",
         "ejecucion_madrid": ahora_madrid.isoformat(timespec="seconds"),
         "ejecucion_utc": ahora_utc.isoformat(timespec="seconds"),
         "fecha": hoy.isoformat(),

@@ -471,16 +471,18 @@ async function cargarFuente(){
 // Detección genérica: columna de tiempo, columna de valor y columna que parte
 // la tabla en series. Así el visor no necesita saber nada de cada fichero, y
 // una fuente nueva funciona sin tocar el código.
-const COLS_TIEMPO=["datetime_utc","datetime","fecha_prevista","Trading day","First Day Delivery"];
+const COLS_TIEMPO=["datetime_utc","datetime","datetime_local","fecha_prevista",
+                   "Trading day","First Day Delivery"];
 const COLS_SERIE=["indicador","geo_id","ciudad","Product"];
 // Numéricas pero identificadores, no magnitudes. Sin esta lista, AEMET salía
 // graficando el código de municipio (8019 para Barcelona): una recta plana con
 // pinta de dato. Y detrás de ella estaban tmax y tmin, que es lo que se busca.
-const COLS_IGNORAR=["municipio","id","run_id","Area","Place of delivery"];
+const COLS_IGNORAR=["municipio","id","run_id","Area","Place of delivery","hora"];
 // Orden de preferencia cuando hay varias magnitudes: la primera es la que se
 // dibuja al abrir. Lo demás sigue estando en el desplegable «Valor».
-const VALOR_PREFERIDO=["value","tmax","tmin","prev_demanda","prev_renovable",
-                       "precio","reserva_hidraulica"];
+const VALOR_PREFERIDO=["value","temperatura","tmax","tmin","viento_velocidad",
+                       "racha_max","prev_demanda","prev_renovable","precio",
+                       "reserva_hidraulica"];
 
 function esNumerica(cols, filas, c){
   const m=filas.slice(0,60).map(f=>num(f[c])).filter(v=>v!==null);
