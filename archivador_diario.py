@@ -19,6 +19,39 @@ con:
 Ninguna de las dos cosas se puede arreglar mirando atrás. Sí se pueden
 arreglar hacia delante.
 
+QUÉ CAMBIA EN LA v3.5
+---------------------
+Una corrección, y no menor. Hasta la v3.4 AEMET se pedía cuando la hora era
+múltiplo de 3 (`hora % 3 == 0`). Con capturas cada hora eso daba ocho al día,
+correcto. Pero al pasar a capturas cada tres horas incluyendo la de las 11:50
+—la última antes del cierre de ofertas, y por tanto la que no se puede
+sacrificar—, todas las horas pasan a ser 2, 5, 8, 11, 14, 17, 20 y 23: ninguna
+múltiplo de 3, y AEMET no se habría pedido NUNCA. Sin error y sin aviso, solo
+`OMITIDA` en todos los manifiestos.
+
+Y AEMET es la fuente cuya pérdida es definitiva: su API solo devuelve la
+predicción vigente. Ahora el espaciado no se calcula con el reloj sino con el
+disco —horas transcurridas desde la última captura buena—, así que es correcto
+con cualquier horario y además reintenta a la siguiente cuando una falla.
+
+QUÉ CAMBIA EN LA v3.4
+---------------------
+Dos ficheros nuevos en una RUTA FIJA, que no cambia nunca:
+
+  · `archivo/ultimo.json` — copia del manifiesto de la última captura.
+  · `archivo/indice.csv`  — una línea por captura, desde la primera.
+
+El motivo es concreto. La carpeta de cada captura lleva el minuto REAL de
+arranque del script, que no es predecible: el disparo externo pide a y 50,
+pero la ejecución empieza cuando GitHub asigna máquina. Comprobar cómo había
+ido el archivador exigía por tanto adivinar el nombre de la carpeta —0850,
+1452, 2303...— o mirarla a mano. Con una ruta fija, deja de ser un problema.
+
+El índice guarda además `disparo` (de dónde vino la ejecución: `schedule`,
+`workflow_dispatch`, `push`), que es lo que permitirá medir con datos la
+fiabilidad del cron de GitHub frente al disparador externo, en vez de contar
+carpetas a mano como hasta ahora.
+
 QUÉ CAMBIA EN LA v3
 -------------------
 Tres cambios, todos motivados por una aportación del usuario: las previsiones
@@ -78,10 +111,11 @@ REQUISITOS
 Python 3.9+, `requests`, `pandas`. Tokens en variables de entorno:
 ESIOS_TOKEN, ENTSOE_TOKEN, AEMET_TOKEN.
 
-Versión: v3.3 — 2026-08-11.
+Versión: v3.5 — 2026-08-13.
 """
 
 import os
+import csv
 import sys
 import json
 import time
@@ -199,8 +233,24 @@ MINUTOS_MAX_BARRIDO = 22
 # AEMET no se pide en todas las capturas. Su predicción se elabora unas pocas
 # veces al día (medido: 08:55 y 10:35), así que pedirla cada hora devuelve lo
 # mismo y además nos gana un HTTP 429 — ya pasó en dos de las tres primeras
-# capturas horarias. Se pide cuando la hora es múltiplo de este número.
-CADA_CUANTAS_HORAS_AEMET = 3
+# capturas horarias.
+#
+# CUIDADO CON CÓMO SE ESPACIA (corregido en la v3.5). Hasta la v3.4 la
+# condición era `hora % 3 == 0`, es decir, AEMET solo se pedía a las 0, 3, 6,
+# 9... Eso funcionaba con capturas cada hora, pero se rompe en silencio en
+# cuanto el horario deja de pasar por esas horas: con capturas a y 50 cada tres
+# horas empezando a las 02:50 —el horario que incluye la captura clave de las
+# 11:50— TODAS las horas son 2, 5, 8, 11, 14... y AEMET no se habría pedido
+# NUNCA. Ni un error, ni un aviso: solo `OMITIDA` en todos los manifiestos.
+#
+# Y AEMET es precisamente la fuente que no se puede recuperar: su API solo
+# devuelve la predicción vigente. Perder un mes de predicciones es perderlo.
+#
+# Por eso ahora no se mira el reloj sino el disco: se pide si hace más de estas
+# horas que no se consigue una. Así el espaciado es correcto con CUALQUIER
+# horario, y además reintenta en la siguiente captura cuando una falla, en vez
+# de esperar al siguiente múltiplo.
+HORAS_MINIMAS_ENTRE_AEMET = 2.5
 
 MUNICIPIOS_AEMET = {
     "28079": "madrid", "08019": "barcelona", "46250": "valencia",
@@ -321,6 +371,41 @@ def ya_hay_captura_completa_hoy(hoy):
         except Exception:
             continue
     return False
+
+
+def horas_desde_ultima_aemet(ahora_madrid):
+    """
+    Horas transcurridas desde la última captura de AEMET que salió OK, o None
+    si no hay ninguna. Se mira el disco, no el reloj, por el motivo explicado
+    en HORAS_MINIMAS_ENTRE_AEMET.
+
+    Se recorren hoy y ayer: una captura de madrugada tiene su última AEMET
+    buena en la carpeta del día anterior, y sin mirar ayer se pediría dos veces
+    seguidas en el cambio de día.
+    """
+    ultima = None
+    for dia in (ahora_madrid.date(), ahora_madrid.date() - dt.timedelta(days=1)):
+        base = os.path.join(CARPETA_RAIZ, f"{dia:%Y}", f"{dia:%m}", f"{dia:%Y-%m-%d}")
+        if not os.path.isdir(base):
+            continue
+        for sub in os.listdir(base):
+            ruta = os.path.join(base, sub, "manifiesto.json")
+            if not os.path.isfile(ruta):
+                continue
+            try:
+                with open(ruta, encoding="utf-8") as f:
+                    m = json.load(f)
+                fuente = m.get("fuentes", {}).get("aemet_prediccion_diaria", {})
+                if fuente.get("estado") != "OK":
+                    continue
+                cuando = dt.datetime.fromisoformat(m["ejecucion_madrid"])
+                if ultima is None or cuando > ultima:
+                    ultima = cuando
+            except Exception:
+                continue
+    if ultima is None:
+        return None
+    return (ahora_madrid - ultima).total_seconds() / 3600
 
 
 def descubrir_previsiones(modo):
@@ -715,7 +800,7 @@ def capturar_entsoe(carpeta, hoy):
 # AEMET — la predicción, que es lo irrecuperable
 # ============================================================================
 
-def capturar_aemet(carpeta, hora_actual):
+def capturar_aemet(carpeta, ahora_madrid):
     titulo("AEMET — PREDICCIÓN de temperatura (irrecuperable después)")
     print("  La API solo devuelve la predicción vigente: si no se guarda hoy,")
     print("  no hay forma de saber mañana qué decía. Es el motivo principal")
@@ -723,12 +808,15 @@ def capturar_aemet(carpeta, hora_actual):
     if not AEMET_TOKEN:
         registrar("aemet", "FALLO", "falta AEMET_TOKEN")
         return
-    # No en todas las capturas: ver CADA_CUANTAS_HORAS_AEMET.
-    if hora_actual % CADA_CUANTAS_HORAS_AEMET != 0:
+    # No en todas las capturas: ver HORAS_MINIMAS_ENTRE_AEMET.
+    desde = horas_desde_ultima_aemet(ahora_madrid)
+    if desde is not None and desde < HORAS_MINIMAS_ENTRE_AEMET:
         registrar("aemet_prediccion_diaria", "OMITIDA",
-                  f"solo se pide cada {CADA_CUANTAS_HORAS_AEMET} h "
-                  f"(su predicción se elabora pocas veces al día)")
+                  f"la última buena fue hace {desde:.1f} h "
+                  f"(mínimo {HORAS_MINIMAS_ENTRE_AEMET} h)")
         return
+    print("  Última captura buena: "
+          + ("ninguna todavía" if desde is None else f"hace {desde:.1f} h"))
 
     filas = []
     for codigo, ciudad in MUNICIPIOS_AEMET.items():
@@ -899,12 +987,117 @@ def capturar_mibgas(carpeta, hoy):
 
 
 # ============================================================================
+# Índice en ruta fija
+# ============================================================================
+#
+# Por qué existe esto (v3.4): hasta ahora, para saber cómo había ido el
+# archivador había que ADIVINAR el nombre de la carpeta, porque lleva el minuto
+# real de arranque del script y ese minuto no es predecible —el disparo externo
+# pide a y 50, pero la ejecución empieza cuando GitHub asigna máquina—. En la
+# práctica eso significaba encadenar 404s probando 0850, 1452, 2303, 2305...
+# hasta acertar, o pedirle al usuario que mirara la carpeta a mano.
+#
+# La solución no es adivinar mejor: es que haya SIEMPRE dos ficheros en una
+# ruta que no cambia nunca.
+#
+#   archivo/ultimo.json  → copia del manifiesto de la última captura.
+#   archivo/indice.csv   → una línea por captura, desde la primera.
+#
+# El índice además responde una pregunta que hasta ahora se contestaba contando
+# carpetas a mano: cuántas capturas hay de verdad al día, y cuántas vienen del
+# disparador externo frente al cron de GitHub. Por eso se guarda `disparo`.
+
+COLUMNAS_INDICE = [
+    "fecha", "hora", "ejecucion_madrid", "ejecucion_utc", "version", "modo",
+    "disparo", "ok", "vacio", "fallo", "omitida", "parcial", "kb_total",
+    "ruta", "run_id",
+]
+
+
+def _fila_indice(manifiesto, carpeta):
+    r = manifiesto.get("resumen", {})
+    return {
+        "fecha": manifiesto.get("fecha", ""),
+        "hora": os.path.basename(carpeta.rstrip("/")),
+        "ejecucion_madrid": manifiesto.get("ejecucion_madrid", ""),
+        "ejecucion_utc": manifiesto.get("ejecucion_utc", ""),
+        "version": manifiesto.get("version", ""),
+        "modo": manifiesto.get("modo", ""),
+        "disparo": manifiesto.get("disparo", ""),
+        "ok": r.get("ok", ""), "vacio": r.get("vacio", ""),
+        "fallo": r.get("fallo", ""), "omitida": r.get("omitida", ""),
+        "parcial": r.get("parcial", ""), "kb_total": r.get("kb_total", ""),
+        "ruta": carpeta.replace(os.sep, "/"),
+        "run_id": manifiesto.get("run_id", ""),
+    }
+
+
+def actualizar_indice(manifiesto, carpeta):
+    """
+    Escribe `archivo/ultimo.json` y añade una línea a `archivo/indice.csv`.
+
+    Se hace al final y dentro de su propio try: si esto fallara, la captura ya
+    está guardada y el índice es solo comodidad. Nunca debe tumbar una foto
+    buena por un problema de contabilidad.
+
+    Se AÑADE una línea en vez de reescribir el fichero entero. No es
+    microoptimización: cada reescritura es un blob nuevo en Git, y a ocho
+    capturas diarias durante un año eso engorda el repositorio sin motivo. Solo
+    se reescribe entero en dos casos —que la cabecera haya cambiado al subir de
+    versión, o que ya exista una línea con esta misma ruta (reejecución del
+    mismo minuto)—, que son excepcionales.
+    """
+    fila = _fila_indice(manifiesto, carpeta)
+
+    ruta_ultimo = os.path.join(CARPETA_RAIZ, "ultimo.json")
+    with open(ruta_ultimo, "w", encoding="utf-8") as f:
+        json.dump({"ruta": fila["ruta"], **manifiesto}, f,
+                  ensure_ascii=False, indent=2)
+
+    ruta_indice = os.path.join(CARPETA_RAIZ, "indice.csv")
+    previas, cabecera_vieja = [], None
+    if os.path.isfile(ruta_indice):
+        try:
+            with open(ruta_indice, newline="", encoding="utf-8") as f:
+                lector = csv.DictReader(f)
+                cabecera_vieja = lector.fieldnames
+                previas = list(lector)
+        except Exception:
+            previas, cabecera_vieja = [], None
+
+    duplicada = any(p.get("ruta") == fila["ruta"] for p in previas)
+    reescribir = (cabecera_vieja != COLUMNAS_INDICE) or duplicada
+
+    if reescribir:
+        # Al reescribir se descartan las líneas sin ruta. Sin este filtro, un
+        # `indice.csv` corrupto —o truncado a medio push— se «migraba» a la
+        # cabecera nueva convertido en filas vacías, y el índice pasaba a
+        # mentir sobre cuántas capturas hay. Lo detectó la prueba 8: mejor
+        # perder una línea ilegible que arrastrar un recuento falso.
+        previas = [p for p in previas
+                   if p.get("ruta") and p.get("ruta") != fila["ruta"]]
+        with open(ruta_indice, "w", newline="", encoding="utf-8") as f:
+            escritor = csv.DictWriter(f, fieldnames=COLUMNAS_INDICE,
+                                      extrasaction="ignore")
+            escritor.writeheader()
+            for p in previas:
+                escritor.writerow({c: p.get(c, "") for c in COLUMNAS_INDICE})
+            escritor.writerow(fila)
+    else:
+        with open(ruta_indice, "a", newline="", encoding="utf-8") as f:
+            csv.DictWriter(f, fieldnames=COLUMNAS_INDICE,
+                           extrasaction="ignore").writerow(fila)
+
+    return ruta_ultimo, ruta_indice, len(previas) + 1
+
+
+# ============================================================================
 def ejecutar():
     ahora_utc = dt.datetime.now(dt.timezone.utc)
     ahora_madrid = ahora_utc.astimezone(TZ_MADRID)
     hoy = ahora_madrid.date()
 
-    print("ARCHIVADOR DIARIO — FASE 0 DEL PROYECTO BESS (v3.3)")
+    print("ARCHIVADOR DIARIO — FASE 0 DEL PROYECTO BESS (v3.5)")
     print(f"Ejecución: {ahora_madrid.isoformat(timespec='seconds')} (Madrid)")
     print(f"           {ahora_utc.isoformat(timespec='seconds')} (UTC)")
 
@@ -920,11 +1113,18 @@ def ejecutar():
     print(f"Destino:   {carpeta}/")
 
     MANIFIESTO.update({
-        "version": "v3.3",
+        "version": "v3.5",
         "ejecucion_madrid": ahora_madrid.isoformat(timespec="seconds"),
         "ejecucion_utc": ahora_utc.isoformat(timespec="seconds"),
         "fecha": hoy.isoformat(),
         "dia_objetivo": (hoy + dt.timedelta(days=1)).isoformat(),
+        # Quién disparó esta ejecución. GitHub lo pone en el entorno:
+        # "schedule" = cron de GitHub, "repository_dispatch"/"workflow_dispatch"
+        # = disparo externo o botón manual, "push" = al tocar el código.
+        # Con esto, dentro de dos semanas la fiabilidad de cada disparador se
+        # mide contando líneas del índice en vez de discutiéndola.
+        "disparo": os.environ.get("GITHUB_EVENT_NAME", "local"),
+        "run_id": os.environ.get("GITHUB_RUN_ID", ""),
     })
 
     modo = "ligero" if ya_hay_captura_completa_hoy(hoy) else "completo"
@@ -942,7 +1142,7 @@ def ejecutar():
 
     for nombre, funcion, args in (
         ("ENTSO-E", capturar_entsoe, (carpeta, hoy)),
-        ("AEMET", capturar_aemet, (carpeta, ahora_madrid.hour)),
+        ("AEMET", capturar_aemet, (carpeta, ahora_madrid)),
         ("MIBGAS", capturar_mibgas, (carpeta, hoy)),
     ):
         try:
@@ -963,6 +1163,15 @@ def ejecutar():
     with open(os.path.join(carpeta, "manifiesto.json"), "w", encoding="utf-8") as f:
         json.dump(MANIFIESTO, f, ensure_ascii=False, indent=2)
 
+    # El índice va después del manifiesto y en su propio try: llegados aquí la
+    # foto ya está en disco, y el índice es comodidad. Que un fallo de
+    # contabilidad tumbe una captura buena sería absurdo.
+    total_capturas = None
+    try:
+        _, _, total_capturas = actualizar_indice(MANIFIESTO, carpeta)
+    except Exception as e:
+        print(f"\n  ⚠ No se pudo actualizar el índice: {type(e).__name__}: {e}")
+
     titulo("RESUMEN")
     for nombre, info in MANIFIESTO["fuentes"].items():
         print(f"  {info['estado']:6s} {nombre:34s} {info['detalle']}")
@@ -970,6 +1179,9 @@ def ejecutar():
     print(f"\n  {r['ok']} OK · {r['vacio']} vacías · {r['fallo']} fallidas")
     print(f"  Tamaño de la foto de hoy: {r['kb_total']:.0f} KB")
     print(f"  Manifiesto en {carpeta}/manifiesto.json")
+    if total_capturas is not None:
+        print(f"  Índice actualizado: {CARPETA_RAIZ}/ultimo.json y "
+              f"{CARPETA_RAIZ}/indice.csv ({total_capturas} capturas)")
 
     if r["ok"] == 0:
         print("\n  ✗ Ninguna fuente respondió. Esto sí es un fallo real.")
