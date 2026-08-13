@@ -78,11 +78,36 @@ No esperes al día siguiente para comprobar que funciona.
 
 ## Uso diario
 
-**No hay uso diario.** Corre solo, dos veces cada mañana: la segunda es la red
-de seguridad por si la primera falló.
+**No hay uso diario.** Corre solo, **ocho veces al día**: al minuto 50 de las
+2, 5, 8, 11, 14, 17, 20 y 23 (hora de Madrid).
+
+Quien dispara no es el `schedule` de GitHub Actions, que descartó 22 de las 24
+primeras ejecuciones, sino **un disparador externo (cron-job.org)** que llama a
+la API de GitHub. El cron de GitHub se deja puesto como red de seguridad.
+
+**La captura de las 11:50 es la intocable.** Medido sobre el propio archivo:
+las series «Previsión diaria D+1» de e·sios (1775, 1777, 1779, 10358) se sellan
+a las 10:50 y no son visibles por la API hasta cerca de las 11:45. Es la única
+captura anterior al cierre de ofertas de las 12:00 que ve la previsión de
+mañana; la de las 08:50 todavía tiene la de ayer.
 
 Si algún día quieres forzarlo —porque quieres la foto a una hora concreta, o
 porque la automática falló— **Actions → Run workflow**, también desde el móvil.
+
+### El visor de móvil
+
+`index.html` es una web de una sola página, sin dependencias, que lee el
+archivo directamente y lo enseña en el móvil: estado del archivador, y
+navegación por captura → fuente → serie con gráfico o tabla.
+
+Se publica con **Settings → Pages → Source: Deploy from a branch → main /
+(root)**. La URL resultante (`https://<usuario>.github.io/bess-archivador/`) se
+abre en el móvil y se añade a la pantalla de inicio; a partir de ahí se
+comporta como una app. Lleva `noindex`, así que no aparecerá en buscadores.
+
+Los datos que muestra los pide a `raw.githubusercontent.com`, no a Pages: así
+no depende de que Pages haya reconstruido el sitio y siempre enseña la última
+captura.
 
 ### Comprobar que fue bien
 
@@ -123,15 +148,26 @@ absolutamente nada.
 
 ## Qué se guarda, y por qué esto y no otra cosa
 
-Una carpeta por día en `archivo/AAAA/MM/AAAA-MM-DD/`:
+Tres ficheros en **ruta fija**, que no cambia nunca:
+
+| Fichero | Contenido |
+|---|---|
+| `archivo/ultimo.json` | El manifiesto de la última captura |
+| `archivo/indice.csv` | Una línea por captura, con el disparador que la lanzó |
+| `archivo/catalogo.csv` | Qué es cada indicador: id, nombre y **descripción completa**. Acumulativo; solo se reescribe cuando REE cambia algo |
+
+Y una carpeta **por captura**, en `archivo/AAAA/MM/AAAA-MM-DD/HHMM/`, donde
+`HHMM` es la hora real de ejecución en Madrid — no la programada, para que el
+retraso del cron quede registrado en vez de disimulado:
 
 | Archivo | Contenido |
 |---|---|
 | `manifiesto.json` | Hora exacta de ejecución, estado de cada fuente, nº de registros, hashes |
 | `esios_600_precio_spot.csv` | Precios publicados: últimos 8 días y, si ya está, mañana |
-| `esios_54*_prev_*.csv` | Previsión de eólica, solar FV y solar térmica |
+| `esios_602_energia_casada_diario.csv` | Energía casada en el mercado diario. Se publica tras la casación: nunca llega a D+1 |
+| `esios_54*_prev_*.csv.gz` | Previsión de eólica, solar FV y solar térmica, **10 días vista** |
 | **`esios_previsiones.csv.gz`** | **Todas** las previsiones del catálogo de e·sios (~60 indicadores) |
-| `esios_catalogo_previsiones.csv` | Qué es cada uno de esos indicadores: id, nombre, descripción |
+| `esios_previsiones_meta.csv` | Por indicador: estado, nº de filas y `values_updated_at` |
 | `esios_previsiones_meta.csv` | Por indicador: estado, nº de filas y `values_updated_at` |
 | `entsoe_A65_prev_demanda_es.csv` | Previsión de demanda peninsular |
 | `entsoe_A69_prev_renovable_es.csv` | Previsión de generación renovable (solar y eólica) |

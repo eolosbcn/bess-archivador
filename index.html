@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#f9f9f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0d0d0d" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Archivo BESS">
+<title>Archivo BESS</title>
+<style>
+:root{
+  color-scheme: light;
+  --plane:#f9f9f7; --surface-1:#fcfcfb;
+  --text-primary:#0b0b0b; --text-secondary:#52514e; --muted:#898781;
+  --grid:#e1e0d9; --axis:#c3c2b7; --border:rgba(11,11,11,0.10);
+  --series-1:#2a78d6;
+  --good:#0ca30c; --warning:#fab219; --serious:#ec835a; --critical:#d03b3b;
+  --ghost:rgba(11,11,11,0.05);
+}
+@media (prefers-color-scheme: dark){
+  :root:where(:not([data-theme="light"])){
+    color-scheme: dark;
+    --plane:#0d0d0d; --surface-1:#1a1a19;
+    --text-primary:#ffffff; --text-secondary:#c3c2b7; --muted:#898781;
+    --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,0.10);
+    --series-1:#3987e5;
+    --ghost:rgba(255,255,255,0.06);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --plane:#0d0d0d; --surface-1:#1a1a19;
+  --text-primary:#ffffff; --text-secondary:#c3c2b7; --muted:#898781;
+  --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,0.10);
+  --series-1:#3987e5;
+  --ghost:rgba(255,255,255,0.06);
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--plane); color:var(--text-primary);
+  font:15px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;
+  padding:0 0 env(safe-area-inset-bottom);
+  -webkit-text-size-adjust:100%;
+}
+header{
+  display:flex; align-items:center; gap:10px; padding:12px 14px;
+  border-bottom:1px solid var(--border); background:var(--surface-1);
+  position:sticky; top:0; z-index:5;
+}
+header h1{font-size:16px; margin:0; flex:1; font-weight:600}
+button,select{font:inherit; color:inherit}
+.icon-btn{
+  background:none; border:1px solid var(--border); border-radius:8px;
+  min-width:40px; min-height:40px; cursor:pointer;
+}
+nav{display:flex; gap:6px; padding:10px 14px 0}
+nav button{
+  flex:1; min-height:44px; border:1px solid var(--border); background:var(--surface-1);
+  border-radius:10px; cursor:pointer; font-weight:500;
+}
+nav button[aria-selected="true"]{background:var(--series-1); color:#fff; border-color:transparent}
+main{padding:12px 14px 32px; max-width:900px; margin:0 auto}
+.card{
+  background:var(--surface-1); border:1px solid var(--border);
+  border-radius:12px; padding:14px; margin-bottom:12px;
+}
+label{display:block; font-size:12px; color:var(--text-secondary); margin:0 0 4px}
+select{
+  width:100%; min-height:44px; padding:8px 10px; border-radius:10px;
+  border:1px solid var(--border); background:var(--surface-1);
+}
+.field{margin-bottom:12px}
+.field:last-child{margin-bottom:0}
+.hero{font-size:34px; font-weight:600; line-height:1.1; margin:2px 0 4px}
+.tiles{display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:10px}
+.tile{background:var(--surface-1); border:1px solid var(--border); border-radius:12px; padding:12px}
+.tile .v{font-size:24px; font-weight:600; line-height:1.15}
+.tile .k{font-size:12px; color:var(--text-secondary)}
+.dot{display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:6px; vertical-align:middle}
+.muted{color:var(--muted)}
+.sec{color:var(--text-secondary)}
+small{font-size:12px}
+table{border-collapse:collapse; width:100%; font-size:13px; font-variant-numeric:tabular-nums}
+th,td{padding:6px 8px; border-bottom:1px solid var(--grid); text-align:right; white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+th{color:var(--text-secondary); font-weight:500; position:sticky; top:0; background:var(--surface-1)}
+.scroll{overflow:auto; max-height:60vh; -webkit-overflow-scrolling:touch}
+.row{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+.pill{
+  border:1px solid var(--border); background:var(--surface-1); border-radius:999px;
+  padding:8px 14px; min-height:40px; cursor:pointer;
+}
+.pill[aria-pressed="true"]{background:var(--series-1); color:#fff; border-color:transparent}
+.chart-wrap{position:relative; touch-action:pan-y}
+svg{display:block; width:100%; height:auto; overflow:visible}
+.tip{
+  position:absolute; pointer-events:none; background:var(--surface-1);
+  border:1px solid var(--border); border-radius:8px; padding:6px 9px;
+  font-size:12px; box-shadow:0 2px 10px rgba(0,0,0,.14); white-space:nowrap;
+  font-variant-numeric:tabular-nums; opacity:0; transition:opacity .08s;
+}
+.lista{list-style:none; margin:0; padding:0}
+.lista li{padding:9px 0; border-bottom:1px solid var(--grid); display:flex; gap:8px; align-items:baseline}
+.lista li:last-child{border-bottom:none}
+.lista .t{font-variant-numeric:tabular-nums; min-width:112px}
+.err{color:var(--critical)}
+.spin{color:var(--text-secondary); padding:8px 0}
+</style>
+</head>
+<body>
+<header>
+  <h1>Archivo BESS</h1>
+  <button class="icon-btn" id="tema" title="Cambiar tema" aria-label="Cambiar tema">◐</button>
+  <button class="icon-btn" id="recargar" title="Recargar" aria-label="Recargar">↻</button>
+</header>
+
+<nav role="tablist">
+  <button role="tab" id="tab-estado" aria-selected="true">Estado</button>
+  <button role="tab" id="tab-explorar" aria-selected="false">Explorar</button>
+</nav>
+
+<main>
+  <section id="vista-estado"></section>
+  <section id="vista-explorar" hidden></section>
+</main>
+
+<script>
+"use strict";
+const REPO = "eolosbcn/bess-archivador";
+const RAW  = `https://raw.githubusercontent.com/${REPO}/main/`;
+const $ = s => document.querySelector(s);
+
+/* ---------- utilidades ---------- */
+// raw.githubusercontent cachea 5 minutos. Sin romper la caché, el visor puede
+// enseñar una foto de hace un rato como si fuera la última: ya pasó una vez.
+const url = p => RAW + p + (p.endsWith(".gz") ? "" : `?t=${Date.now()}`);
+
+async function traer(p){
+  const r = await fetch(url(p), {cache:"no-store"});
+  if(!r.ok) throw new Error(`${r.status} en ${p}`);
+  const buf = new Uint8Array(await r.arrayBuffer());
+  // GitHub sirve los .gz como bytes crudos, sin content-encoding: hay que
+  // descomprimir aquí. Se mira la firma en vez de fiarse de la extensión, por
+  // si algún día un CDN los descomprime por el camino.
+  if(buf[0] === 0x1f && buf[1] === 0x8b){
+    if(!("DecompressionStream" in window))
+      throw new Error("Este navegador no sabe descomprimir .gz");
+    const ds = new DecompressionStream("gzip");
+    const s = new Blob([buf]).stream().pipeThrough(ds);
+    return await new Response(s).text();
+  }
+  return new TextDecoder("utf-8").decode(buf);
+}
+
+function parseCSV(txt){
+  const filas=[]; let campo="", fila=[], q=false;
+  for(let i=0;i<txt.length;i++){
+    const c=txt[i];
+    if(q){
+      if(c === '"'){ if(txt[i+1] === '"'){campo+='"'; i++;} else q=false; }
+      else campo+=c;
+    } else if(c === '"') q=true;
+    else if(c === ","){ fila.push(campo); campo=""; }
+    else if(c === "\n"){ fila.push(campo); filas.push(fila); fila=[]; campo=""; }
+    else if(c !== "\r") campo+=c;
+  }
+  if(campo!=="" || fila.length){ fila.push(campo); filas.push(fila); }
+  if(!filas.length) return {cols:[], filas:[]};
+  const cols = filas[0].map(c=>c.trim());
+  return {cols, filas: filas.slice(1)
+    .filter(f=>f.length>1 || (f[0]||"").trim()!=="")
+    .map(f=>Object.fromEntries(cols.map((c,i)=>[c, f[i] ?? ""])))};
+}
+
+// Estricto a propósito: con parseFloat a secas, "2026-08-05T00:00:00+02:00"
+// devolvía 2026 y la columna de fecha pasaba por columna de valores. El
+// gráfico salía siendo una línea plana en 2026 y nadie se habría dado cuenta
+// mirando solo el eje.
+const num = v => {
+  const t = String(v).trim().replace(/\u00a0/g,"").replace(",", ".");
+  if(!/^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$/.test(t)) return null;
+  const n = parseFloat(t);
+  return Number.isFinite(n) ? n : null;
+};
+const fmt = n => n===null ? "—" :
+  Math.abs(n)>=1000 ? n.toLocaleString("es-ES",{maximumFractionDigits:0})
+                    : n.toLocaleString("es-ES",{maximumFractionDigits:2});
+function fecha(v){
+  const d=new Date(v);
+  return isNaN(d) ? String(v) :
+    d.toLocaleString("es-ES",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"});
+}
+// Las descripciones de e·sios vienen con etiquetas HTML dentro.
+const limpiarHtml = s => String(s).replace(/<[^>]+>/g," ").replace(/&nbsp;/g," ")
+                                  .replace(/\s+/g," ").trim();
+const esc = s => String(s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+/* ---------- tema ---------- */
+const temaGuardado = localStorage.getItem("tema");
+if(temaGuardado) document.documentElement.dataset.theme = temaGuardado;
+$("#tema").onclick = () => {
+  const oscuro = getComputedStyle(document.body).backgroundColor === "rgb(13, 13, 13)";
+  const nuevo = oscuro ? "light" : "dark";
+  document.documentElement.dataset.theme = nuevo;
+  localStorage.setItem("tema", nuevo);
+  if(ultimoDibujo) ultimoDibujo();
+};
+
+/* ---------- gráfico de línea, UNA serie ---------- */
+// Una sola serie siempre, a propósito: en un móvil, dos líneas encima con
+// leyenda no se leen, y con una serie el título ya dice qué es — no hace falta
+// leyenda ni distinguir colores.
+let ultimoDibujo = null;
+function grafico(cont, puntos, unidad){
+  const W=680, H=300, mL=52, mR=12, mT=14, mB=34;
+  const xs = puntos.map(p=>p.x), ys = puntos.map(p=>p.y);
+  let y0=Math.min(...ys), y1=Math.max(...ys);
+  if(y0===y1){ y0-=1; y1+=1; }
+  const pad=(y1-y0)*0.08; y0-=pad; y1+=pad;
+  if(Math.min(...ys)>=0 && y0<0) y0=0;
+  const x0=Math.min(...xs), x1=Math.max(...xs);
+  const px = x => mL + (x1===x0 ? 0 : (x-x0)/(x1-x0))*(W-mL-mR);
+  const py = y => mT + (1-(y-y0)/(y1-y0))*(H-mT-mB);
+
+  // Escalones «bonitos» (1, 2, 2,5 o 5 por potencia de diez). Con la división
+  // en cuatro partes iguales salían ejes tipo 8985 / 17.969 / 26.954, que se
+  // leen fatal y hacen dudar de la cifra.
+  const bruto=(y1-y0)/4, mag=Math.pow(10, Math.floor(Math.log10(bruto)));
+  const norm=bruto/mag;
+  const paso=(norm<=1?1:norm<=2?2:norm<=2.5?2.5:norm<=5?5:10)*mag;
+  y0=Math.floor(y0/paso)*paso; y1=Math.ceil(y1/paso)*paso;
+  const ticksY=[]; for(let t=y0; t<=y1+paso*1e-9; t+=paso) ticksY.push(+t.toFixed(10));
+  const nx = Math.min(5, puntos.length);
+  const ticksX=[]; for(let i=0;i<nx;i++)
+    ticksX.push(puntos[Math.round(i*(puntos.length-1)/Math.max(1,nx-1))]);
+
+  const d = puntos.map((p,i)=>`${i?"L":"M"}${px(p.x).toFixed(1)},${py(p.y).toFixed(1)}`).join("");
+  const svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Gráfico de la serie seleccionada">
+    ${ticksY.map(t=>`<line x1="${mL}" x2="${W-mR}" y1="${py(t).toFixed(1)}" y2="${py(t).toFixed(1)}"
+        stroke="var(--grid)" stroke-width="1"/>`).join("")}
+    ${ticksY.map(t=>`<text x="${mL-8}" y="${(py(t)+4).toFixed(1)}" text-anchor="end"
+        font-size="11" fill="var(--muted)" style="font-variant-numeric:tabular-nums">${fmt(t)}</text>`).join("")}
+    <line x1="${mL}" x2="${W-mR}" y1="${py(ticksY[0]).toFixed(1)}" y2="${py(ticksY[0]).toFixed(1)}"
+      stroke="var(--axis)" stroke-width="1"/>
+    ${ticksX.map(p=>`<text x="${px(p.x).toFixed(1)}" y="${H-12}" text-anchor="middle"
+        font-size="11" fill="var(--muted)">${esc(p.et)}</text>`).join("")}
+    <path d="${d}" fill="none" stroke="var(--series-1)" stroke-width="2"
+      stroke-linejoin="round" stroke-linecap="round"/>
+    ${puntos.length===1 ? `<circle cx="${px(puntos[0].x)}" cy="${py(puntos[0].y)}" r="5" fill="var(--series-1)"/>`:""}
+    <line id="cross" x1="0" x2="0" y1="${mT}" y2="${H-mB}" stroke="var(--axis)" stroke-width="1" opacity="0"/>
+    <circle id="marca" r="5" fill="var(--series-1)" stroke="var(--surface-1)" stroke-width="2" opacity="0"/>
+  </svg><div class="tip" id="tip"></div>`;
+  cont.innerHTML = svg;
+
+  // Capa de hover/táctil: en móvil el dedo tapa el punto, así que el globo se
+  // coloca siempre por encima y se desplaza para no salirse por los lados.
+  const el=cont.querySelector("svg"), tip=cont.querySelector("#tip");
+  const cross=cont.querySelector("#cross"), marca=cont.querySelector("#marca");
+  function mover(ev){
+    const r=el.getBoundingClientRect();
+    const cx=(ev.touches?ev.touches[0].clientX:ev.clientX)-r.left;
+    const vx=cx/r.width*W;
+    let mejor=0, dmin=1e9;
+    puntos.forEach((p,i)=>{ const dd=Math.abs(px(p.x)-vx); if(dd<dmin){dmin=dd; mejor=i;} });
+    const p=puntos[mejor], X=px(p.x), Y=py(p.y);
+    cross.setAttribute("x1",X); cross.setAttribute("x2",X); cross.setAttribute("opacity","1");
+    marca.setAttribute("cx",X); marca.setAttribute("cy",Y); marca.setAttribute("opacity","1");
+    tip.innerHTML = `<strong>${fmt(p.y)}</strong> ${esc(unidad||"")}<br><span class="sec">${esc(p.etl)}</span>`;
+    tip.style.opacity="1";
+    const izq = Math.max(4, Math.min(r.width - tip.offsetWidth - 4, X/W*r.width - tip.offsetWidth/2));
+    tip.style.left = izq+"px";
+    tip.style.top = Math.max(0, Y/H*r.height - tip.offsetHeight - 12)+"px";
+  }
+  const salir=()=>{ tip.style.opacity="0"; cross.setAttribute("opacity","0"); marca.setAttribute("opacity","0"); };
+  el.addEventListener("pointermove", mover);
+  el.addEventListener("pointerdown", mover);
+  el.addEventListener("pointerleave", salir);
+  el.addEventListener("touchmove", mover, {passive:true});
+  el.addEventListener("touchend", salir);
+}
+
+/* ---------- vista ESTADO ---------- */
+let INDICE=null;
+async function cargarIndice(force){
+  if(INDICE && !force) return INDICE;
+  const {filas} = parseCSV(await traer("archivo/indice.csv"));
+  INDICE = filas.filter(f=>f.ruta).sort((a,b)=>
+    (a.ejecucion_madrid||"") < (b.ejecucion_madrid||"") ? 1 : -1);   // más reciente primero
+  return INDICE;
+}
+
+function estadoCaptura(f){
+  const fallo=+f.fallo||0, parcial=+f.parcial||0, ok=+f.ok||0;
+  if(!ok) return ["critical","Sin datos"];
+  if(parcial) return ["serious","Parcial"];
+  if(fallo) return ["warning",`${fallo} fallo${fallo>1?"s":""}`];
+  return ["good","Completa"];
+}
+
+async function pintarEstado(){
+  const v=$("#vista-estado");
+  v.innerHTML='<div class="spin">Cargando…</div>';
+  try{
+    const idx = await cargarIndice(true);
+    if(!idx.length){ v.innerHTML='<div class="card">El índice está vacío todavía.</div>'; return; }
+    const u = idx[0];
+    const horas = (Date.now()-new Date(u.ejecucion_madrid))/36e5;
+    const [cls,txt] = estadoCaptura(u);
+    // Hueco esperado: 3 h entre capturas. Por encima de 4 es que algo pasa.
+    const salud = horas>4 ? ["critical","Retraso"] : horas>3.2 ? ["warning","Al límite"] : ["good","Al día"];
+    const hoy = idx.filter(f=>f.fecha===u.fecha).length;
+    const conFallo = idx.slice(0,8).filter(f=>+f.fallo>0 || +f.parcial>0).length;
+
+    v.innerHTML = `
+      <div class="card">
+        <div class="sec"><small>Última captura</small></div>
+        <div class="hero">hace ${horas<1 ? Math.round(horas*60)+" min" : horas.toFixed(1)+" h"}</div>
+        <div class="sec"><small>${esc(fecha(u.ejecucion_madrid))} · modo ${esc(u.modo||"?")}
+          · disparo ${esc(u.disparo||"?")}</small></div>
+        <div style="margin-top:8px"><span class="dot" style="background:var(--${salud[0]})"></span>
+          <strong>${salud[1]}</strong> <span class="sec">— ${txt.toLowerCase()},
+          ${esc(u.ok)} fuentes con datos</span></div>
+      </div>
+      <div class="tiles">
+        <div class="tile"><div class="v">${hoy}</div><div class="k">capturas hoy</div></div>
+        <div class="tile"><div class="v">${idx.length}</div><div class="k">capturas archivadas</div></div>
+        <div class="tile"><div class="v">${conFallo}</div><div class="k">con incidencias (últimas 8)</div></div>
+        <div class="tile"><div class="v">${esc(u.version||"?")}</div><div class="k">versión</div></div>
+      </div>
+      <div class="card">
+        <div class="sec" style="margin-bottom:6px"><small>Últimas 12 capturas</small></div>
+        <ul class="lista">${idx.slice(0,12).map(f=>{
+          const [c,t]=estadoCaptura(f);
+          return `<li><span class="dot" style="background:var(--${c})"></span>
+            <span class="t">${esc(f.fecha)} ${esc((f.hora||"").replace(/(\d\d)(\d\d)/,"$1:$2"))}</span>
+            <span class="sec" style="flex:1">${t} · ${esc(f.modo||"")}</span>
+            <span class="muted"><small>${esc(f.kb_total)} KB</small></span></li>`;
+        }).join("")}</ul>
+      </div>`;
+  }catch(e){ v.innerHTML=`<div class="card err">No se pudo cargar: ${esc(e.message)}</div>`; }
+}
+
+/* ---------- vista EXPLORAR ---------- */
+let CATALOGO=null, DATOS=null, MODO_TABLA=false;
+
+// Qué fichero corresponde a cada fuente del manifiesto. Se devuelven las dos
+// variantes y se prueban en orden: qué series van en plano y cuáles comprimidas
+// ha cambiado entre versiones del archivador (el 602 nació comprimido en la
+// v3.6 y pasó a plano en la v3.7), y el visor tiene que poder abrir capturas
+// viejas igual que las nuevas.
+function ficherosDe(nombre){
+  if(nombre==="esios_catalogo" || nombre==="esios_catalogo_fichero") return [];
+  if(nombre==="esios_previsiones") return ["esios_previsiones.csv.gz"];
+  const planoPrimero = /^(esios_(600|602)_|aemet_|esios_previsiones_meta)/.test(nombre);
+  return planoPrimero ? [nombre+".csv", nombre+".csv.gz"]
+                      : [nombre+".csv.gz", nombre+".csv"];
+}
+async function traerPrimero(ruta, nombre){
+  let ultimo=null;
+  for(const f of ficherosDe(nombre)){
+    try{ return await traer(`${ruta}/${f}`); }catch(e){ ultimo=e; }
+  }
+  throw ultimo || new Error("sin fichero asociado");
+}
+
+async function cargarCatalogo(){
+  if(CATALOGO) return CATALOGO;
+  try{
+    const {filas}=parseCSV(await traer("archivo/catalogo.csv"));
+    CATALOGO=Object.fromEntries(filas.map(f=>[f.id,f]));
+  }catch(e){ CATALOGO={}; }   // anterior a la v3.6: se sigue sin nombres
+  return CATALOGO;
+}
+
+async function pintarExplorar(){
+  const v=$("#vista-explorar");
+  v.innerHTML='<div class="spin">Cargando…</div>';
+  try{
+    const idx=await cargarIndice();
+    const dias=[...new Set(idx.map(f=>f.fecha))];
+    v.innerHTML=`
+      <div class="card">
+        <div class="field"><label for="s-dia">Día</label><select id="s-dia">
+          ${dias.map(d=>`<option value="${esc(d)}">${esc(d)}</option>`).join("")}</select></div>
+        <div class="field"><label for="s-hora">Captura</label><select id="s-hora"></select></div>
+        <div class="field"><label for="s-fuente">Fuente</label><select id="s-fuente"></select></div>
+        <div class="field" id="f-serie" hidden><label for="s-serie">Serie</label>
+          <select id="s-serie"></select></div>
+        <div class="field" id="f-col" hidden><label for="s-col">Valor</label>
+          <select id="s-col"></select></div>
+      </div>
+      <div id="salida"></div>`;
+    $("#s-dia").onchange=llenarHoras; $("#s-hora").onchange=llenarFuentes;
+    $("#s-fuente").onchange=cargarFuente;
+    llenarHoras();
+  }catch(e){ v.innerHTML=`<div class="card err">No se pudo cargar: ${esc(e.message)}</div>`; }
+}
+
+function llenarHoras(){
+  const d=$("#s-dia").value;
+  const hs=INDICE.filter(f=>f.fecha===d);
+  $("#s-hora").innerHTML=hs.map(f=>
+    `<option value="${esc(f.ruta)}">${esc((f.hora||"").replace(/(\d\d)(\d\d)/,"$1:$2"))} · ${esc(f.modo||"")}</option>`
+  ).join("");
+  llenarFuentes();
+}
+
+async function llenarFuentes(){
+  const ruta=$("#s-hora").value;
+  $("#s-fuente").innerHTML='<option>Leyendo el manifiesto…</option>';
+  $("#salida").innerHTML="";
+  try{
+    const man=JSON.parse(await traer(ruta+"/manifiesto.json"));
+    const opts=Object.entries(man.fuentes||{})
+      .filter(([n,i])=>i.estado==="OK" || i.estado==="PARCIAL")
+      .filter(([n])=>ficherosDe(n).length)
+      .map(([n,i])=>`<option value="${esc(n)}">${esc(n)}${i.filas?` (${i.filas} filas)`:""}</option>`);
+    const omitidas=Object.entries(man.fuentes||{}).filter(([n,i])=>i.estado!=="OK"&&i.estado!=="PARCIAL");
+    $("#s-fuente").innerHTML = opts.length ? opts.join("")
+      : '<option value="">Esta captura no guardó ninguna fuente</option>';
+    if(omitidas.length) $("#salida").innerHTML =
+      `<div class="card"><small class="sec">No disponibles en esta captura: ${
+        omitidas.map(([n,i])=>`${esc(n)} <span class="muted">(${esc(i.estado)})</span>`).join(", ")}</small></div>`;
+    cargarFuente();
+  }catch(e){ $("#s-fuente").innerHTML=`<option value="">Error: ${esc(e.message)}</option>`; }
+}
+
+async function cargarFuente(){
+  const ruta=$("#s-hora").value, fuente=$("#s-fuente").value;
+  if(!fuente) return;
+  const sal=$("#salida"); sal.innerHTML='<div class="spin">Descargando…</div>';
+  $("#f-serie").hidden=true; $("#f-col").hidden=true;
+  MODO_TABLA=false;   // cada fuente empieza en gráfico; la tabla es opt-in
+  try{
+    const txt=await traerPrimero(ruta, fuente);
+    DATOS=parseCSV(txt);
+    if(!DATOS.filas.length){ sal.innerHTML='<div class="card">El fichero está vacío.</div>'; return; }
+    if(fuente==="esios_previsiones") await cargarCatalogo();
+    await prepararSelectores(fuente);
+  }catch(e){ sal.innerHTML=`<div class="card err">No se pudo abrir: ${esc(e.message)}</div>`; }
+}
+
+// Detección genérica: columna de tiempo, columna de valor y columna que parte
+// la tabla en series. Así el visor no necesita saber nada de cada fichero, y
+// una fuente nueva funciona sin tocar el código.
+const COLS_TIEMPO=["datetime_utc","datetime","fecha_prevista","Trading day","First Day Delivery"];
+const COLS_SERIE=["indicador","geo_id","ciudad","Product"];
+
+function esNumerica(cols, filas, c){
+  const m=filas.slice(0,60).map(f=>num(f[c])).filter(v=>v!==null);
+  return m.length >= Math.min(filas.length,60)*0.6;
+}
+
+async function prepararSelectores(fuente){
+  const {cols, filas}=DATOS;
+  const tcol=COLS_TIEMPO.find(c=>cols.includes(c)) || null;
+  const scol=COLS_SERIE.find(c=>cols.includes(c) && new Set(filas.map(f=>f[c])).size>1) || null;
+  // Se descartan TODAS las columnas de tiempo y de serie, no solo las elegidas:
+  // en el precio spot, `geo_id` es numérica y con un solo valor no llegaba a
+  // ser columna de serie, así que acababa ofreciéndose como magnitud.
+  const vcols=cols.filter(c=>!COLS_TIEMPO.includes(c) && !COLS_SERIE.includes(c)
+                             && esNumerica(cols,filas,c));
+
+  if(scol){
+    const vals=[...new Set(filas.map(f=>f[scol]))];
+    const etiqueta = v => scol==="indicador" && CATALOGO && CATALOGO[v]
+      ? `${v} · ${CATALOGO[v].nombre}` : `${scol} ${v}`;
+    vals.sort((a,b)=> scol==="indicador" ? (+a)-(+b) : String(a).localeCompare(String(b)));
+    $("#s-serie").innerHTML=vals.map(v=>`<option value="${esc(v)}">${esc(etiqueta(v))}</option>`).join("");
+    $("#f-serie").hidden=false;
+    $("#s-serie").onchange=()=>render(fuente,tcol,scol);
+  }
+  if(vcols.length>1){
+    $("#s-col").innerHTML=vcols.map(c=>`<option value="${esc(c)}">${esc(c.replace(/\n/g," "))}</option>`).join("");
+    $("#f-col").hidden=false;
+    $("#s-col").onchange=()=>render(fuente,tcol,scol);
+  }
+  if(!vcols.length) DATOS._vcols=[null]; else DATOS._vcols=vcols;
+  render(fuente,tcol,scol);
+}
+
+function render(fuente,tcol,scol){
+  const sal=$("#salida"); const {filas}=DATOS;
+  const serie = scol ? $("#s-serie").value : null;
+  const vcol = DATOS._vcols.length>1 ? $("#s-col").value : DATOS._vcols[0];
+  let sub = scol ? filas.filter(f=>f[scol]===serie) : filas;
+
+  let titulo=fuente;
+  if(fuente==="esios_previsiones" && CATALOGO && CATALOGO[serie]){
+    const c=CATALOGO[serie];
+    titulo=`${serie} · ${c.nombre}`;
+  } else if(scol) titulo=`${fuente} — ${scol} ${serie}`;
+
+  const desc = (fuente==="esios_previsiones" && CATALOGO && CATALOGO[serie])
+    ? limpiarHtml(CATALOGO[serie].descripcion) : "";
+
+  let puntos=[];
+  if(tcol && vcol){
+    puntos = sub.map(f=>{
+      const y=num(f[vcol]); if(y===null) return null;
+      const t=new Date(f[tcol]); if(isNaN(t)) return null;
+      return {x:+t, y, et:`${t.getDate()}/${t.getMonth()+1}`,
+              etl:new Date(f[tcol]).toLocaleString("es-ES",
+                   {day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"})};
+    }).filter(Boolean).sort((a,b)=>a.x-b.x);
+  }
+
+  const puedeGraficar = puntos.length>=3;
+  const cabecera=`
+    <div class="card">
+      <div style="font-weight:600; margin-bottom:2px">${esc(titulo)}</div>
+      <div class="sec"><small>${sub.length} filas${vcol?` · ${esc(vcol.replace(/\n/g," "))}`:""}</small></div>
+      ${desc?`<details style="margin-top:8px"><summary class="sec"><small>Qué es este indicador</small></summary>
+        <div class="sec" style="margin-top:6px"><small>${esc(desc)}</small></div></details>`:""}
+      ${puedeGraficar?`<div class="row" style="margin-top:10px">
+        <button class="pill" id="b-graf" aria-pressed="${!MODO_TABLA}">Gráfico</button>
+        <button class="pill" id="b-tab" aria-pressed="${MODO_TABLA}">Valores</button></div>`:""}
+    </div>`;
+
+  if(puedeGraficar && !MODO_TABLA){
+    // El máximo y el mínimo se etiquetan aparte, en texto: el gráfico no lleva
+    // un número en cada punto y estos dos son los que siempre se buscan.
+    const ys=puntos.map(p=>p.y);
+    const iMax=ys.indexOf(Math.max(...ys)), iMin=ys.indexOf(Math.min(...ys));
+    sal.innerHTML = cabecera + `<div class="card">
+      <div class="chart-wrap" id="cw"></div>
+      <div class="row" style="margin-top:10px; justify-content:space-between">
+        <small class="sec">Máx <strong>${fmt(ys[iMax])}</strong> · ${esc(puntos[iMax].etl)}</small>
+        <small class="sec">Mín <strong>${fmt(ys[iMin])}</strong> · ${esc(puntos[iMin].etl)}</small>
+      </div></div>`;
+    ultimoDibujo = () => grafico($("#cw"), puntos, "");
+    ultimoDibujo();
+  } else {
+    ultimoDibujo=null;
+    const cols=DATOS.cols;
+    sal.innerHTML = cabecera + `<div class="card"><div class="scroll"><table>
+      <thead><tr>${cols.map(c=>`<th>${esc(c.replace(/\n/g," "))}</th>`).join("")}</tr></thead>
+      <tbody>${sub.slice(0,500).map(f=>`<tr>${cols.map(c=>{
+        const n=num(f[c]);
+        return `<td>${n!==null && c!==tcol ? fmt(n) : esc(f[c])}</td>`;}).join("")}</tr>`).join("")}
+      </tbody></table></div>
+      ${sub.length>500?`<small class="muted">Se muestran 500 de ${sub.length} filas.</small>`:""}
+      </div>`;
+  }
+  const g=$("#b-graf"), t=$("#b-tab");
+  if(g) g.onclick=()=>{MODO_TABLA=false; render(fuente,tcol,scol);};
+  if(t) t.onclick=()=>{MODO_TABLA=true; render(fuente,tcol,scol);};
+}
+
+/* ---------- navegación ---------- */
+function ir(cual){
+  const est = cual==="estado";
+  $("#tab-estado").setAttribute("aria-selected", est);
+  $("#tab-explorar").setAttribute("aria-selected", !est);
+  $("#vista-estado").hidden=!est; $("#vista-explorar").hidden=est;
+  if(est) pintarEstado(); else pintarExplorar();
+}
+$("#tab-estado").onclick=()=>ir("estado");
+$("#tab-explorar").onclick=()=>ir("explorar");
+$("#recargar").onclick=()=>{ INDICE=null; CATALOGO=null;
+  ir($("#tab-estado").getAttribute("aria-selected")==="true" ? "estado":"explorar"); };
+ir("estado");
+</script>
+</body>
+</html>
