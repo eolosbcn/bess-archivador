@@ -1,2 +1,3 @@
 fecha,hora,ejecucion_madrid,ejecucion_utc,version,modo,disparo,ok,vacio,fallo,omitida,parcial,kb_total,ruta,run_id
 2026-08-13,1032,2026-08-13T10:32:25+02:00,2026-08-13T08:32:25+00:00,v3.4,ligero,push,12,0,0,1,0,302.9,archivo/2026/08/2026-08-13/1032,31682478579
+2026-08-13,1038,2026-08-13T10:38:09+02:00,2026-08-13T08:38:09+00:00,v3.5,ligero,push,12,0,0,1,0,303.0,archivo/2026/08/2026-08-13/1038,31682899116
