@@ -19,6 +19,24 @@ con:
 Ninguna de las dos cosas se puede arreglar mirando atrás. Sí se pueden
 arreglar hacia delante.
 
+QUÉ CAMBIA EN LA v3.4
+---------------------
+Dos ficheros nuevos en una RUTA FIJA, que no cambia nunca:
+
+  · `archivo/ultimo.json` — copia del manifiesto de la última captura.
+  · `archivo/indice.csv`  — una línea por captura, desde la primera.
+
+El motivo es concreto. La carpeta de cada captura lleva el minuto REAL de
+arranque del script, que no es predecible: el disparo externo pide a y 50,
+pero la ejecución empieza cuando GitHub asigna máquina. Comprobar cómo había
+ido el archivador exigía por tanto adivinar el nombre de la carpeta —0850,
+1452, 2303...— o mirarla a mano. Con una ruta fija, deja de ser un problema.
+
+El índice guarda además `disparo` (de dónde vino la ejecución: `schedule`,
+`workflow_dispatch`, `push`), que es lo que permitirá medir con datos la
+fiabilidad del cron de GitHub frente al disparador externo, en vez de contar
+carpetas a mano como hasta ahora.
+
 QUÉ CAMBIA EN LA v3
 -------------------
 Tres cambios, todos motivados por una aportación del usuario: las previsiones
@@ -78,10 +96,11 @@ REQUISITOS
 Python 3.9+, `requests`, `pandas`. Tokens en variables de entorno:
 ESIOS_TOKEN, ENTSOE_TOKEN, AEMET_TOKEN.
 
-Versión: v3.3 — 2026-08-11.
+Versión: v3.4 — 2026-08-12.
 """
 
 import os
+import csv
 import sys
 import json
 import time
@@ -899,12 +918,117 @@ def capturar_mibgas(carpeta, hoy):
 
 
 # ============================================================================
+# Índice en ruta fija
+# ============================================================================
+#
+# Por qué existe esto (v3.4): hasta ahora, para saber cómo había ido el
+# archivador había que ADIVINAR el nombre de la carpeta, porque lleva el minuto
+# real de arranque del script y ese minuto no es predecible —el disparo externo
+# pide a y 50, pero la ejecución empieza cuando GitHub asigna máquina—. En la
+# práctica eso significaba encadenar 404s probando 0850, 1452, 2303, 2305...
+# hasta acertar, o pedirle al usuario que mirara la carpeta a mano.
+#
+# La solución no es adivinar mejor: es que haya SIEMPRE dos ficheros en una
+# ruta que no cambia nunca.
+#
+#   archivo/ultimo.json  → copia del manifiesto de la última captura.
+#   archivo/indice.csv   → una línea por captura, desde la primera.
+#
+# El índice además responde una pregunta que hasta ahora se contestaba contando
+# carpetas a mano: cuántas capturas hay de verdad al día, y cuántas vienen del
+# disparador externo frente al cron de GitHub. Por eso se guarda `disparo`.
+
+COLUMNAS_INDICE = [
+    "fecha", "hora", "ejecucion_madrid", "ejecucion_utc", "version", "modo",
+    "disparo", "ok", "vacio", "fallo", "omitida", "parcial", "kb_total",
+    "ruta", "run_id",
+]
+
+
+def _fila_indice(manifiesto, carpeta):
+    r = manifiesto.get("resumen", {})
+    return {
+        "fecha": manifiesto.get("fecha", ""),
+        "hora": os.path.basename(carpeta.rstrip("/")),
+        "ejecucion_madrid": manifiesto.get("ejecucion_madrid", ""),
+        "ejecucion_utc": manifiesto.get("ejecucion_utc", ""),
+        "version": manifiesto.get("version", ""),
+        "modo": manifiesto.get("modo", ""),
+        "disparo": manifiesto.get("disparo", ""),
+        "ok": r.get("ok", ""), "vacio": r.get("vacio", ""),
+        "fallo": r.get("fallo", ""), "omitida": r.get("omitida", ""),
+        "parcial": r.get("parcial", ""), "kb_total": r.get("kb_total", ""),
+        "ruta": carpeta.replace(os.sep, "/"),
+        "run_id": manifiesto.get("run_id", ""),
+    }
+
+
+def actualizar_indice(manifiesto, carpeta):
+    """
+    Escribe `archivo/ultimo.json` y añade una línea a `archivo/indice.csv`.
+
+    Se hace al final y dentro de su propio try: si esto fallara, la captura ya
+    está guardada y el índice es solo comodidad. Nunca debe tumbar una foto
+    buena por un problema de contabilidad.
+
+    Se AÑADE una línea en vez de reescribir el fichero entero. No es
+    microoptimización: cada reescritura es un blob nuevo en Git, y a ocho
+    capturas diarias durante un año eso engorda el repositorio sin motivo. Solo
+    se reescribe entero en dos casos —que la cabecera haya cambiado al subir de
+    versión, o que ya exista una línea con esta misma ruta (reejecución del
+    mismo minuto)—, que son excepcionales.
+    """
+    fila = _fila_indice(manifiesto, carpeta)
+
+    ruta_ultimo = os.path.join(CARPETA_RAIZ, "ultimo.json")
+    with open(ruta_ultimo, "w", encoding="utf-8") as f:
+        json.dump({"ruta": fila["ruta"], **manifiesto}, f,
+                  ensure_ascii=False, indent=2)
+
+    ruta_indice = os.path.join(CARPETA_RAIZ, "indice.csv")
+    previas, cabecera_vieja = [], None
+    if os.path.isfile(ruta_indice):
+        try:
+            with open(ruta_indice, newline="", encoding="utf-8") as f:
+                lector = csv.DictReader(f)
+                cabecera_vieja = lector.fieldnames
+                previas = list(lector)
+        except Exception:
+            previas, cabecera_vieja = [], None
+
+    duplicada = any(p.get("ruta") == fila["ruta"] for p in previas)
+    reescribir = (cabecera_vieja != COLUMNAS_INDICE) or duplicada
+
+    if reescribir:
+        # Al reescribir se descartan las líneas sin ruta. Sin este filtro, un
+        # `indice.csv` corrupto —o truncado a medio push— se «migraba» a la
+        # cabecera nueva convertido en filas vacías, y el índice pasaba a
+        # mentir sobre cuántas capturas hay. Lo detectó la prueba 8: mejor
+        # perder una línea ilegible que arrastrar un recuento falso.
+        previas = [p for p in previas
+                   if p.get("ruta") and p.get("ruta") != fila["ruta"]]
+        with open(ruta_indice, "w", newline="", encoding="utf-8") as f:
+            escritor = csv.DictWriter(f, fieldnames=COLUMNAS_INDICE,
+                                      extrasaction="ignore")
+            escritor.writeheader()
+            for p in previas:
+                escritor.writerow({c: p.get(c, "") for c in COLUMNAS_INDICE})
+            escritor.writerow(fila)
+    else:
+        with open(ruta_indice, "a", newline="", encoding="utf-8") as f:
+            csv.DictWriter(f, fieldnames=COLUMNAS_INDICE,
+                           extrasaction="ignore").writerow(fila)
+
+    return ruta_ultimo, ruta_indice, len(previas) + 1
+
+
+# ============================================================================
 def ejecutar():
     ahora_utc = dt.datetime.now(dt.timezone.utc)
     ahora_madrid = ahora_utc.astimezone(TZ_MADRID)
     hoy = ahora_madrid.date()
 
-    print("ARCHIVADOR DIARIO — FASE 0 DEL PROYECTO BESS (v3.3)")
+    print("ARCHIVADOR DIARIO — FASE 0 DEL PROYECTO BESS (v3.4)")
     print(f"Ejecución: {ahora_madrid.isoformat(timespec='seconds')} (Madrid)")
     print(f"           {ahora_utc.isoformat(timespec='seconds')} (UTC)")
 
@@ -920,11 +1044,18 @@ def ejecutar():
     print(f"Destino:   {carpeta}/")
 
     MANIFIESTO.update({
-        "version": "v3.3",
+        "version": "v3.4",
         "ejecucion_madrid": ahora_madrid.isoformat(timespec="seconds"),
         "ejecucion_utc": ahora_utc.isoformat(timespec="seconds"),
         "fecha": hoy.isoformat(),
         "dia_objetivo": (hoy + dt.timedelta(days=1)).isoformat(),
+        # Quién disparó esta ejecución. GitHub lo pone en el entorno:
+        # "schedule" = cron de GitHub, "repository_dispatch"/"workflow_dispatch"
+        # = disparo externo o botón manual, "push" = al tocar el código.
+        # Con esto, dentro de dos semanas la fiabilidad de cada disparador se
+        # mide contando líneas del índice en vez de discutiéndola.
+        "disparo": os.environ.get("GITHUB_EVENT_NAME", "local"),
+        "run_id": os.environ.get("GITHUB_RUN_ID", ""),
     })
 
     modo = "ligero" if ya_hay_captura_completa_hoy(hoy) else "completo"
@@ -963,6 +1094,15 @@ def ejecutar():
     with open(os.path.join(carpeta, "manifiesto.json"), "w", encoding="utf-8") as f:
         json.dump(MANIFIESTO, f, ensure_ascii=False, indent=2)
 
+    # El índice va después del manifiesto y en su propio try: llegados aquí la
+    # foto ya está en disco, y el índice es comodidad. Que un fallo de
+    # contabilidad tumbe una captura buena sería absurdo.
+    total_capturas = None
+    try:
+        _, _, total_capturas = actualizar_indice(MANIFIESTO, carpeta)
+    except Exception as e:
+        print(f"\n  ⚠ No se pudo actualizar el índice: {type(e).__name__}: {e}")
+
     titulo("RESUMEN")
     for nombre, info in MANIFIESTO["fuentes"].items():
         print(f"  {info['estado']:6s} {nombre:34s} {info['detalle']}")
@@ -970,6 +1110,9 @@ def ejecutar():
     print(f"\n  {r['ok']} OK · {r['vacio']} vacías · {r['fallo']} fallidas")
     print(f"  Tamaño de la foto de hoy: {r['kb_total']:.0f} KB")
     print(f"  Manifiesto en {carpeta}/manifiesto.json")
+    if total_capturas is not None:
+        print(f"  Índice actualizado: {CARPETA_RAIZ}/ultimo.json y "
+              f"{CARPETA_RAIZ}/indice.csv ({total_capturas} capturas)")
 
     if r["ok"] == 0:
         print("\n  ✗ Ninguna fuente respondió. Esto sí es un fallo real.")
