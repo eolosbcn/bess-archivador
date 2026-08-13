@@ -8,7 +8,8 @@
 <meta name="theme-color" content="#0d0d0d" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Archivo BESS">
-<title>Archivo BESS</title>
+<meta name="author" content="Revenergetica Consulting">
+<title>Archivo BESS · Revenergetica Consulting</title>
 <style>
 :root{
   color-scheme: light;
@@ -49,7 +50,15 @@ header{
   border-bottom:1px solid var(--border); background:var(--surface-1);
   position:sticky; top:0; z-index:5;
 }
-header h1{font-size:16px; margin:0; flex:1; font-weight:600}
+header .marca{flex:1; min-width:0}
+header h1{font-size:16px; margin:0; font-weight:600; line-height:1.2}
+header .empresa{font-size:11px; color:var(--text-secondary); letter-spacing:.04em;
+  text-transform:uppercase}
+footer{
+  max-width:900px; margin:0 auto; padding:18px 14px 28px;
+  border-top:1px solid var(--border); color:var(--text-secondary); font-size:12px;
+}
+footer strong{color:var(--text-primary); font-weight:600}
 button,select{font:inherit; color:inherit}
 .icon-btn{
   background:none; border:1px solid var(--border); border-radius:8px;
@@ -111,7 +120,10 @@ svg{display:block; width:100%; height:auto; overflow:visible}
 </head>
 <body>
 <header>
-  <h1>Archivo BESS</h1>
+  <div class="marca">
+    <div class="empresa">Revenergetica Consulting</div>
+    <h1>Archivo BESS</h1>
+  </div>
   <button class="icon-btn" id="tema" title="Cambiar tema" aria-label="Cambiar tema">◐</button>
   <button class="icon-btn" id="recargar" title="Recargar" aria-label="Recargar">↻</button>
 </header>
@@ -125,6 +137,12 @@ svg{display:block; width:100%; height:auto; overflow:visible}
   <section id="vista-estado"></section>
   <section id="vista-explorar" hidden></section>
 </main>
+
+<footer>
+  <strong>Revenergetica Consulting</strong> · Archivo diario del mercado eléctrico español.<br>
+  Ocho capturas al día de lo publicado por e·sios (REE), ENTSO-E, AEMET y MIBGAS,
+  con marca de tiempo verificable. Fuentes públicas; elaboración propia.
+</footer>
 
 <script>
 "use strict";
@@ -390,6 +408,7 @@ async function pintarExplorar(){
           <select id="s-serie"></select></div>
         <div class="field" id="f-col" hidden><label for="s-col">Valor</label>
           <select id="s-col"></select></div>
+        <div id="aviso"></div>
       </div>
       <div id="salida"></div>`;
     $("#s-dia").onchange=llenarHoras; $("#s-hora").onchange=llenarFuentes;
@@ -413,16 +432,23 @@ async function llenarFuentes(){
   $("#salida").innerHTML="";
   try{
     const man=JSON.parse(await traer(ruta+"/manifiesto.json"));
-    const opts=Object.entries(man.fuentes||{})
-      .filter(([n,i])=>i.estado==="OK" || i.estado==="PARCIAL")
-      .filter(([n])=>ficherosDe(n).length)
-      .map(([n,i])=>`<option value="${esc(n)}">${esc(n)}${i.filas?` (${i.filas} filas)`:""}</option>`);
-    const omitidas=Object.entries(man.fuentes||{}).filter(([n,i])=>i.estado!=="OK"&&i.estado!=="PARCIAL");
-    $("#s-fuente").innerHTML = opts.length ? opts.join("")
-      : '<option value="">Esta captura no guardó ninguna fuente</option>';
-    if(omitidas.length) $("#salida").innerHTML =
-      `<div class="card"><small class="sec">No disponibles en esta captura: ${
-        omitidas.map(([n,i])=>`${esc(n)} <span class="muted">(${esc(i.estado)})</span>`).join(", ")}</small></div>`;
+    // Las fuentes sin datos se listan igualmente, deshabilitadas y con su estado.
+    // Antes desaparecían del desplegable, y eso hacía pensar que una fuente no
+    // se archivaba nunca cuando lo que pasaba es que esa captura concreta no la
+    // traía —AEMET, por ejemplo, solo se pide cada 2,5 h—.
+    const entradas=Object.entries(man.fuentes||{}).filter(([n])=>ficherosDe(n).length);
+    const hay=entradas.filter(([n,i])=>i.estado==="OK"||i.estado==="PARCIAL");
+    const no =entradas.filter(([n,i])=>i.estado!=="OK"&&i.estado!=="PARCIAL");
+    $("#s-fuente").innerHTML = (hay.length
+      ? hay.map(([n,i])=>`<option value="${esc(n)}">${esc(n)}${i.filas?` · ${i.filas} filas`:""}</option>`).join("")
+      : '<option value="">Esta captura no guardó ninguna fuente</option>')
+      + no.map(([n,i])=>`<option value="" disabled>${esc(n)} — ${esc(i.estado.toLowerCase())}</option>`).join("");
+    // En #aviso y no en #salida: al pintar la fuente elegida, #salida se
+    // reescribe entero y el aviso desaparecía justo cuando hacía falta.
+    $("#aviso").innerHTML = no.length
+      ? `<small class="sec">Sin datos en esta captura: ${
+          no.map(([n,i])=>`<strong>${esc(n)}</strong> — ${esc(String(i.detalle||i.estado))}`).join("; ")}</small>`
+      : "";
     cargarFuente();
   }catch(e){ $("#s-fuente").innerHTML=`<option value="">Error: ${esc(e.message)}</option>`; }
 }
@@ -447,6 +473,14 @@ async function cargarFuente(){
 // una fuente nueva funciona sin tocar el código.
 const COLS_TIEMPO=["datetime_utc","datetime","fecha_prevista","Trading day","First Day Delivery"];
 const COLS_SERIE=["indicador","geo_id","ciudad","Product"];
+// Numéricas pero identificadores, no magnitudes. Sin esta lista, AEMET salía
+// graficando el código de municipio (8019 para Barcelona): una recta plana con
+// pinta de dato. Y detrás de ella estaban tmax y tmin, que es lo que se busca.
+const COLS_IGNORAR=["municipio","id","run_id","Area","Place of delivery"];
+// Orden de preferencia cuando hay varias magnitudes: la primera es la que se
+// dibuja al abrir. Lo demás sigue estando en el desplegable «Valor».
+const VALOR_PREFERIDO=["value","tmax","tmin","prev_demanda","prev_renovable",
+                       "precio","reserva_hidraulica"];
 
 function esNumerica(cols, filas, c){
   const m=filas.slice(0,60).map(f=>num(f[c])).filter(v=>v!==null);
@@ -461,7 +495,11 @@ async function prepararSelectores(fuente){
   // en el precio spot, `geo_id` es numérica y con un solo valor no llegaba a
   // ser columna de serie, así que acababa ofreciéndose como magnitud.
   const vcols=cols.filter(c=>!COLS_TIEMPO.includes(c) && !COLS_SERIE.includes(c)
-                             && esNumerica(cols,filas,c));
+                             && !COLS_IGNORAR.includes(c) && esNumerica(cols,filas,c))
+    .sort((a,b)=>{
+      const ia=VALOR_PREFERIDO.indexOf(a), ib=VALOR_PREFERIDO.indexOf(b);
+      return (ia<0?99:ia)-(ib<0?99:ib);
+    });
 
   if(scol){
     const vals=[...new Set(filas.map(f=>f[scol]))];
