@@ -19,6 +19,23 @@ con:
 Ninguna de las dos cosas se puede arreglar mirando atrás. Sí se pueden
 arreglar hacia delante.
 
+QUÉ CAMBIA EN LA v3.6
+---------------------
+Todo esto sale de leer los datos ya archivados y encontrar lo que faltaba.
+
+  1. **Las descripciones ya no se truncan.** Estaban cortadas a 300 caracteres
+     y 606 de los 1.506 indicadores quedaban a media frase. La del 460 se
+     cortaba justo en «Important...», que era donde REE ponía la advertencia.
+  2. **El catálogo se muda a `archivo/catalogo.csv`**, en ruta fija, acumulativo
+     y reescrito solo cuando cambia. Es material de referencia, no una serie
+     temporal: guardarlo ocho veces al día era lo que obligaba a truncarlo.
+  3. **Grupo de búsqueda nuevo, «capacidad».** No había ni una serie de potencia
+     de eólica o fotovoltaica: la potencia *disponible* solo existe para
+     generación convencional, pero la *instalada* renovable debería estar y no
+     entraba por ninguno de los cinco términos anteriores.
+  4. **El indicador 602 (energía casada en el diario) pasa a principal.** Es la
+     pareja natural del precio 600 y estaba solo en el barrido completo.
+
 QUÉ CAMBIA EN LA v3.5
 ---------------------
 Una corrección, y no menor. Hasta la v3.4 AEMET se pedía cuando la hora era
@@ -111,7 +128,7 @@ REQUISITOS
 Python 3.9+, `requests`, `pandas`. Tokens en variables de entorno:
 ESIOS_TOKEN, ENTSOE_TOKEN, AEMET_TOKEN.
 
-Versión: v3.5 — 2026-08-13.
+Versión: v3.6 — 2026-08-13.
 """
 
 import os
@@ -158,6 +175,12 @@ UA = {"User-Agent": "Mozilla/5.0 (proyecto BESS, datos publicos)"}
 # desde la web de GitHub sin descargar nada.
 INDICADORES_PRINCIPALES = {
     600: "precio_spot",
+    # La energía casada en el diario, que es la pareja natural del precio 600.
+    # Estaba ya en el barrido completo (grupo «programa»), pero solo una vez al
+    # día. Aquí entra en las ocho capturas y en CSV plano. OJO: se publica tras
+    # la casación, así que a las 11:50 llega hasta el final de HOY, nunca a
+    # D+1. Sirve como variable retardada y para la Fase 3, no para predecir.
+    602: "energia_casada_diario",
     541: "prev_eolica",
     542: "prev_solar_fv",
     543: "prev_solar_termica",
@@ -183,8 +206,19 @@ INDICADORES_PRINCIPALES = {
 #     fuga de información pura. Se archiva igualmente porque es valioso para la
 #     Fase 3 (backtest de estrategia de oferta) y para entender el mercado,
 #     pero NO puede entrar como variable del modelo de precio.
+#   · CAPACIDAD — potencia instalada y disponible. Grupo nuevo en la v3.6, a
+#     raíz de una pregunta concreta: en el catálogo no aparecía ni una sola
+#     serie de potencia disponible de eólica o fotovoltaica. La explicación es
+#     que ese concepto solo existe para generación CONVENCIONAL —se calcula
+#     como potencia instalada menos indisponibilidad declarada por los sujetos
+#     del mercado, y nadie declara la indisponibilidad del viento—. Pero la
+#     potencia INSTALADA renovable sí debería existir, y no entraba porque
+#     ninguno de los cinco términos anteriores casaba con su nombre. Se busca
+#     explícitamente: si existe, entrará sola en el próximo barrido completo.
 GRUPOS_BUSQUEDA = {
     "prevision": ["previsión", "prevista", "previsto"],
+    "capacidad": ["potencia instalada", "potencia disponible",
+                  "capacidad instalada"],
     "programa": ["D+1", "H+3"],
 }
 
@@ -211,8 +245,8 @@ PREVISIONES_CONOCIDAS = [
 # descarta las ejecuciones programadas cuando hay carga —el 11-ago-2026 solo
 # corrieron 2 de las ~8 previstas— y las tareas largas son las primeras en caer.
 MAX_POR_GRUPO = {
-    "ligero":   {"prevision": 400, "programa": 0},
-    "completo": {"prevision": 400, "programa": 1600},
+    "ligero":   {"prevision": 400, "capacidad": 0,   "programa": 0},
+    "completo": {"prevision": 400, "capacidad": 200, "programa": 1600},
 }
 
 # Ritmo de peticiones. El documento de conocimiento del proyecto fija ~1/s
@@ -441,7 +475,14 @@ def descubrir_previsiones(modo):
                 del_grupo[idx] = {
                     "id": idx, "grupo": grupo,
                     "nombre": (ind.get("name") or "").strip(),
-                    "descripcion": (ind.get("description") or "")[:300].strip(),
+                    # SIN TRUNCAR (v3.6). Hasta la v3.5 esto era [:300], y de
+                    # los 1.506 indicadores del barrido completo, 606 quedaban
+                    # cortados a media frase. La descripción es la ÚNICA
+                    # documentación de qué significa cada serie: la del 460 se
+                    # cortaba literalmente en «Important...», justo donde REE
+                    # ponía la advertencia. Ahora cabe entera porque el catálogo
+                    # ya no se reescribe en cada captura (ver guardar_catalogo).
+                    "descripcion": (ind.get("description") or "").strip(),
                     "termino": termino,
                 }
                 nuevos += 1
@@ -532,6 +573,113 @@ def capturar_esios_principales(carpeta, hoy):
     return True
 
 
+def guardar_catalogo(catalogo):
+    """
+    Escribe el catálogo en RUTA FIJA y ACUMULATIVA: `archivo/catalogo.csv`.
+
+    Hasta la v3.5 el catálogo se reescribía dentro de cada captura. Eso tenía
+    dos consecuencias malas a la vez:
+
+      · Obligaba a truncar las descripciones a 300 caracteres para que el
+        repositorio no se disparara —558 KB por captura completa—, y con ello
+        se perdía la única documentación que existe de qué es cada indicador.
+      · Guardaba ocho copias diarias de algo que cambia una vez cada varios
+        meses.
+
+    El catálogo no es una serie temporal, es material de referencia, y hay que
+    tratarlo como tal: un solo fichero, con las descripciones ENTERAS, que solo
+    se reescribe el día que REE cambia algo. Git guarda un blob nuevo
+    únicamente entonces.
+
+    Es ACUMULATIVO por una razón concreta: la captura ligera solo descubre 110
+    indicadores y la completa 1.506. Si cada una sobrescribiera el fichero, las
+    siete ligeras del día borrarían el trabajo de la completa. Así que se
+    fusiona por id, actualizando lo que cambie y sin borrar nunca nada — un
+    indicador retirado del catálogo de e·sios se queda aquí, que es justo lo
+    que interesa para poder leer el archivo antiguo dentro de dos años.
+    """
+    ruta = os.path.join(CARPETA_RAIZ, "catalogo.csv")
+    hoy = dt.date.today().isoformat()
+    nuevo = {}
+    for e in catalogo:
+        if e.get("grupo") == "fijo" and not e.get("descripcion"):
+            # Entrada de relleno de la lista fija: no debe pisar la buena.
+            nuevo[e["id"]] = {**e, "visto": hoy, "_relleno": True}
+        else:
+            nuevo[e["id"]] = {**e, "visto": hoy, "_relleno": False}
+
+    previo = {}
+    if os.path.isfile(ruta):
+        try:
+            with open(ruta, newline="", encoding="utf-8") as f:
+                for fila in csv.DictReader(f):
+                    try:
+                        previo[int(fila["id"])] = fila
+                    except (KeyError, TypeError, ValueError):
+                        continue
+        except Exception:
+            previo = {}
+
+    fusionado = dict(previo)
+    altas = cambios = 0
+    for idx, e in nuevo.items():
+        anterior = previo.get(idx)
+        fila = {"id": idx, "grupo": e["grupo"], "nombre": e["nombre"],
+                "descripcion": e["descripcion"], "termino": e["termino"],
+                "visto": hoy}
+        if anterior is None:
+            fusionado[idx] = fila
+            altas += 1
+            continue
+        # Una entrada de relleno nunca degrada una buena ya guardada.
+        if e["_relleno"] and (anterior.get("nombre") or "") not in ("", "(de la lista fija)"):
+            anterior["visto"] = hoy
+            continue
+        if any((anterior.get(c) or "") != (fila[c] or "")
+               for c in ("grupo", "nombre", "descripcion", "termino")):
+            cambios += 1
+        fusionado[idx] = fila
+
+    cols = ["id", "grupo", "nombre", "descripcion", "termino", "visto"]
+    filas = [fusionado[i] for i in sorted(fusionado)]
+    # Solo se reescribe si el contenido cambia de verdad. Comparar el texto
+    # generado, y no los campos, evita reescrituras por diferencias de formato.
+    import io
+    buf = io.StringIO()
+    w = csv.DictWriter(buf, fieldnames=cols, extrasaction="ignore",
+                       lineterminator="\n")
+    w.writeheader()
+    for fila in filas:
+        w.writerow({c: fila.get(c, "") for c in cols})
+    contenido = buf.getvalue()
+
+    anterior_txt = ""
+    if os.path.isfile(ruta):
+        try:
+            anterior_txt = open(ruta, encoding="utf-8").read()
+        except Exception:
+            anterior_txt = ""
+
+    # El campo `visto` cambia todos los días y por sí solo no justifica un
+    # commit: se compara ignorando esa columna.
+    def sin_visto(t):
+        return "\n".join(l.rsplit(",", 1)[0] for l in t.splitlines())
+
+    escrito = False
+    if sin_visto(contenido) != sin_visto(anterior_txt):
+        with open(ruta, "w", encoding="utf-8", newline="") as f:
+            f.write(contenido)
+        escrito = True
+
+    registrar("esios_catalogo_fichero", "OK",
+              f"{len(filas)} indicadores en {ruta}"
+              + (f" · {altas} altas, {cambios} modificados, REESCRITO" if escrito
+                 else " · sin cambios, no se reescribe"),
+              extra={"total": len(filas), "altas": altas, "cambios": cambios,
+                     "reescrito": escrito})
+    return ruta
+
+
 def capturar_esios_previsiones(carpeta, hoy, catalogo):
     """
     Todas las previsiones descubiertas, en un ÚNICO fichero comprimido en
@@ -590,10 +738,14 @@ def capturar_esios_previsiones(carpeta, hoy, catalogo):
         time.sleep(PAUSA_BARRIDO)
 
     df_meta = pd.DataFrame(meta)
-    # El catálogo con nombres y descripciones se guarda aparte: es lo que
-    # permitirá saber, dentro de un año, qué era el indicador 10358.
-    guardar(pd.DataFrame(catalogo), carpeta, "esios_catalogo_previsiones",
-            comprimir=False)
+    # El catálogo ya NO se guarda dentro de la captura: vive en ruta fija y
+    # acumulativa (ver guardar_catalogo). Lo que sí es propio de cada captura
+    # es el meta —estado, filas y values_updated_at cambian cada vez—.
+    try:
+        guardar_catalogo(catalogo)
+    except Exception as e:
+        registrar("esios_catalogo_fichero", "FALLO",
+                  f"{type(e).__name__}: {e}")
     guardar(df_meta, carpeta, "esios_previsiones_meta", comprimir=False)
 
     if not trozos:
@@ -1097,7 +1249,7 @@ def ejecutar():
     ahora_madrid = ahora_utc.astimezone(TZ_MADRID)
     hoy = ahora_madrid.date()
 
-    print("ARCHIVADOR DIARIO — FASE 0 DEL PROYECTO BESS (v3.5)")
+    print("ARCHIVADOR DIARIO — FASE 0 DEL PROYECTO BESS (v3.6)")
     print(f"Ejecución: {ahora_madrid.isoformat(timespec='seconds')} (Madrid)")
     print(f"           {ahora_utc.isoformat(timespec='seconds')} (UTC)")
 
@@ -1113,7 +1265,7 @@ def ejecutar():
     print(f"Destino:   {carpeta}/")
 
     MANIFIESTO.update({
-        "version": "v3.5",
+        "version": "v3.6",
         "ejecucion_madrid": ahora_madrid.isoformat(timespec="seconds"),
         "ejecucion_utc": ahora_utc.isoformat(timespec="seconds"),
         "fecha": hoy.isoformat(),
