@@ -1,4 +1,29 @@
 id,grupo,nombre,descripcion,termino,visto
+12,programa_seguido,(cadena de programación),,seguimiento,2026-08-13
+14,programa_seguido,(cadena de programación),,seguimiento,2026-08-13
+15,programa_seguido,(cadena de programación),,seguimiento,2026-08-13
+47,programa_seguido,(cadena de programación),,seguimiento,2026-08-13
+49,programa_seguido,(cadena de programación),,seguimiento,2026-08-13
+50,programa_seguido,(cadena de programación),,seguimiento,2026-08-13
+82,programa_seguido,(cadena de programación),,seguimiento,2026-08-13
+84,programa_seguido,(cadena de programación),,seguimiento,2026-08-13
+85,programa_seguido,(cadena de programación),,seguimiento,2026-08-13
+117,programa_seguido,(cadena de programación),,seguimiento,2026-08-13
+119,programa_seguido,(cadena de programación),,seguimiento,2026-08-13
+120,programa_seguido,(cadena de programación),,seguimiento,2026-08-13
+187,programa_seguido,(cadena de programación),,seguimiento,2026-08-13
+189,programa_seguido,(cadena de programación),,seguimiento,2026-08-13
+190,programa_seguido,(cadena de programación),,seguimiento,2026-08-13
+257,programa_seguido,(cadena de programación),,seguimiento,2026-08-13
+259,programa_seguido,(cadena de programación),,seguimiento,2026-08-13
+260,programa_seguido,(cadena de programación),,seguimiento,2026-08-13
+292,programa_seguido,(cadena de programación),,seguimiento,2026-08-13
+294,programa_seguido,(cadena de programación),,seguimiento,2026-08-13
+295,programa_seguido,(cadena de programación),,seguimiento,2026-08-13
+327,programa_seguido,(cadena de programación),,seguimiento,2026-08-13
+329,programa_seguido,(cadena de programación),,seguimiento,2026-08-13
+330,programa_seguido,(cadena de programación),,seguimiento,2026-08-13
+434,programa_seguido,(cadena de programación),,seguimiento,2026-08-13
 460,prevision,Previsión diaria de la demanda eléctrica peninsular,"<p>Es la previsión de consumo que Red Eléctrica elabora teniendo en cuenta los valores de consumo registrados en periodos precedentes similares, así como otros factores con influencia en el consumo eléctrico como la laboralidad, la climatología y la actividad económica.</p>
 
 <p><strong>Importante:</strong> Esta curva incluye desde el 11/12/2025 la estimación del consumo alimentado por las instalaciones de autoconsumo.</p>
@@ -122,6 +147,9 @@ id,grupo,nombre,descripcion,termino,visto
 899,prevision,Coste asignación de reserva de regulación secundaria a subir,"<p>La regulación secundaria es un servicio complementario de carácter potestativo que tiene por objeto el mantenimiento del equilibrio generación-demanda, corrigiendo los desvíos respecto a los programas de intercambio previstos en la interconexión España-Francia, y las desviaciones de la frecuencia.</p><p>Este servicio es retribuido mediante mecanismos de mercado por dos conceptos: disponibilidad (reservas de regulación) y utilización (energía).</p><p>Los Proveedores de Servicio habilitan sus Unidades de Programación para la prestación del servicio de regulación secundaria y envían sus ofertas de reservas de regulación en cada sentido (subir/bajar). La asignación se realiza a nivel Proveedor de Servicio, por criterios de mínimo coste hasta cubrir los requerimientos del sistema, estableciéndose así un precio marginal de reserva de regulación secundaria en cada sentido.</p><p>Este servicio se encuentra regulado en el P.O.-7.2.</p><p>En concreto este indicador se refiere al coste de asignación del servicio de reserva de regulación secundaria a subir.</p><p><b>Publicación:</b> diariamente a partir de las 19:30 horas con la información del día D+1, y cualquier día para días pasados según el calendario de liquidaciones.</p>",previsto,2026-08-13
 1006,prevision,"Perfiles de consumo a efectos de facturación del PVPC Tarifa 2.0 GENERAL BAJA TENSIÓN, POTENCIA INFERIOR A 15 kW","<p>Perfil de carga que se utilizar&aacute; para calcular la facturaci&oacute;n en consumidores acogidos al PVPC cuando el suministro no disponga de equipo de medida con capacidad para telemedida y telegesti&oacute;n, y efectivamente integrado en los correspondientes sistemas, aplicando a las lecturas reales por periodos puestas a disposici&oacute;n de los comercializadores por los encargados de la lectura, dichos perfiles de consumo. Para el c&aacute;lculo de dichos perfiles se utiliza la demanda prevista por el Operador del Sistema.</p><p>En concreto este indicador se refiere a los perfiles de consumo para el c&aacute;lculo de la facturaci&oacute;n del PVPC para la Tarifa 2.0TD.</p><p><b>Publicaci&oacute;n:</b> diariamente sobre las 21:00 horas con la informaci&oacute;n del d&iacute;a D+1.</p>",prevista,2026-08-13
 1335,prevision,Demanda del sistema a efectos del cálculo de perfiles,"<p>Perfil final es el perfil de carga que se utilizará para obtener las medidas horarias de los consumidores de un determinado tipo, a partir de registros de medida no horarios.</p><p>Los perfiles finales se calculan según el método de cálculo descrito en la <a href=http://www.boe.es/boe/dias/2015/12/30/pdfs/BOE-A-2015-14277.pdf target=_blank>Resolución de 23 de diciembre de 2015 (y corrección de errores de 30 de marzo de 2016)</a>, de la Dirección General de Política Energética y Minas. Para el cálculo de dichos perfiles se utiliza la demanda prevista por el Operador del Sistema.</p><p>En concreto este indicador se refiere a la demanda del sistema a efectos de la determinación de los perfiles finales de consumo, que se obtiene integrando horariamente los datos de demanda estimados en tiempo real por Red Eléctrica, a partir de telemedidas y valores programados.</p><p>  </p><p><b>Publicación:</b> el día 1 de cada mes antes con los datos del mes M-1 y se actualiza el día 5.</p>",prevista,2026-08-13
+1411,programa_seguido,(cadena de programación),,seguimiento,2026-08-13
+1413,programa_seguido,(cadena de programación),,seguimiento,2026-08-13
+1414,programa_seguido,(cadena de programación),,seguimiento,2026-08-13
 1742,prevision,Demanda prevista SNP,"<p>Es la previsi&oacute;n de consumo de los sistemas no peninsulares que REE elabora teniendo en cuenta los valores de consumo registrados en periodos precedentes similares, as&iacute; como otros factores con influencia en el consumo el&eacute;ctrico como la laboralidad, la climatol&oacute;gica y la actividad econ&oacute;mica. Los valores diezminutales son representandos en forma de curva aplicando unos par&aacute;metros que parabolizan el valor constante horario.</p>
 
 <p><b>Publicaci&oacute;n:</b> diariamente a las 0:00 horas con la informaci&oacute;n del d&iacute;a D y a las 13:30 horas con las tres primeras horas del d&iacute;a D+1. Un valor cada cinco&nbsp;minutos.</p>",prevista,2026-08-13
