@@ -19,6 +19,17 @@ con:
 Ninguna de las dos cosas se puede arreglar mirando atrás. Sí se pueden
 arreglar hacia delante.
 
+QUÉ CAMBIA EN LA v3.7
+---------------------
+Dos retoques al servicio del visor de móvil:
+
+  1. **El índice se rellena hacia atrás.** Las capturas anteriores a la v3.4
+     existen en disco pero nunca dejaron línea en `indice.csv`. Sin esto, el
+     visor no vería los primeros días de archivo — justo los que sirvieron para
+     caracterizar la publicación de las series D+1.
+  2. **El 602 se guarda en CSV plano**, como el 600. Se me había quedado
+     comprimido pese a anunciarlo en plano.
+
 QUÉ CAMBIA EN LA v3.6
 ---------------------
 Todo esto sale de leer los datos ya archivados y encontrar lo que faltaba.
@@ -128,12 +139,13 @@ REQUISITOS
 Python 3.9+, `requests`, `pandas`. Tokens en variables de entorno:
 ESIOS_TOKEN, ENTSOE_TOKEN, AEMET_TOKEN.
 
-Versión: v3.6 — 2026-08-13.
+Versión: v3.7 — 2026-08-13.
 """
 
 import os
 import csv
 import sys
+import glob
 import json
 import time
 import gzip
@@ -562,8 +574,9 @@ def capturar_esios_principales(carpeta, hoy):
         if df is None:
             registrar(etiqueta, "VACIO" if ind else "FALLO", error)
         else:
-            # El precio spot en plano: es el que más se consulta a ojo.
-            guardar(df, carpeta, etiqueta, comprimir=(indicador != 600))
+            # Precio (600) y energía casada (602) en plano: son los dos que
+            # más se consultan a ojo y los más pequeños.
+            guardar(df, carpeta, etiqueta, comprimir=(indicador not in (600, 602)))
             registrar(etiqueta, "OK",
                       f"{df['datetime_utc'].min()[:10]} a {df['datetime_utc'].max()[:10]}",
                       filas=len(df),
@@ -1184,6 +1197,40 @@ def _fila_indice(manifiesto, carpeta):
     }
 
 
+def _rellenar_indice(previas):
+    """
+    Añade al índice las capturas anteriores a la v3.4, que existen en disco pero
+    nunca dejaron línea porque el índice no existía cuando corrieron.
+
+    Sin esto, el visor del móvil solo vería el archivo a partir del momento en
+    que se estrenó el índice, y los primeros días —que incluyen justo las
+    capturas con las que se caracterizó la publicación de las series D+1— serían
+    invisibles. Es una reparación de una sola vez: cuando no falta nada, el
+    coste es listar unos cientos de rutas y salir.
+    """
+    rutas = glob.glob(os.path.join(CARPETA_RAIZ, "*", "*", "*", "*",
+                                   "manifiesto.json"))
+    ya = {p.get("ruta") for p in previas}
+    faltan = [r for r in rutas
+              if os.path.dirname(r).replace(os.sep, "/") not in ya]
+    if not faltan:
+        return previas, 0
+    añadidas = []
+    for r in sorted(faltan):
+        try:
+            with open(r, encoding="utf-8") as f:
+                m = json.load(f)
+            añadidas.append(_fila_indice(m, os.path.dirname(r)))
+        except Exception:
+            continue
+    if not añadidas:
+        return previas, 0
+    print(f"  ↺ Índice: {len(añadidas)} capturas antiguas incorporadas.")
+    todas = list(previas) + añadidas
+    todas.sort(key=lambda f: (f.get("ejecucion_madrid") or "", f.get("ruta") or ""))
+    return todas, len(añadidas)
+
+
 def actualizar_indice(manifiesto, carpeta):
     """
     Escribe `archivo/ultimo.json` y añade una línea a `archivo/indice.csv`.
@@ -1217,8 +1264,10 @@ def actualizar_indice(manifiesto, carpeta):
         except Exception:
             previas, cabecera_vieja = [], None
 
+    previas, rellenadas = _rellenar_indice(previas)
+
     duplicada = any(p.get("ruta") == fila["ruta"] for p in previas)
-    reescribir = (cabecera_vieja != COLUMNAS_INDICE) or duplicada
+    reescribir = (cabecera_vieja != COLUMNAS_INDICE) or duplicada or rellenadas
 
     if reescribir:
         # Al reescribir se descartan las líneas sin ruta. Sin este filtro, un
@@ -1249,7 +1298,7 @@ def ejecutar():
     ahora_madrid = ahora_utc.astimezone(TZ_MADRID)
     hoy = ahora_madrid.date()
 
-    print("ARCHIVADOR DIARIO — FASE 0 DEL PROYECTO BESS (v3.6)")
+    print("ARCHIVADOR DIARIO — FASE 0 DEL PROYECTO BESS (v3.7)")
     print(f"Ejecución: {ahora_madrid.isoformat(timespec='seconds')} (Madrid)")
     print(f"           {ahora_utc.isoformat(timespec='seconds')} (UTC)")
 
@@ -1265,7 +1314,7 @@ def ejecutar():
     print(f"Destino:   {carpeta}/")
 
     MANIFIESTO.update({
-        "version": "v3.6",
+        "version": "v3.7",
         "ejecucion_madrid": ahora_madrid.isoformat(timespec="seconds"),
         "ejecucion_utc": ahora_utc.isoformat(timespec="seconds"),
         "fecha": hoy.isoformat(),
