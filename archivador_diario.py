@@ -1,29 +1,56 @@
 #!/usr/bin/env python3
 """
 archivador_diario.py — Fase 0 del proyecto BESS.
-
+ 
 Guarda cada día una FOTO de lo que estaba publicado y disponible en el momento
 de ejecutarse. No modela nada, no predice nada: solo deja constancia.
-
+ 
 POR QUÉ EXISTE
 --------------
 Es la única pieza del proyecto cuyo coste crece cada día que se retrasa,
 porque el tiempo va en una sola dirección. Hoy el modelo de precio se entrena
 con:
-
+ 
   · Temperatura REAL histórica en lugar de la predicción que había ese día,
     porque AEMET no archiva predicciones pasadas. Sesgo optimista conocido.
   · Previsiones descargadas HOY para fechas pasadas, con el riesgo de revisión
     retroactiva ya detectado en los indicadores 460, 2563 y 10249 de e·sios.
-
+ 
 Ninguna de las dos cosas se puede arreglar mirando atrás. Sí se pueden
 arreglar hacia delante.
-
+ 
+QUÉ CAMBIA EN LA v3.11
+----------------------
+La POTENCIA INSTALADA RENOVABLE aparece por fin en el archivo.
+ 
+El barrido completo del 16-ago-2026 confirmó que las series existen —1485
+eólica, 1486 solar fotovoltaica, 1487 solar térmica, 1475-1491 por tecnología
+y 2267-2273 de plantas híbridas, incluida «2269 renovable-almacenamiento»—,
+pero las 69 del grupo «capacidad» se archivaban VACÍAS. No era un fallo de la
+API: era la ventana. El barrido pide [hoy-1, hoy+11] con `time_trunc` de
+quince minutos, y la potencia instalada es una serie MENSUAL: no tiene ni un
+solo punto dentro de una ventana de doce días que empieza ayer. Por eso las
+convencionales 464-471 sí traían datos —esas se republican a diario— y las de
+tecnología no traían ninguno.
+ 
+  1. **Pasada propia para el grupo «capacidad»**, solo en modo completo:
+     ventana de `DIAS_CAPACIDAD_ATRAS` (400 días) hacia atrás y `time_trunc`
+     mensual. Sale a `esios_capacidad_instalada.csv`, en plano y sin comprimir
+     porque son unos pocos miles de filas y conviene poder mirarlas desde la
+     web de GitHub sin descargar nada.
+  2. **`_serie_esios` acepta `trunc`**, que hasta ahora estaba fijo a quince
+     minutos. La granularidad deja de ser una suposición global.
+  3. **`MINUTOS_MAX_BARRIDO` sube de 22 a 28.** El barrido del 16-ago tardó
+     1.162 s de los 1.320 disponibles: un 88 %, con dos minutos y medio de
+     margen. La pasada de capacidad añade ~70 peticiones. El `timeout-minutes`
+     del workflow es 45, así que el margen existe; lo que no puede pasar es
+     que un día de API lenta corte el barrido y se pierdan los programas.
+ 
 QUÉ CAMBIA EN LA v3.10
 ----------------------
 Dos correcciones en AEMET, ambas del mismo tipo: una excepción que se llevaba
 por delante datos que ya estaban bien.
-
+ 
   1. **`_aemet_json` reintenta también cuando el cuerpo no es JSON.** El try
      solo cubría la primera petición; `r.json()` y `json.loads(texto)` estaban
      fuera. El 14-ago-2026 a las 14:50 AEMET contestó 200 con un cuerpo que no
@@ -34,39 +61,39 @@ por delante datos que ya estaban bien.
   2. **Cada ciudad, aislada.** El cuerpo del bucle sale a `_aemet_una_ciudad`
      y cada iteración va en su propio try. Con dieciséis llamadas por captura,
      que la sexta ciudad devuelva algo raro no puede costar las cinco buenas.
-
+ 
 Efecto práctico: donde antes se perdían las tres tablas, ahora sale PARCIAL
 con las ciudades que sí contestaron. Y `PAUSA_AEMET` sube de 3 a 5 s.
-
+ 
 QUÉ CAMBIA EN LA v3.9
 ---------------------
 Seguimiento de la CADENA DE PROGRAMACIÓN (PBF → PVP → P48 → PHF), a petición
 del análisis de vertidos fotovoltaicos.
-
+ 
 El problema: esos indicadores viven en el grupo «programa», con tope 0 en modo
 ligero, y solo la primera captura del día va en completo. La cadena se
 fotografiaba **una vez al día**, hacia las 00:50. Del P48 teníamos su estado
 recién nacido y nunca cómo se modifica durante el día de operación.
-
+ 
   1. **28 indicadores fijos** (fotovoltaica, eólica terrestre y solar térmica)
      entran en TODAS las capturas, al margen de los topes.
   2. **`archivo/seguimiento_programas.csv`**, acumulativo y en ruta fija: una
      fila por captura y por indicador, con `values_updated_at`, `fecha_max`,
      `n_periodos`, `suma_valores` y `hash_valores`.
-
+ 
 Las dos últimas columnas son la clave: detectan una republicación **aunque
 `values_updated_at` no cambie**, y distinguen el refresco sin cambio de datos
 del cambio real. Con eso, «¿a qué hora se emite la primera versión del P48 de
 un día?» se contesta buscando la primera fila del indicador 84 cuyo
 `fecha_max` alcanza ese día.
-
+ 
 Se registran también las filas VACÍAS, a propósito: «a esta hora todavía no
 estaba publicado» es la mitad de la respuesta.
-
+ 
 QUÉ CAMBIA EN LA v3.8
 ---------------------
 AEMET pasa de ser la fuente más pobre del archivo a una de las más ricas.
-
+ 
   1. **Ocho municipios en vez de seis.** Entra **A Coruña**, que cubre el
      noroeste —la zona con más eólica y con un régimen atlántico distinto del
      resto, que no estaba representada—, y **Mataró** como referencia local.
@@ -78,29 +105,29 @@ AEMET pasa de ser la fuente más pobre del archivo a una de las más ricas.
      Es el que de verdad sirve para D+1, porque su resolución es la del
      mercado; el diario da máximos y mínimos, que no se pueden repartir por
      horas sin inventar.
-
+ 
 Sobre la RADIACIÓN SOLAR: **AEMET no publica previsión de radiación.** Su
 producto de radiación es de observación, no de predicción. Lo más cercano en
 la predicción es `uvMax` (índice UV diario, y además para cielo despejado, o
 sea que ignora justo la nubosidad). El sustituto utilizable es el **estado del
 cielo horario**, que es lo que modula la fotovoltaica, y ese sí se archiva
 ahora.
-
+ 
 QUÉ CAMBIA EN LA v3.7
 ---------------------
 Dos retoques al servicio del visor de móvil:
-
+ 
   1. **El índice se rellena hacia atrás.** Las capturas anteriores a la v3.4
      existen en disco pero nunca dejaron línea en `indice.csv`. Sin esto, el
      visor no vería los primeros días de archivo — justo los que sirvieron para
      caracterizar la publicación de las series D+1.
   2. **El 602 se guarda en CSV plano**, como el 600. Se me había quedado
      comprimido pese a anunciarlo en plano.
-
+ 
 QUÉ CAMBIA EN LA v3.6
 ---------------------
 Todo esto sale de leer los datos ya archivados y encontrar lo que faltaba.
-
+ 
   1. **Las descripciones ya no se truncan.** Estaban cortadas a 300 caracteres
      y 606 de los 1.506 indicadores quedaban a media frase. La del 460 se
      cortaba justo en «Important...», que era donde REE ponía la advertencia.
@@ -113,7 +140,7 @@ Todo esto sale de leer los datos ya archivados y encontrar lo que faltaba.
      entraba por ninguno de los cinco términos anteriores.
   4. **El indicador 602 (energía casada en el diario) pasa a principal.** Es la
      pareja natural del precio 600 y estaba solo en el barrido completo.
-
+ 
 QUÉ CAMBIA EN LA v3.5
 ---------------------
 Una corrección, y no menor. Hasta la v3.4 AEMET se pedía cuando la hora era
@@ -123,35 +150,35 @@ correcto. Pero al pasar a capturas cada tres horas incluyendo la de las 11:50
 sacrificar—, todas las horas pasan a ser 2, 5, 8, 11, 14, 17, 20 y 23: ninguna
 múltiplo de 3, y AEMET no se habría pedido NUNCA. Sin error y sin aviso, solo
 `OMITIDA` en todos los manifiestos.
-
+ 
 Y AEMET es la fuente cuya pérdida es definitiva: su API solo devuelve la
 predicción vigente. Ahora el espaciado no se calcula con el reloj sino con el
 disco —horas transcurridas desde la última captura buena—, así que es correcto
 con cualquier horario y además reintenta a la siguiente cuando una falla.
-
+ 
 QUÉ CAMBIA EN LA v3.4
 ---------------------
 Dos ficheros nuevos en una RUTA FIJA, que no cambia nunca:
-
+ 
   · `archivo/ultimo.json` — copia del manifiesto de la última captura.
   · `archivo/indice.csv`  — una línea por captura, desde la primera.
-
+ 
 El motivo es concreto. La carpeta de cada captura lleva el minuto REAL de
 arranque del script, que no es predecible: el disparo externo pide a y 50,
 pero la ejecución empieza cuando GitHub asigna máquina. Comprobar cómo había
 ido el archivador exigía por tanto adivinar el nombre de la carpeta —0850,
 1452, 2303...— o mirarla a mano. Con una ruta fija, deja de ser un problema.
-
+ 
 El índice guarda además `disparo` (de dónde vino la ejecución: `schedule`,
 `workflow_dispatch`, `push`), que es lo que permitirá medir con datos la
 fiabilidad del cron de GitHub frente al disparador externo, en vez de contar
 carpetas a mano como hasta ahora.
-
+ 
 QUÉ CAMBIA EN LA v3
 -------------------
 Tres cambios, todos motivados por una aportación del usuario: las previsiones
 de renovables cubren unos 10 días y se REGENERAN varias veces al día.
-
+ 
   1. Se piden 10 días hacia delante en vez de uno. La evolución de la
      previsión de un día concreto según se acerca es irrecuperable si no se
      captura, y es la serie más interesante que puede dar esta fuente.
@@ -160,13 +187,13 @@ de renovables cubren unos 10 días y se REGENERAN varias veces al día.
   3. Compresión por defecto, salvo los ficheros pequeños que conviene poder
      mirar desde la web. Sin esto, 10 días × 8 capturas diarias multiplicaban
      por cinco el tamaño del repositorio.
-
+ 
 QUÉ CAMBIÓ EN LA v2
 -------------------
 La v1 archivaba solo los cuatro indicadores que el modelo usa hoy. La v2
 archiva **todas las previsiones que publica e·sios**, descubriéndolas del
 catálogo en cada ejecución.
-
+ 
 El motivo no es «por si acaso». Los indicadores 460, 2563 y 10249 están hoy
 DESCARTADOS como variable de entrenamiento porque se revisan después de
 publicarse: el valor que se descarga hoy para una fecha pasada no es
@@ -174,15 +201,15 @@ necesariamente el que existía entonces. Archivarlos a diario **resuelve
 exactamente ese problema**: a partir de la primera ejecución tendremos su
 valor tal como se publicó, que es el único que un modelo honesto puede usar.
 Es decir, el archivador no los guarda por completismo — los rehabilita.
-
+ 
 Y lo mismo vale para los indicadores cuyo significado todavía no conocemos:
 guardarlos cuesta unos KB al día; no haberlos guardado cuesta el histórico
 entero el día que resulten útiles.
-
+ 
 QUÉ GUARDA
 ----------
 Una carpeta por día bajo `archivo/AAAA/MM/AAAA-MM-DD/`:
-
+ 
   · Los indicadores del modelo actual, en CSV plano y legible.
   · TODAS las previsiones descubiertas, en un único CSV comprimido.
   · Un CSV de metadatos con el `values_updated_at` de cada indicador, que es
@@ -190,25 +217,25 @@ Una carpeta por día bajo `archivo/AAAA/MM/AAAA-MM-DD/`:
   · La predicción de temperatura de AEMET, irrecuperable después.
   · Las vistas de ENTSO-E y el precio del gas.
   · Un `manifiesto.json` con hora de ejecución y estado de cada fuente.
-
+ 
 Las ventanas son DELIBERADAMENTE CORTAS: se trata de registrar lo nuevo y
 poder detectar revisiones, no de duplicar el histórico cada mañana.
-
+ 
 NOTA SOBRE EL NOMBRE DEL FICHERO
 --------------------------------
 Rompe a propósito la convención del proyecto de incluir la versión en el
 nombre (`_vN`): este fichero lo ejecuta un workflow que lo referencia por
 nombre, así que tiene que ser estable. La versión va en esta cabecera y en el
 manifiesto de cada ejecución.
-
+ 
 REQUISITOS
 ----------
 Python 3.9+, `requests`, `pandas`. Tokens en variables de entorno:
 ESIOS_TOKEN, ENTSOE_TOKEN, AEMET_TOKEN.
-
-Versión: v3.10 — 2026-08-14.
+ 
+Versión: v3.11 — 2026-08-16.
 """
-
+ 
 import os
 import csv
 import sys
@@ -220,17 +247,17 @@ import hashlib
 import datetime as dt
 import xml.etree.ElementTree as ET
 from zoneinfo import ZoneInfo
-
+ 
 import requests
 import pandas as pd
-
+ 
 # ============================================================================
 # CONFIGURACIÓN
 # ============================================================================
-
+ 
 TZ_MADRID = ZoneInfo("Europe/Madrid")
 CARPETA_RAIZ = "archivo"
-
+ 
 # Ventanas de captura, en días.
 DIAS_PRECIO_ATRAS = 8        # precios publicados: contexto + detectar revisiones
 DIAS_PREVISION_ATRAS = 1     # las previsiones no necesitan histórico
@@ -241,15 +268,22 @@ DIAS_PREVISION_ATRAS = 1     # las previsiones no necesitan histórico
 # no se captura. Si un indicador no llega tan lejos, simplemente devuelve
 # menos: se pide y se registra hasta dónde llegó, en vez de suponerlo.
 DIAS_ADELANTE = 11
-
+# La potencia instalada es una serie MENSUAL, y por eso necesita ventana
+# propia: pedida con la del barrido —[hoy-1, hoy+11]— no devuelve ni un punto.
+# Así se archivó VACÍO todo el grupo «capacidad» del 13 al 16-ago-2026, y por
+# eso parecía que las series renovables no existían cuando sí existen. Con 400
+# días entran trece meses: suficiente para ver el ritmo de altas de eólica y
+# fotovoltaica sin convertir la captura diaria en un histórico completo.
+DIAS_CAPACIDAD_ATRAS = 400
+ 
 ESIOS_BASE = "https://api.esios.ree.es"
 ENTSOE_API = "https://web-api.tp.entsoe.eu/api"
 AEMET_BASE = "https://opendata.aemet.es/opendata"
-
+ 
 EIC_ES = "10YES-REE------0"
 EIC_FR = "10YFR-RTE------C"
 UA = {"User-Agent": "Mozilla/5.0 (proyecto BESS, datos publicos)"}
-
+ 
 # Los que usa el modelo hoy. Se guardan en CSV plano para poder mirarlos
 # desde la web de GitHub sin descargar nada.
 INDICADORES_PRINCIPALES = {
@@ -264,7 +298,7 @@ INDICADORES_PRINCIPALES = {
     542: "prev_solar_fv",
     543: "prev_solar_termica",
 }
-
+ 
 # Términos de búsqueda, SEPARADOS EN GRUPOS con tope propio cada uno.
 #
 # Por qué en grupos: la v3 buscaba los cinco términos juntos, ordenaba por id y
@@ -300,7 +334,7 @@ GRUPOS_BUSQUEDA = {
                   "capacidad instalada"],
     "programa": ["D+1", "H+3"],
 }
-
+ 
 # Red de seguridad: si el descubrimiento falla, se bajan al menos estos, que
 # son los ya catalogados en Aprendizaje_API_REE §4.6.
 # Cadena de programación bajo SEGUIMIENTO. Entran en TODAS las capturas, al
@@ -325,12 +359,12 @@ PROGRAMAS_SEGUIDOS = [
     # Solar térmica
     15, 50, 85, 120, 190, 260, 295, 330, 1414,
 ]
-
+ 
 PREVISIONES_CONOCIDAS = [
     460, 541, 542, 543, 603, 1775, 1776, 1777, 1778,
     2563, 10034, 10249, 10358, 10359,
 ]
-
+ 
 # Tope POR GRUPO y POR MODO. Medido el 11-ago-2026: de los 1.506 indicadores
 # que devuelve la búsqueda, solo **110 son previsiones**; los otros 1.396 son
 # programas de generación. Así que las previsiones caben enteras en cualquier
@@ -350,7 +384,7 @@ MAX_POR_GRUPO = {
     "ligero":   {"prevision": 400, "capacidad": 0,   "programa": 0},
     "completo": {"prevision": 400, "capacidad": 200, "programa": 1600},
 }
-
+ 
 # Ritmo de peticiones. El documento de conocimiento del proyecto fija ~1/s
 # como norma prudente, y se mantiene para los indicadores principales. Para el
 # barrido masivo se baja: 1.506 indicadores a 1/s son más de 25 minutos, y la
@@ -358,14 +392,17 @@ MAX_POR_GRUPO = {
 # NADA. Los 429 se reintentan igual, así que el riesgo de acelerar es bajo y
 # el de no hacerlo ya se materializó.
 PAUSA_BARRIDO = 0.4
-
+ 
 # Presupuesto de tiempo del barrido, en minutos. Al agotarse se para y se
 # guarda lo capturado hasta ese momento, anotando cuántos quedaron fuera.
 # Sin esto, un barrido que no termina se lleva por delante la captura entera:
 # los ficheros se escriben al final, así que el trabajo de media hora se
 # perdía sin dejar rastro. Mejor una foto incompleta y anotada que ninguna.
-MINUTOS_MAX_BARRIDO = 22
-
+# v3.11: de 22 a 28. El barrido del 16-ago-2026 tardó 1.162 s de los 1.320
+# disponibles (88 %) y la pasada de capacidad añade unas 70 peticiones. El
+# `timeout-minutes` del workflow es 45, así que hay sitio.
+MINUTOS_MAX_BARRIDO = 28
+ 
 # AEMET no se pide en todas las capturas. Su predicción se elabora unas pocas
 # veces al día (medido: 08:55 y 10:35), así que pedirla cada hora devuelve lo
 # mismo y además nos gana un HTTP 429 — ya pasó en dos de las tres primeras
@@ -387,7 +424,7 @@ MINUTOS_MAX_BARRIDO = 22
 # horario, y además reintenta en la siguiente captura cuando una falla, en vez
 # de esperar al siguiente múltiplo.
 HORAS_MINIMAS_ENTRE_AEMET = 2.5
-
+ 
 # Ocho municipios. Los seis primeros son las grandes áreas de consumo; los dos
 # últimos se añadieron en la v3.8:
 #   · A Coruña (15030) cubre el NOROESTE, que no estaba representado y es la
@@ -398,7 +435,7 @@ MUNICIPIOS_AEMET = {
     "41091": "sevilla", "48020": "bilbao", "50297": "zaragoza",
     "15030": "a_coruna", "08121": "mataro",
 }
-
+ 
 # Segundos entre peticiones a AEMET. Su API devuelve 429 esporádicos incluso sin
 # exceso evidente, y en la v3.8 se pasa de 6 a 16 llamadas por captura (ocho
 # municipios × dos productos), así que el ritmo importa más que antes.
@@ -408,14 +445,14 @@ MUNICIPIOS_AEMET = {
 # que el 14-ago-2026 devolvió un 200 con cuerpo no-JSON. No es LA causa del
 # fallo (esa era el try mal colocado en _aemet_json), pero sí margen barato.
 PAUSA_AEMET = 5
-
+ 
 ESIOS_TOKEN = os.environ.get("ESIOS_TOKEN", "").strip()
 ENTSOE_TOKEN = os.environ.get("ENTSOE_TOKEN", "").strip()
 AEMET_TOKEN = os.environ.get("AEMET_TOKEN", "").strip()
-
+ 
 MANIFIESTO = {"fuentes": {}}
-
-
+ 
+ 
 def registrar(nombre, estado, detalle, filas=None, extra=None):
     """
     Deja constancia de cómo fue cada fuente. Un fallo NO aborta el programa:
@@ -428,14 +465,14 @@ def registrar(nombre, estado, detalle, filas=None, extra=None):
     marca = {"OK": "✓", "VACIO": "·", "FALLO": "✗", "OMITIDA": "–",
              "PARCIAL": "◐"}.get(estado, "?")
     print(f"  [{marca}] {nombre}: {detalle}" + (f" ({filas} filas)" if filas else ""))
-
-
+ 
+ 
 def guardar(df, carpeta, nombre, comprimir=True):
     """
     Comprime por defecto. Con 10 días de previsión y varias capturas al día,
     el CSV plano multiplicaría por cinco el tamaño del repositorio sin aportar
     nada: pandas lee un .csv.gz exactamente igual que un .csv.
-
+ 
     Se dejan en plano solo los ficheros que interesa poder mirar de un vistazo
     desde la web de GitHub sin descargar nada — el precio, la predicción de
     AEMET y los dos índices del catálogo—, que además son los pequeños.
@@ -449,26 +486,26 @@ def guardar(df, carpeta, nombre, comprimir=True):
         ruta = os.path.join(carpeta, f"{nombre}.csv")
         df.to_csv(ruta, index=False)
     return ruta
-
-
+ 
+ 
 def hash_texto(texto):
     return hashlib.sha256(texto.encode("utf-8")).hexdigest()[:16]
-
-
+ 
+ 
 def titulo(t):
     print("\n" + "=" * 70)
     print(t)
     print("=" * 70)
-
-
+ 
+ 
 def cabeceras_esios():
     return {
         "Accept": "application/json; application/vnd.esios-api-v1+json",
         "Content-Type": "application/json",
         "x-api-key": ESIOS_TOKEN,
     }
-
-
+ 
+ 
 def pedir_esios(ruta, params, intentos=3):
     """
     Petición a e·sios con reintentos. Los HTTP 404 de e·sios son TRANSITORIOS
@@ -496,12 +533,12 @@ def pedir_esios(ruta, params, intentos=3):
             continue
         break
     return None, error
-
-
+ 
+ 
 # ============================================================================
 # Descubrimiento del catálogo de previsiones
 # ============================================================================
-
+ 
 def ya_hay_captura_completa_hoy(hoy):
     """
     ¿Se ha hecho ya hoy la captura completa? Se mira el disco en vez de la hora
@@ -523,14 +560,14 @@ def ya_hay_captura_completa_hoy(hoy):
         except Exception:
             continue
     return False
-
-
+ 
+ 
 def horas_desde_ultima_aemet(ahora_madrid):
     """
     Horas transcurridas desde la última captura de AEMET que salió OK, o None
     si no hay ninguna. Se mira el disco, no el reloj, por el motivo explicado
     en HORAS_MINIMAS_ENTRE_AEMET.
-
+ 
     Se recorren hoy y ayer: una captura de madrugada tiene su última AEMET
     buena en la carpeta del día anterior, y sin mirar ayer se pediría dos veces
     seguidas en el cambio de día.
@@ -558,8 +595,8 @@ def horas_desde_ultima_aemet(ahora_madrid):
     if ultima is None:
         return None
     return (ahora_madrid - ultima).total_seconds() / 3600
-
-
+ 
+ 
 def descubrir_previsiones(modo):
     """
     Busca en el catálogo de e·sios los indicadores que parezcan una previsión.
@@ -568,7 +605,7 @@ def descubrir_previsiones(modo):
     """
     titulo(f"e·sios — descubrimiento del catálogo, por grupos (modo {modo})")
     encontrados, por_grupo = {}, {}
-
+ 
     topes = MAX_POR_GRUPO[modo]
     for grupo, terminos in GRUPOS_BUSQUEDA.items():
         if topes.get(grupo, 0) <= 0:
@@ -607,7 +644,7 @@ def descubrir_previsiones(modo):
             print(f"  [{grupo}] '{termino}': {len(lista)} resultados, "
                   f"{nuevos} nuevos")
             time.sleep(1)
-
+ 
         tope = topes.get(grupo, 200)
         ids_grupo = sorted(del_grupo)
         por_grupo[grupo] = {"encontrados": len(ids_grupo),
@@ -618,7 +655,7 @@ def descubrir_previsiones(modo):
             ids_grupo = ids_grupo[:tope]
         for idx in ids_grupo:
             encontrados[idx] = del_grupo[idx]
-
+ 
     # Los conocidos entran siempre, aunque la búsqueda no los haya devuelto y
     # aunque los topes se hayan agotado. Son los que el modelo usa de verdad.
     for idx in PREVISIONES_CONOCIDAS:
@@ -632,7 +669,7 @@ def descubrir_previsiones(modo):
         encontrados.setdefault(idx, {"id": idx, "grupo": "programa_seguido",
                                      "nombre": "(cadena de programación)",
                                      "descripcion": "", "termino": "seguimiento"})
-
+ 
     ids = sorted(encontrados)
     detalle = " · ".join(
         f"{g}: omitido" if v.get("omitido")
@@ -643,15 +680,19 @@ def descubrir_previsiones(modo):
               extra={"modo": modo, "por_grupo": por_grupo,
                      "total_archivados": len(ids)})
     return [encontrados[i] for i in ids]
-
-
+ 
+ 
 # ============================================================================
 # e·sios
 # ============================================================================
-
-def _serie_esios(indicador, ini_iso, fin_iso, filtrar_espana=False):
+ 
+def _serie_esios(indicador, ini_iso, fin_iso, filtrar_espana=False,
+                 trunc="fifteen_minutes"):
+    # `trunc` es parámetro desde la v3.11. Estaba fijo a quince minutos, que es
+    # lo correcto para previsiones y programas pero deja fuera cualquier serie
+    # de paso más largo: la potencia instalada es mensual y devolvía vacío.
     params = {"start_date": ini_iso, "end_date": fin_iso,
-              "time_trunc": "fifteen_minutes",
+              "time_trunc": trunc,
               "time_agg": "average"}   # crítico: con 'sum' los precios salen x4
     if filtrar_espana:
         params["geo_ids[]"] = 3
@@ -666,20 +707,20 @@ def _serie_esios(indicador, ini_iso, fin_iso, filtrar_espana=False):
     columnas = [c for c in ("datetime", "datetime_utc", "value", "geo_id")
                 if c in df.columns]
     return df[columnas].sort_values("datetime_utc"), ind, None
-
-
+ 
+ 
 def capturar_esios_principales(carpeta, hoy):
     titulo("e·sios — indicadores del modelo (CSV legible)")
     if not ESIOS_TOKEN:
         registrar("esios", "FALLO", "falta ESIOS_TOKEN")
         return False
-
+ 
     ini = dt.datetime.combine(hoy - dt.timedelta(days=DIAS_PRECIO_ATRAS),
                               dt.time(0, 0), tzinfo=TZ_MADRID).isoformat()
     fin = (dt.datetime.combine(hoy + dt.timedelta(days=DIAS_ADELANTE),
                                dt.time(0, 0), tzinfo=TZ_MADRID)
            - dt.timedelta(seconds=1)).isoformat()
-
+ 
     for indicador, nombre in INDICADORES_PRINCIPALES.items():
         df, ind, error = _serie_esios(indicador, ini, fin,
                                       filtrar_espana=(indicador == 600))
@@ -697,26 +738,26 @@ def capturar_esios_principales(carpeta, hoy):
                              "hash": hash_texto(df.to_csv(index=False))})
         time.sleep(1)
     return True
-
-
+ 
+ 
 def guardar_catalogo(catalogo):
     """
     Escribe el catálogo en RUTA FIJA y ACUMULATIVA: `archivo/catalogo.csv`.
-
+ 
     Hasta la v3.5 el catálogo se reescribía dentro de cada captura. Eso tenía
     dos consecuencias malas a la vez:
-
+ 
       · Obligaba a truncar las descripciones a 300 caracteres para que el
         repositorio no se disparara —558 KB por captura completa—, y con ello
         se perdía la única documentación que existe de qué es cada indicador.
       · Guardaba ocho copias diarias de algo que cambia una vez cada varios
         meses.
-
+ 
     El catálogo no es una serie temporal, es material de referencia, y hay que
     tratarlo como tal: un solo fichero, con las descripciones ENTERAS, que solo
     se reescribe el día que REE cambia algo. Git guarda un blob nuevo
     únicamente entonces.
-
+ 
     Es ACUMULATIVO por una razón concreta: la captura ligera solo descubre 110
     indicadores y la completa 1.506. Si cada una sobrescribiera el fichero, las
     siete ligeras del día borrarían el trabajo de la completa. Así que se
@@ -733,7 +774,7 @@ def guardar_catalogo(catalogo):
             nuevo[e["id"]] = {**e, "visto": hoy, "_relleno": True}
         else:
             nuevo[e["id"]] = {**e, "visto": hoy, "_relleno": False}
-
+ 
     previo = {}
     if os.path.isfile(ruta):
         try:
@@ -745,7 +786,7 @@ def guardar_catalogo(catalogo):
                         continue
         except Exception:
             previo = {}
-
+ 
     fusionado = dict(previo)
     altas = cambios = 0
     for idx, e in nuevo.items():
@@ -765,7 +806,7 @@ def guardar_catalogo(catalogo):
                for c in ("grupo", "nombre", "descripcion", "termino")):
             cambios += 1
         fusionado[idx] = fila
-
+ 
     cols = ["id", "grupo", "nombre", "descripcion", "termino", "visto"]
     filas = [fusionado[i] for i in sorted(fusionado)]
     # Solo se reescribe si el contenido cambia de verdad. Comparar el texto
@@ -778,25 +819,25 @@ def guardar_catalogo(catalogo):
     for fila in filas:
         w.writerow({c: fila.get(c, "") for c in cols})
     contenido = buf.getvalue()
-
+ 
     anterior_txt = ""
     if os.path.isfile(ruta):
         try:
             anterior_txt = open(ruta, encoding="utf-8").read()
         except Exception:
             anterior_txt = ""
-
+ 
     # El campo `visto` cambia todos los días y por sí solo no justifica un
     # commit: se compara ignorando esa columna.
     def sin_visto(t):
         return "\n".join(l.rsplit(",", 1)[0] for l in t.splitlines())
-
+ 
     escrito = False
     if sin_visto(contenido) != sin_visto(anterior_txt):
         with open(ruta, "w", encoding="utf-8", newline="") as f:
             f.write(contenido)
         escrito = True
-
+ 
     registrar("esios_catalogo_fichero", "OK",
               f"{len(filas)} indicadores en {ruta}"
               + (f" · {altas} altas, {cambios} modificados, REESCRITO" if escrito
@@ -804,20 +845,20 @@ def guardar_catalogo(catalogo):
               extra={"total": len(filas), "altas": altas, "cambios": cambios,
                      "reescrito": escrito})
     return ruta
-
-
+ 
+ 
 COLUMNAS_SEGUIMIENTO = [
     "captura_madrid", "indicador", "nombre", "estado", "values_updated_at",
     "fecha_min", "fecha_max", "dias_cubiertos", "n_periodos",
     "suma_valores", "hash_valores",
 ]
-
-
+ 
+ 
 def _fila_seguimiento(idx, nombre, estado, ind, df):
     """
     Una foto compacta de un indicador de la cadena de programación, tal como
     estaba en ESTA captura.
-
+ 
     `suma_valores` y `hash_valores` son lo que permite detectar una
     republicación AUNQUE `values_updated_at` no cambie: si el hash cambia, el
     contenido cambió. Y al revés — si cambia `values_updated_at` pero no el
@@ -848,14 +889,14 @@ def _fila_seguimiento(idx, nombre, estado, ind, df):
             "" if pd.isna(v) else f"{v:.4f}" for v in valores)),
     })
     return fila
-
-
+ 
+ 
 def actualizar_seguimiento(filas):
     """
     Añade al fichero acumulativo `archivo/seguimiento_programas.csv`. Mismo
     criterio que el índice: se AÑADE, y solo se reescribe entero si cambia la
     cabecera o si esta captura ya estaba registrada.
-
+ 
     No se poda nada. Durante los primeros meses, que es cuando se está
     caracterizando el comportamiento, cualquier poda destruye justamente lo
     que se quiere medir. Con 28 indicadores y 8 capturas diarias son ~224
@@ -873,7 +914,7 @@ def actualizar_seguimiento(filas):
                 previas = list(lector)
         except Exception:
             previas, cabecera = [], None
-
+ 
     capturas = {f["captura_madrid"] for f in filas}
     repetida = any(p.get("captura_madrid") in capturas for p in previas)
     if cabecera != COLUMNAS_SEGUIMIENTO or repetida:
@@ -895,8 +936,8 @@ def actualizar_seguimiento(filas):
             for fila in filas:
                 w.writerow(fila)
     return len(previas) + len(filas)
-
-
+ 
+ 
 def capturar_esios_previsiones(carpeta, hoy, catalogo):
     """
     Todas las previsiones descubiertas, en un ÚNICO fichero comprimido en
@@ -907,13 +948,13 @@ def capturar_esios_previsiones(carpeta, hoy, catalogo):
     titulo(f"e·sios — archivo de {len(catalogo)} previsiones (comprimido)")
     if not ESIOS_TOKEN or not catalogo:
         return
-
+ 
     ini = dt.datetime.combine(hoy - dt.timedelta(days=DIAS_PREVISION_ATRAS),
                               dt.time(0, 0), tzinfo=TZ_MADRID).isoformat()
     fin = (dt.datetime.combine(hoy + dt.timedelta(days=DIAS_ADELANTE),
                                dt.time(0, 0), tzinfo=TZ_MADRID)
            - dt.timedelta(seconds=1)).isoformat()
-
+ 
     trozos, meta, seguimiento = [], [], []
     ok = vacios = fallos = 0
     t0 = time.time()
@@ -960,7 +1001,7 @@ def capturar_esios_previsiones(carpeta, hoy, catalogo):
             print(f"    {i}/{len(catalogo)} procesados "
                   f"({time.time() - t0:.0f}s)...")
         time.sleep(PAUSA_BARRIDO)
-
+ 
     df_meta = pd.DataFrame(meta)
     # El catálogo ya NO se guarda dentro de la captura: vive en ruta fija y
     # acumulativa (ver guardar_catalogo). Lo que sí es propio de cada captura
@@ -971,7 +1012,7 @@ def capturar_esios_previsiones(carpeta, hoy, catalogo):
         registrar("esios_catalogo_fichero", "FALLO",
                   f"{type(e).__name__}: {e}")
     guardar(df_meta, carpeta, "esios_previsiones_meta", comprimir=False)
-
+ 
     # El seguimiento va en su propio try: llegados aquí las series ya están
     # capturadas y esto es contabilidad. Que un fallo aquí tumbe una captura
     # buena sería absurdo.
@@ -990,11 +1031,11 @@ def capturar_esios_previsiones(carpeta, hoy, catalogo):
     except Exception as e:
         registrar("esios_seguimiento_programas", "FALLO",
                   f"{type(e).__name__}: {e}")
-
+ 
     if not trozos:
         registrar("esios_previsiones", "FALLO", "ningún indicador devolvió datos")
         return
-
+ 
     completo = pd.concat(trozos, ignore_index=True)
     ruta = guardar(completo, carpeta, "esios_previsiones")
     tam_kb = os.path.getsize(ruta) / 1024
@@ -1010,20 +1051,106 @@ def capturar_esios_previsiones(carpeta, hoy, catalogo):
                      "kb_comprimido": round(tam_kb, 1),
                      "segundos": segundos, "cortado_en": cortado_en,
                      "pedidos": len(catalogo)})
-
-
+ 
+ 
+def capturar_capacidad_instalada(carpeta, hoy, catalogo):
+    """
+    Segunda pasada, solo en modo completo, sobre el grupo «capacidad»: potencia
+    instalada y disponible, con ventana ancha y paso MENSUAL.
+ 
+    Existe porque la ventana del barrido —doce días con paso de quince
+    minutos— es la equivocada para esta familia. La potencia instalada se
+    publica una vez al mes: dentro de esa ventana no hay ningún punto, así que
+    las 69 series del grupo se archivaban vacías y parecía que las renovables
+    no estaban en el catálogo. Sí están (1485 eólica, 1486 fotovoltaica, y las
+    híbridas 2267-2273, entre ellas «renovable-almacenamiento», que es
+    exactamente la familia de este proyecto).
+ 
+    No sustituye al barrido: las convencionales 464-471 se republican a diario
+    y ahí siguen, con su detalle de quince minutos. Esto añade la foto mensual
+    que faltaba.
+    """
+    entradas = [e for e in catalogo if e.get("grupo") == "capacidad"]
+    titulo(f"e·sios — potencia instalada y disponible ({len(entradas)} series, "
+           f"paso mensual)")
+    if not ESIOS_TOKEN or not entradas:
+        registrar("esios_capacidad_instalada", "OMITIDA",
+                  "sin series del grupo «capacidad» en este modo")
+        return
+ 
+    ini = dt.datetime.combine(hoy - dt.timedelta(days=DIAS_CAPACIDAD_ATRAS),
+                              dt.time(0, 0), tzinfo=TZ_MADRID).isoformat()
+    fin = dt.datetime.combine(hoy + dt.timedelta(days=1),
+                              dt.time(0, 0), tzinfo=TZ_MADRID).isoformat()
+ 
+    trozos, nombres = [], {}
+    ok = vacios = fallos = 0
+    t0 = time.time()
+    for entrada in entradas:
+        idx = entrada["id"]
+        df, ind, error = _serie_esios(idx, ini, fin, trunc="month")
+        if df is None:
+            if ind is None:
+                fallos += 1
+            else:
+                vacios += 1
+        else:
+            df = df.copy()
+            df.insert(0, "indicador", idx)
+            df.insert(1, "nombre", (ind.get("name") or entrada["nombre"] or "").strip())
+            trozos.append(df)
+            nombres[idx] = df["nombre"].iloc[0]
+            ok += 1
+        time.sleep(PAUSA_BARRIDO)
+ 
+    segundos = round(time.time() - t0)
+    if not trozos:
+        registrar("esios_capacidad_instalada", "VACIO",
+                  f"ninguna de las {len(entradas)} series devolvió valores "
+                  f"({fallos} fallidas, {segundos}s)")
+        return
+ 
+    completo = pd.concat(trozos, ignore_index=True)
+    # En plano y sin comprimir: son unos pocos miles de filas y el sentido de
+    # esta tabla es poder abrirla desde la web de GitHub y ver de un vistazo
+    # cuánta eólica y cuánta fotovoltaica hay instaladas.
+    guardar(completo, carpeta, "esios_capacidad_instalada", comprimir=False)
+ 
+    # Un par de referencias explícitas en el detalle: son la pregunta que
+    # originó el grupo «capacidad», y verlas en el manifiesto ahorra abrir el
+    # fichero para saber si esta captura las trajo.
+    resumen = []
+    for idx, etiqueta in ((1485, "eólica"), (1486, "FV")):
+        sub = completo[completo["indicador"] == idx]
+        if not sub.empty:
+            ultima = sub.sort_values("datetime").iloc[-1]
+            resumen.append(f"{etiqueta} {ultima['value']:.0f} MW "
+                           f"({str(ultima['datetime'])[:7]})")
+    detalle = (f"{ok} con datos, {vacios} vacías, {fallos} fallidas "
+               f"({segundos}s)")
+    if resumen:
+        detalle += " · instalada: " + " · ".join(resumen)
+ 
+    registrar("esios_capacidad_instalada", "OK", detalle,
+              filas=len(completo),
+              extra={"series_ok": ok, "series_vacias": vacios,
+                     "series_fallidas": fallos, "pedidas": len(entradas),
+                     "segundos": segundos,
+                     "dias_atras": DIAS_CAPACIDAD_ATRAS})
+ 
+ 
 # ============================================================================
 # ENTSO-E
 # ============================================================================
-
+ 
 def _sin_ns(tag):
     return tag.split("}")[-1]
-
-
+ 
+ 
 def _minutos_iso(txt):
     """
     P7D, PT15M, PT60M, P1D... -> minutos. None si no se entiende.
-
+ 
     Se interpreta como duración ISO 8601 genérica y NO contra una lista
     cerrada de valores: una tabla cerrada descartó en silencio toda la serie
     semanal `P7D` de la reserva hidráulica y costó dos versiones de programa
@@ -1054,8 +1181,8 @@ def _minutos_iso(txt):
                 dias = v * 30
             num = ""
     return (dias * 1440 + horas * 60 + mins) or None
-
-
+ 
+ 
 def _parsear_entsoe(xml_texto, campo_valor):
     """Las posiciones omitidas repiten el último valor conocido (§5)."""
     filas = []
@@ -1108,8 +1235,8 @@ def _parsear_entsoe(xml_texto, campo_valor):
                 if ultimo is not None:
                     filas.append((t0 + (pos - 1) * paso, ultimo, psr))
     return filas
-
-
+ 
+ 
 def _entsoe(nombre, params_extra, campo, ini, fin):
     params = {"securityToken": ENTSOE_TOKEN,
               "periodStart": ini.strftime("%Y%m%d") + "0000",
@@ -1136,17 +1263,17 @@ def _entsoe(nombre, params_extra, campo, ini, fin):
     else:
         df = df.drop_duplicates(["datetime_utc", "psr_type"])
     return df.sort_values("datetime_utc"), None
-
-
+ 
+ 
 def capturar_entsoe(carpeta, hoy):
     titulo("ENTSO-E — previsiones, precios y reserva hidráulica")
     if not ENTSOE_TOKEN:
         registrar("entsoe", "FALLO", "falta ENTSOE_TOKEN")
         return
-
+ 
     ini = hoy - dt.timedelta(days=DIAS_PRECIO_ATRAS)
     fin = hoy + dt.timedelta(days=DIAS_ADELANTE)
-
+ 
     vistas = [
         ("entsoe_A65_prev_demanda_es", "prev_demanda",
          {"documentType": "A65", "processType": "A01",
@@ -1175,7 +1302,7 @@ def capturar_entsoe(carpeta, hoy):
                       f"hasta {df['datetime_utc'].max()}", filas=len(df),
                       extra={"hash": hash_texto(df.to_csv(index=False))})
         time.sleep(2)
-
+ 
     # Reserva hidráulica: semanal (P7D) y con ~9 días de desfase de
     # publicación, así que necesita una ventana más ancha o no cae ninguna
     # lectura dentro.
@@ -1189,12 +1316,12 @@ def capturar_entsoe(carpeta, hoy):
         guardar(df, carpeta, "entsoe_A72_reserva_hidraulica")
         registrar("entsoe_A72_reserva_hidraulica", "OK",
                   f"última lectura {df['datetime_utc'].max()}", filas=len(df))
-
-
+ 
+ 
 # ============================================================================
 # AEMET — la predicción, que es lo irrecuperable
 # ============================================================================
-
+ 
 def _aemet_json(ruta):
     """
     Una lectura de AEMET son SIEMPRE dos peticiones: la primera devuelve un
@@ -1236,15 +1363,15 @@ def _aemet_json(ruta):
             time.sleep(10 * intento)
             continue
     return None, error
-
-
+ 
+ 
 def _val(x):
     """Los valores vienen unas veces sueltos y otras dentro de una lista."""
     if isinstance(x, list):
         return x[0] if x else None
     return x
-
-
+ 
+ 
 def _periodo_dia(lista, periodo="00-24"):
     """
     De una lista de tramos, la entrada del periodo pedido. AEMET no siempre
@@ -1262,8 +1389,8 @@ def _periodo_dia(lista, periodo="00-24"):
         if not e.get("periodo"):
             return e
     return lista[0]
-
-
+ 
+ 
 def _aemet_una_ciudad(codigo, ciudad, diarias, horarias, periodos,
                       fallos_d, fallos_h):
     """
@@ -1319,7 +1446,7 @@ def _aemet_una_ciudad(codigo, ciudad, diarias, horarias, periodos,
                         "direccion": _val(e.get("direccion")),
                     })
     time.sleep(PAUSA_AEMET)
-
+ 
     # ---- Producto HORARIO: 48 h hora a hora -----------------------------
     # Es el que de verdad sirve para D+1: viento y estado del cielo con
     # resolución horaria, que es la del mercado. El producto diario da
@@ -1388,8 +1515,8 @@ def _aemet_una_ciudad(codigo, ciudad, diarias, horarias, periodos,
                         "velocidad": None, "direccion": None,
                     })
     time.sleep(PAUSA_AEMET)
-
-
+ 
+ 
 def capturar_aemet(carpeta, ahora_madrid):
     titulo("AEMET — PREDICCIÓN de temperatura, viento y cielo (irrecuperable)")
     print("  La API solo devuelve la predicción vigente: si no se guarda hoy,")
@@ -1407,10 +1534,10 @@ def capturar_aemet(carpeta, ahora_madrid):
         return
     print("  Última captura buena: "
           + ("ninguna todavía" if desde is None else f"hace {desde:.1f} h"))
-
+ 
     diarias, periodos, horarias = [], [], []
     fallos_d, fallos_h = [], []
-
+ 
     for codigo, ciudad in MUNICIPIOS_AEMET.items():
         # Cada ciudad, aislada. Ocho ciudades × dos productos son dieciséis
         # oportunidades de que AEMET devuelva algo raro; que la número seis
@@ -1421,7 +1548,7 @@ def capturar_aemet(carpeta, ahora_madrid):
         except Exception as e:
             fallos_d.append(f"{ciudad}: {type(e).__name__}: {e}")
             fallos_h.append(f"{ciudad}: {type(e).__name__}: {e}")
-
+ 
     # --- Registro, fuente por fuente -----------------------------------------
     if diarias:
         df = pd.DataFrame(diarias)
@@ -1436,7 +1563,7 @@ def capturar_aemet(carpeta, ahora_madrid):
     else:
         registrar("aemet_prediccion_diaria", "FALLO",
                   "ninguna ciudad devolvió datos: " + "; ".join(fallos_d))
-
+ 
     if horarias:
         dh = pd.DataFrame(horarias)
         guardar(dh, carpeta, "aemet_prediccion_horaria")
@@ -1449,33 +1576,33 @@ def capturar_aemet(carpeta, ahora_madrid):
     else:
         registrar("aemet_prediccion_horaria", "FALLO",
                   "ninguna ciudad devolvió datos: " + "; ".join(fallos_h))
-
+ 
     if periodos:
         dp = pd.DataFrame(periodos)
         guardar(dp, carpeta, "aemet_prediccion_periodos")
         registrar("aemet_prediccion_periodos", "OK",
                   f"{dp['variable'].nunique()} variables por tramos",
                   filas=len(dp))
-
-
+ 
+ 
 # ============================================================================
 # MIBGAS
 # ============================================================================
-
+ 
 def capturar_mibgas(carpeta, hoy):
     """
     En la primera ejecución real desde GitHub Actions (11-ago-2026) esta fuente
     devolvió `HTTP 200, 549 bytes`: un 200 con un cuerpo minúsculo, o sea que
     no era el XLSX. Es el mismo patrón de trampa que e·sios con los ficheros
     I3/I90 — un código de éxito que no trae lo que dice traer.
-
+ 
     Dos sospechas, y el código las cubre las dos sin poder distinguirlas de
     antemano: que MIBGAS rechace peticiones sin cabeceras de navegador
     completas (venían muy escuetas), o que sirva una página intermedia cuando
     no hay una visita previa al sitio. Por eso ahora se mantiene una sesión,
     se visita primero la página de acceso a ficheros y se envían cabeceras
     realistas.
-
+ 
     Y si aun así falla, **se guarda el principio de la respuesta en el
     manifiesto**: 549 bytes de HTML dicen exactamente qué pasa, mientras que
     "no funcionó" no dice nada. Diagnosticar a ciegas ya nos costó caro en
@@ -1499,7 +1626,7 @@ def capturar_mibgas(carpeta, hoy):
         (f"https://www.mibgas.es/en/file-access/MIBGAS_Data_{anio}.xlsx"
          f"?path=AGNO_{anio}/XLS"),
     ]
-
+ 
     sesion = requests.Session()
     sesion.headers.update(cabeceras)
     try:
@@ -1508,7 +1635,7 @@ def capturar_mibgas(carpeta, hoy):
         sesion.get("https://www.mibgas.es/es/file-access", timeout=60)
     except Exception:
         pass
-
+ 
     r = None
     for url in urls:
         try:
@@ -1518,7 +1645,7 @@ def capturar_mibgas(carpeta, hoy):
             return
         if r.status_code == 200 and len(r.content) >= 10000:
             break
-
+ 
     if r is None or r.status_code != 200 or len(r.content) < 10000:
         muestra = ""
         if r is not None:
@@ -1534,7 +1661,7 @@ def capturar_mibgas(carpeta, hoy):
                                             if r is not None else None),
                          "muestra_respuesta": muestra})
         return
-
+ 
     ruta_tmp = os.path.join(carpeta, "_mibgas_tmp.xlsx")
     with open(ruta_tmp, "wb") as f:
         f.write(r.content)
@@ -1562,8 +1689,8 @@ def capturar_mibgas(carpeta, hoy):
     finally:
         if os.path.exists(ruta_tmp):
             os.remove(ruta_tmp)
-
-
+ 
+ 
 # ============================================================================
 # Índice en ruta fija
 # ============================================================================
@@ -1584,14 +1711,14 @@ def capturar_mibgas(carpeta, hoy):
 # El índice además responde una pregunta que hasta ahora se contestaba contando
 # carpetas a mano: cuántas capturas hay de verdad al día, y cuántas vienen del
 # disparador externo frente al cron de GitHub. Por eso se guarda `disparo`.
-
+ 
 COLUMNAS_INDICE = [
     "fecha", "hora", "ejecucion_madrid", "ejecucion_utc", "version", "modo",
     "disparo", "ok", "vacio", "fallo", "omitida", "parcial", "kb_total",
     "ruta", "run_id",
 ]
-
-
+ 
+ 
 def _fila_indice(manifiesto, carpeta):
     r = manifiesto.get("resumen", {})
     return {
@@ -1608,13 +1735,13 @@ def _fila_indice(manifiesto, carpeta):
         "ruta": carpeta.replace(os.sep, "/"),
         "run_id": manifiesto.get("run_id", ""),
     }
-
-
+ 
+ 
 def _rellenar_indice(previas):
     """
     Añade al índice las capturas anteriores a la v3.4, que existen en disco pero
     nunca dejaron línea porque el índice no existía cuando corrieron.
-
+ 
     Sin esto, el visor del móvil solo vería el archivo a partir del momento en
     que se estrenó el índice, y los primeros días —que incluyen justo las
     capturas con las que se caracterizó la publicación de las series D+1— serían
@@ -1642,16 +1769,16 @@ def _rellenar_indice(previas):
     todas = list(previas) + añadidas
     todas.sort(key=lambda f: (f.get("ejecucion_madrid") or "", f.get("ruta") or ""))
     return todas, len(añadidas)
-
-
+ 
+ 
 def actualizar_indice(manifiesto, carpeta):
     """
     Escribe `archivo/ultimo.json` y añade una línea a `archivo/indice.csv`.
-
+ 
     Se hace al final y dentro de su propio try: si esto fallara, la captura ya
     está guardada y el índice es solo comodidad. Nunca debe tumbar una foto
     buena por un problema de contabilidad.
-
+ 
     Se AÑADE una línea en vez de reescribir el fichero entero. No es
     microoptimización: cada reescritura es un blob nuevo en Git, y a ocho
     capturas diarias durante un año eso engorda el repositorio sin motivo. Solo
@@ -1660,12 +1787,12 @@ def actualizar_indice(manifiesto, carpeta):
     mismo minuto)—, que son excepcionales.
     """
     fila = _fila_indice(manifiesto, carpeta)
-
+ 
     ruta_ultimo = os.path.join(CARPETA_RAIZ, "ultimo.json")
     with open(ruta_ultimo, "w", encoding="utf-8") as f:
         json.dump({"ruta": fila["ruta"], **manifiesto}, f,
                   ensure_ascii=False, indent=2)
-
+ 
     ruta_indice = os.path.join(CARPETA_RAIZ, "indice.csv")
     previas, cabecera_vieja = [], None
     if os.path.isfile(ruta_indice):
@@ -1676,12 +1803,12 @@ def actualizar_indice(manifiesto, carpeta):
                 previas = list(lector)
         except Exception:
             previas, cabecera_vieja = [], None
-
+ 
     previas, rellenadas = _rellenar_indice(previas)
-
+ 
     duplicada = any(p.get("ruta") == fila["ruta"] for p in previas)
     reescribir = (cabecera_vieja != COLUMNAS_INDICE) or duplicada or rellenadas
-
+ 
     if reescribir:
         # Al reescribir se descartan las líneas sin ruta. Sin este filtro, un
         # `indice.csv` corrupto —o truncado a medio push— se «migraba» a la
@@ -1701,20 +1828,20 @@ def actualizar_indice(manifiesto, carpeta):
         with open(ruta_indice, "a", newline="", encoding="utf-8") as f:
             csv.DictWriter(f, fieldnames=COLUMNAS_INDICE,
                            extrasaction="ignore").writerow(fila)
-
+ 
     return ruta_ultimo, ruta_indice, len(previas) + 1
-
-
+ 
+ 
 # ============================================================================
 def ejecutar():
     ahora_utc = dt.datetime.now(dt.timezone.utc)
     ahora_madrid = ahora_utc.astimezone(TZ_MADRID)
     hoy = ahora_madrid.date()
-
-    print("ARCHIVADOR DIARIO — FASE 0 DEL PROYECTO BESS (v3.10)")
+ 
+    print("ARCHIVADOR DIARIO — FASE 0 DEL PROYECTO BESS (v3.11)")
     print(f"Ejecución: {ahora_madrid.isoformat(timespec='seconds')} (Madrid)")
     print(f"           {ahora_utc.isoformat(timespec='seconds')} (UTC)")
-
+ 
     # Una subcarpeta por CAPTURA, no por día: con varias ejecuciones diarias,
     # escribir todas en la misma carpeta hacía que la segunda machacara a la
     # primera. Sobrevivían en el historial de Git, pero comparar dos versiones
@@ -1725,9 +1852,9 @@ def ejecutar():
                            f"{hoy:%Y-%m-%d}", f"{ahora_madrid:%H%M}")
     os.makedirs(carpeta, exist_ok=True)
     print(f"Destino:   {carpeta}/")
-
+ 
     MANIFIESTO.update({
-        "version": "v3.10",
+        "version": "v3.11",
         "ejecucion_madrid": ahora_madrid.isoformat(timespec="seconds"),
         "ejecucion_utc": ahora_utc.isoformat(timespec="seconds"),
         "fecha": hoy.isoformat(),
@@ -1740,12 +1867,12 @@ def ejecutar():
         "disparo": os.environ.get("GITHUB_EVENT_NAME", "local"),
         "run_id": os.environ.get("GITHUB_RUN_ID", ""),
     })
-
+ 
     modo = "ligero" if ya_hay_captura_completa_hoy(hoy) else "completo"
     MANIFIESTO["modo"] = modo
     print(f"Modo:      {modo}"
           + ("" if modo == "completo" else "  (hoy ya se hizo el barrido completo)"))
-
+ 
     catalogo = []
     try:
         if capturar_esios_principales(carpeta, hoy):
@@ -1753,7 +1880,18 @@ def ejecutar():
             capturar_esios_previsiones(carpeta, hoy, catalogo)
     except Exception as e:
         registrar("e·sios", "FALLO", f"excepción: {type(e).__name__}: {e}")
-
+ 
+    # En su propio try y DESPUÉS del barrido: llegados aquí las previsiones y
+    # los programas ya están en disco, y esta pasada es un añadido. Que falle
+    # no puede costar la captura. Solo en modo completo: la potencia instalada
+    # cambia una vez al mes, pedirla cada hora no aporta nada.
+    if modo == "completo" and catalogo:
+        try:
+            capturar_capacidad_instalada(carpeta, hoy, catalogo)
+        except Exception as e:
+            registrar("esios_capacidad_instalada", "FALLO",
+                      f"excepción: {type(e).__name__}: {e}")
+ 
     for nombre, funcion, args in (
         ("ENTSO-E", capturar_entsoe, (carpeta, hoy)),
         ("AEMET", capturar_aemet, (carpeta, ahora_madrid)),
@@ -1763,7 +1901,7 @@ def ejecutar():
             funcion(*args)
         except Exception as e:
             registrar(nombre, "FALLO", f"excepción: {type(e).__name__}: {e}")
-
+ 
     estados = [v["estado"] for v in MANIFIESTO["fuentes"].values()]
     tam = sum(os.path.getsize(os.path.join(carpeta, f))
               for f in os.listdir(carpeta)) / 1024
@@ -1773,10 +1911,10 @@ def ejecutar():
         "parcial": estados.count("PARCIAL"),
         "kb_total": round(tam, 1),
     }
-
+ 
     with open(os.path.join(carpeta, "manifiesto.json"), "w", encoding="utf-8") as f:
         json.dump(MANIFIESTO, f, ensure_ascii=False, indent=2)
-
+ 
     # El índice va después del manifiesto y en su propio try: llegados aquí la
     # foto ya está en disco, y el índice es comodidad. Que un fallo de
     # contabilidad tumbe una captura buena sería absurdo.
@@ -1785,7 +1923,7 @@ def ejecutar():
         _, _, total_capturas = actualizar_indice(MANIFIESTO, carpeta)
     except Exception as e:
         print(f"\n  ⚠ No se pudo actualizar el índice: {type(e).__name__}: {e}")
-
+ 
     titulo("RESUMEN")
     for nombre, info in MANIFIESTO["fuentes"].items():
         print(f"  {info['estado']:6s} {nombre:34s} {info['detalle']}")
@@ -1796,7 +1934,7 @@ def ejecutar():
     if total_capturas is not None:
         print(f"  Índice actualizado: {CARPETA_RAIZ}/ultimo.json y "
               f"{CARPETA_RAIZ}/indice.csv ({total_capturas} capturas)")
-
+ 
     if r["ok"] == 0:
         print("\n  ✗ Ninguna fuente respondió. Esto sí es un fallo real.")
         return 1
@@ -1808,7 +1946,8 @@ def ejecutar():
         return 0
     print("\n  ✓ Foto completa.")
     return 0
-
-
+ 
+ 
 if __name__ == "__main__":
     sys.exit(ejecutar())
+ 
