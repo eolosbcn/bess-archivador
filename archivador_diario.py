@@ -19,6 +19,35 @@ con:
 Ninguna de las dos cosas se puede arreglar mirando atrás. Sí se pueden
 arreglar hacia delante.
  
+QUÉ CAMBIA EN LA v3.12
+----------------------
+Sale del análisis de la semana de `seguimiento_programas.csv` (13 a 21-ago-2026,
+153 capturas, 7 días completos). Dos cambios, los dos para dejar de gastar
+peticiones en lo que no aporta y para avisar antes de que algo se rompa.
+ 
+  1. **PHF5, PHF6 y PHF7 salen de las capturas ligeras.** Los nueve
+     indicadores (257, 259, 260, 292, 294, 295, 327, 329, 330) han vuelto
+     VACÍO en las **153 capturas de la semana, sin una sola excepción**. No es
+     un fallo del archivador: esas sesiones intradiarias ya no existen en el
+     MIBEL desde la reforma de las subastas —igual que PHF2 y PHF4, que ya
+     estaban fuera de la lista por el mismo motivo—. Se pasan a
+     `PROGRAMAS_VIGILADOS`: se siguen pidiendo **una vez al día en el barrido
+     completo**, para enterarnos el día que REE los reactive, y desaparecen de
+     las otras capturas. Con ocho capturas diarias son 63 peticiones al día
+     que dejan de gastarse en nueve series vacías.
+ 
+     Se mantiene el registro de la fila vacía en el barrido completo: «a esta
+     hora todavía no estaba publicado» sigue siendo media respuesta, y borrar
+     el indicador entero haría invisible su eventual regreso.
+ 
+  2. **Aviso de presupuesto al 85 %.** El barrido completo del 21-ago tardó
+     1.191 s de los 1.320 configurados —el 90 %— con 1.550 indicadores; el del
+     16-ago tardó 1.162 s con 1.506. El catálogo crece, y el modo de fallo es
+     el peor de los descritos en el roadmap: no avisa, simplemente un día sale
+     `PARCIAL`. Ahora, cuando el barrido pasa del 85 % del presupuesto sin
+     haberse cortado, el manifiesto lo registra como `PARCIAL` con el detalle
+     «presupuesto al X %», que es visible en `indice.csv` sin abrir nada.
+ 
 QUÉ CAMBIA EN LA v3.11
 ----------------------
 La POTENCIA INSTALADA RENOVABLE aparece por fin en el archivo.
@@ -29,22 +58,14 @@ y 2267-2273 de plantas híbridas, incluida «2269 renovable-almacenamiento»—,
 pero las 69 del grupo «capacidad» se archivaban VACÍAS. No era un fallo de la
 API: era la ventana. El barrido pide [hoy-1, hoy+11] con `time_trunc` de
 quince minutos, y la potencia instalada es una serie MENSUAL: no tiene ni un
-solo punto dentro de una ventana de doce días que empieza ayer. Por eso las
-convencionales 464-471 sí traían datos —esas se republican a diario— y las de
-tecnología no traían ninguno.
+solo punto dentro de una ventana de doce días que empieza ayer.
  
   1. **Pasada propia para el grupo «capacidad»**, solo en modo completo:
      ventana de `DIAS_CAPACIDAD_ATRAS` (400 días) hacia atrás y `time_trunc`
-     mensual. Sale a `esios_capacidad_instalada.csv`, en plano y sin comprimir
-     porque son unos pocos miles de filas y conviene poder mirarlas desde la
-     web de GitHub sin descargar nada.
+     mensual. Sale a `esios_capacidad_instalada.csv`.
   2. **`_serie_esios` acepta `trunc`**, que hasta ahora estaba fijo a quince
-     minutos. La granularidad deja de ser una suposición global.
-  3. **`MINUTOS_MAX_BARRIDO` sube de 22 a 28.** El barrido del 16-ago tardó
-     1.162 s de los 1.320 disponibles: un 88 %, con dos minutos y medio de
-     margen. La pasada de capacidad añade ~70 peticiones. El `timeout-minutes`
-     del workflow es 45, así que el margen existe; lo que no puede pasar es
-     que un día de API lenta corte el barrido y se pierdan los programas.
+     minutos.
+  3. **`MINUTOS_MAX_BARRIDO` sube de 22 a 28.**
  
 QUÉ CAMBIA EN LA v3.10
 ----------------------
@@ -233,7 +254,7 @@ REQUISITOS
 Python 3.9+, `requests`, `pandas`. Tokens en variables de entorno:
 ESIOS_TOKEN, ENTSOE_TOKEN, AEMET_TOKEN.
  
-Versión: v3.11 — 2026-08-16.
+Versión: v3.12 — 2026-08-21.
 """
  
 import os
@@ -270,10 +291,8 @@ DIAS_PREVISION_ATRAS = 1     # las previsiones no necesitan histórico
 DIAS_ADELANTE = 11
 # La potencia instalada es una serie MENSUAL, y por eso necesita ventana
 # propia: pedida con la del barrido —[hoy-1, hoy+11]— no devuelve ni un punto.
-# Así se archivó VACÍO todo el grupo «capacidad» del 13 al 16-ago-2026, y por
-# eso parecía que las series renovables no existían cuando sí existen. Con 400
-# días entran trece meses: suficiente para ver el ritmo de altas de eólica y
-# fotovoltaica sin convertir la captura diaria en un histórico completo.
+# Así se archivó VACÍO todo el grupo «capacidad» del 13 al 16-ago-2026. Con 400
+# días entran trece meses.
 DIAS_CAPACIDAD_ATRAS = 400
  
 ESIOS_BASE = "https://api.esios.ree.es"
@@ -351,14 +370,37 @@ GRUPOS_BUSQUEDA = {
 # 13-ago-2026. Aviso para quien los revise: PHF2 y PHF4 NO existen para estas
 # tecnologías (4 indicadores en el catálogo frente a 57 de cada uno de los
 # demás PHF), así que su ausencia en esta lista es correcta.
+#
+# v3.12 — la lista se parte en dos a la vista de la semana medida. De los 28
+# indicadores, nueve (PHF5, PHF6 y PHF7 de las tres tecnologías) volvieron
+# VACÍO en las 153 capturas del 13 al 21-ago-2026, sin una sola excepción.
+# Esas sesiones intradiarias ya no existen, igual que PHF2 y PHF4. Bajan a
+# PROGRAMAS_VIGILADOS, que solo entra en el barrido completo.
 PROGRAMAS_SEGUIDOS = [
     # Solar fotovoltaica — la prioritaria. 84 es el P48, el que urge.
-    14, 49, 84, 119, 189, 259, 294, 329, 1413, 434,
+    14, 49, 84, 119, 189, 1413, 434,
     # Eólica terrestre
-    12, 47, 82, 117, 187, 257, 292, 327, 1411,
+    12, 47, 82, 117, 187, 1411,
     # Solar térmica
-    15, 50, 85, 120, 190, 260, 295, 330, 1414,
+    15, 50, 85, 120, 190, 1414,
 ]
+ 
+# Los que se comprueban UNA VEZ AL DÍA, en el barrido completo. No se borran:
+# si REE reactiva alguna de estas sesiones queremos enterarnos, y una fila
+# vacía diaria es el precio de saberlo. Lo que no tiene sentido es pagar nueve
+# peticiones vacías en cada una de las ocho capturas.
+PROGRAMAS_VIGILADOS = [
+    259, 294, 329,      # PHF5, PHF6, PHF7 — solar fotovoltaica
+    257, 292, 327,      # PHF5, PHF6, PHF7 — eólica terrestre
+    260, 295, 330,      # PHF5, PHF6, PHF7 — solar térmica
+]
+ 
+ 
+def programas_a_seguir(modo):
+    """Los indicadores de la cadena que entran en ESTA captura."""
+    if modo == "completo":
+        return PROGRAMAS_SEGUIDOS + PROGRAMAS_VIGILADOS
+    return list(PROGRAMAS_SEGUIDOS)
  
 PREVISIONES_CONOCIDAS = [
     460, 541, 542, 543, 603, 1775, 1776, 1777, 1778,
@@ -398,10 +440,15 @@ PAUSA_BARRIDO = 0.4
 # Sin esto, un barrido que no termina se lleva por delante la captura entera:
 # los ficheros se escriben al final, así que el trabajo de media hora se
 # perdía sin dejar rastro. Mejor una foto incompleta y anotada que ninguna.
-# v3.11: de 22 a 28. El barrido del 16-ago-2026 tardó 1.162 s de los 1.320
-# disponibles (88 %) y la pasada de capacidad añade unas 70 peticiones. El
-# `timeout-minutes` del workflow es 45, así que hay sitio.
 MINUTOS_MAX_BARRIDO = 28
+ 
+# Fracción del presupuesto a partir de la cual el barrido, aunque termine, se
+# anota como PARCIAL con un aviso. v3.12: el barrido del 21-ago-2026 tardó
+# 1.191 s de 1.320 (90 %) con 1.550 indicadores, frente a 1.162 s con 1.506 el
+# 16-ago. El catálogo crece solo, y el modo de fallo es el que más veces nos ha
+# mordido en este proyecto: no da error, un día sale PARCIAL y ya está. Con
+# esto el aviso llega ANTES, y se ve en indice.csv sin abrir nada.
+AVISO_PRESUPUESTO = 0.85
  
 # AEMET no se pide en todas las capturas. Su predicción se elabora unas pocas
 # veces al día (medido: 08:55 y 10:35), así que pedirla cada hora devuelve lo
@@ -665,7 +712,7 @@ def descubrir_previsiones(modo):
     # Y la cadena de programación bajo seguimiento, por el mismo mecanismo. Sus
     # ids son bajos (12 a 434), así que al ordenar quedan de los primeros y se
     # capturan antes de que pueda actuar el corte por presupuesto de tiempo.
-    for idx in PROGRAMAS_SEGUIDOS:
+    for idx in programas_a_seguir(modo):
         encontrados.setdefault(idx, {"id": idx, "grupo": "programa_seguido",
                                      "nombre": "(cadena de programación)",
                                      "descripcion": "", "termino": "seguimiento"})
@@ -938,7 +985,7 @@ def actualizar_seguimiento(filas):
     return len(previas) + len(filas)
  
  
-def capturar_esios_previsiones(carpeta, hoy, catalogo):
+def capturar_esios_previsiones(carpeta, hoy, catalogo, modo="ligero"):
     """
     Todas las previsiones descubiertas, en un ÚNICO fichero comprimido en
     formato largo. Un CSV por indicador serían decenas de ficheros diminutos
@@ -954,6 +1001,11 @@ def capturar_esios_previsiones(carpeta, hoy, catalogo):
     fin = (dt.datetime.combine(hoy + dt.timedelta(days=DIAS_ADELANTE),
                                dt.time(0, 0), tzinfo=TZ_MADRID)
            - dt.timedelta(seconds=1)).isoformat()
+ 
+    # Qué ids alimentan seguimiento_programas.csv en ESTA captura. En ligero
+    # son los 19 vivos; en completo entran además los nueve PHF5/6/7, que se
+    # comprueban una vez al día por si REE los reactiva (v3.12).
+    seguidos = set(programas_a_seguir(modo))
  
     trozos, meta, seguimiento = [], [], []
     ok = vacios = fallos = 0
@@ -981,7 +1033,7 @@ def capturar_esios_previsiones(carpeta, hoy, catalogo):
                          "estado": estado, "detalle": error,
                          "values_updated_at": (ind or {}).get("values_updated_at"),
                          "filas": 0})
-            if idx in PROGRAMAS_SEGUIDOS:
+            if idx in seguidos:
                 seguimiento.append(_fila_seguimiento(
                     idx, (ind or {}).get("name") or entrada["nombre"],
                     estado, ind, None))
@@ -994,7 +1046,7 @@ def capturar_esios_previsiones(carpeta, hoy, catalogo):
                          "estado": "ok", "detalle": "",
                          "values_updated_at": ind.get("values_updated_at"),
                          "filas": len(df)})
-            if idx in PROGRAMAS_SEGUIDOS:
+            if idx in seguidos:
                 seguimiento.append(_fila_seguimiento(
                     idx, ind.get("name") or entrada["nombre"], "ok", ind, df))
         if i % 50 == 0:
@@ -1040,9 +1092,24 @@ def capturar_esios_previsiones(carpeta, hoy, catalogo):
     ruta = guardar(completo, carpeta, "esios_previsiones")
     tam_kb = os.path.getsize(ruta) / 1024
     segundos = round(time.time() - t0)
-    aviso = "" if cortado_en is None else \
-        f", CORTADO en {cortado_en}/{len(catalogo)}"
-    registrar("esios_previsiones", "OK" if cortado_en is None else "PARCIAL",
+    # Aviso temprano (v3.12). Terminar dentro del presupuesto no basta: lo que
+    # interesa saber es CUÁNTO margen queda, porque el catálogo crece solo y el
+    # día que no quepa saldrá PARCIAL sin previo aviso. 1.191 s de 1.320 el
+    # 21-ago-2026 es un 90 %: eso ya es un aviso, no una ejecución tranquila.
+    fraccion = segundos / limite if limite else 0
+    apurado = cortado_en is None and fraccion >= AVISO_PRESUPUESTO
+    if cortado_en is not None:
+        aviso = f", CORTADO en {cortado_en}/{len(catalogo)}"
+    elif apurado:
+        aviso = (f", PRESUPUESTO AL {fraccion * 100:.0f} % "
+                 f"de {MINUTOS_MAX_BARRIDO} min")
+        print(f"  ⚠ El barrido ha consumido el {fraccion * 100:.0f} % del "
+              f"presupuesto. Conviene subir MINUTOS_MAX_BARRIDO antes de que "
+              f"un día no quepa.")
+    else:
+        aviso = ""
+    registrar("esios_previsiones",
+              "OK" if (cortado_en is None and not apurado) else "PARCIAL",
               f"{ok} con datos, {vacios} vacíos, {fallos} fallidos "
               f"({tam_kb:.0f} KB, {segundos}s{aviso})",
               filas=len(completo),
@@ -1050,6 +1117,7 @@ def capturar_esios_previsiones(carpeta, hoy, catalogo):
                      "indicadores_fallidos": fallos,
                      "kb_comprimido": round(tam_kb, 1),
                      "segundos": segundos, "cortado_en": cortado_en,
+                     "fraccion_presupuesto": round(fraccion, 3),
                      "pedidos": len(catalogo)})
  
  
@@ -1065,10 +1133,6 @@ def capturar_capacidad_instalada(carpeta, hoy, catalogo):
     no estaban en el catálogo. Sí están (1485 eólica, 1486 fotovoltaica, y las
     híbridas 2267-2273, entre ellas «renovable-almacenamiento», que es
     exactamente la familia de este proyecto).
- 
-    No sustituye al barrido: las convencionales 464-471 se republican a diario
-    y ahí siguen, con su detalle de quince minutos. Esto añade la foto mensual
-    que faltaba.
     """
     entradas = [e for e in catalogo if e.get("grupo") == "capacidad"]
     titulo(f"e·sios — potencia instalada y disponible ({len(entradas)} series, "
@@ -1083,7 +1147,7 @@ def capturar_capacidad_instalada(carpeta, hoy, catalogo):
     fin = dt.datetime.combine(hoy + dt.timedelta(days=1),
                               dt.time(0, 0), tzinfo=TZ_MADRID).isoformat()
  
-    trozos, nombres = [], {}
+    trozos = []
     ok = vacios = fallos = 0
     t0 = time.time()
     for entrada in entradas:
@@ -1097,9 +1161,9 @@ def capturar_capacidad_instalada(carpeta, hoy, catalogo):
         else:
             df = df.copy()
             df.insert(0, "indicador", idx)
-            df.insert(1, "nombre", (ind.get("name") or entrada["nombre"] or "").strip())
+            df.insert(1, "nombre",
+                      (ind.get("name") or entrada["nombre"] or "").strip())
             trozos.append(df)
-            nombres[idx] = df["nombre"].iloc[0]
             ok += 1
         time.sleep(PAUSA_BARRIDO)
  
@@ -1116,9 +1180,6 @@ def capturar_capacidad_instalada(carpeta, hoy, catalogo):
     # cuánta eólica y cuánta fotovoltaica hay instaladas.
     guardar(completo, carpeta, "esios_capacidad_instalada", comprimir=False)
  
-    # Un par de referencias explícitas en el detalle: son la pregunta que
-    # originó el grupo «capacidad», y verlas en el manifiesto ahorra abrir el
-    # fichero para saber si esta captura las trajo.
     resumen = []
     for idx, etiqueta in ((1485, "eólica"), (1486, "FV")):
         sub = completo[completo["indicador"] == idx]
@@ -1126,8 +1187,7 @@ def capturar_capacidad_instalada(carpeta, hoy, catalogo):
             ultima = sub.sort_values("datetime").iloc[-1]
             resumen.append(f"{etiqueta} {ultima['value']:.0f} MW "
                            f"({str(ultima['datetime'])[:7]})")
-    detalle = (f"{ok} con datos, {vacios} vacías, {fallos} fallidas "
-               f"({segundos}s)")
+    detalle = f"{ok} con datos, {vacios} vacías, {fallos} fallidas ({segundos}s)"
     if resumen:
         detalle += " · instalada: " + " · ".join(resumen)
  
@@ -1137,6 +1197,7 @@ def capturar_capacidad_instalada(carpeta, hoy, catalogo):
                      "series_fallidas": fallos, "pedidas": len(entradas),
                      "segundos": segundos,
                      "dias_atras": DIAS_CAPACIDAD_ATRAS})
+ 
  
  
 # ============================================================================
@@ -1838,7 +1899,7 @@ def ejecutar():
     ahora_madrid = ahora_utc.astimezone(TZ_MADRID)
     hoy = ahora_madrid.date()
  
-    print("ARCHIVADOR DIARIO — FASE 0 DEL PROYECTO BESS (v3.11)")
+    print("ARCHIVADOR DIARIO — FASE 0 DEL PROYECTO BESS (v3.12)")
     print(f"Ejecución: {ahora_madrid.isoformat(timespec='seconds')} (Madrid)")
     print(f"           {ahora_utc.isoformat(timespec='seconds')} (UTC)")
  
@@ -1854,7 +1915,7 @@ def ejecutar():
     print(f"Destino:   {carpeta}/")
  
     MANIFIESTO.update({
-        "version": "v3.11",
+        "version": "v3.12",
         "ejecucion_madrid": ahora_madrid.isoformat(timespec="seconds"),
         "ejecucion_utc": ahora_utc.isoformat(timespec="seconds"),
         "fecha": hoy.isoformat(),
@@ -1877,7 +1938,7 @@ def ejecutar():
     try:
         if capturar_esios_principales(carpeta, hoy):
             catalogo = descubrir_previsiones(modo)
-            capturar_esios_previsiones(carpeta, hoy, catalogo)
+            capturar_esios_previsiones(carpeta, hoy, catalogo, modo)
     except Exception as e:
         registrar("e·sios", "FALLO", f"excepción: {type(e).__name__}: {e}")
  
