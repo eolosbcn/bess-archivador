@@ -5,7 +5,7 @@ name: Archivador diario BESS
 #   2. A mano desde la app de GitHub en el móvil o desde la web.
 #   3. Al tocar el script, para probar que sigue funcionando.
 on:
-  schedule:
+  # schedule:
     # CADA HORA, temporalmente. Medido el 11-ago-2026: las previsiones de
     # renovables se regeneran cada hora hacia el minuto 40, no cada 3 horas
     # como se suponía. Durante unas semanas se pide cada hora para
@@ -23,7 +23,10 @@ on:
     #
     # Para volver a cada 3 horas cuando toque:
     #   - cron: "45 0,3,6,9,12,15,18,21 * * *"
-    - cron: "45 * * * *"
+    # - cron: "45 * * * *"
+  # DESACTIVADO el 28-ago-2026: el cron de GitHub es impuntual y descarta
+  # ejecuciones. El disparo lo hace cron-job.org por workflow_dispatch, que
+  # entra por otra cola. Ver guia_cron_externo.
   workflow_dispatch:        # botón "Run workflow" (también desde el móvil)
   push:
     paths:
