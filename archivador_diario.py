@@ -19,6 +19,44 @@ con:
 Ninguna de las dos cosas se puede arreglar mirando atrás. Sí se pueden
 arreglar hacia delante.
  
+QUÉ CAMBIA EN LA v3.13
+----------------------
+Un fallo de UNA LÍNEA que llevaba archivando mentiras, y la refactorización
+que impide que vuelva.
+
+EL FALLO. Las cuatro vistas normales de ENTSO-E se recorren en un bucle que
+clasifica mirando el error: si el texto dice «sin datos» es VACIO, y en
+cualquier otro caso es FALLO. El A72 —la reserva hidráulica— está FUERA de ese
+bucle, en un bloque propio, y tiene motivo para estarlo: es una serie semanal
+con ~9 días de retraso de publicación, así que necesita una ventana de 35 días
+en vez de la normal. Pero al sacarlo del bucle se heredó la llamada y SE PERDIÓ
+LA CLASIFICACIÓN: anotaba VACIO pasara lo que pasara.
+
+POR QUÉ IMPORTA. En este archivo `vacio` no es un hueco cualquiera: significa
+«a esta hora todavía no estaba publicado», que es la mitad de la respuesta a
+cuándo aparece un dato por primera vez. Con eso, una CAÍDA DEL PROVEEDOR queda
+archivada como una AUSENCIA LEGÍTIMA DE PUBLICACIÓN. No da error: da un dato
+plausible y falso, que es el patrón de fallo de este proyecto.
+
+MEDIDO: durante la caída de ENTSO-E del 30-ago-2026 (14:50) al 2-sep (17:51),
+las cinco consultas devolvieron HTTP 503 en 25 capturas. Cuatro se archivaron
+como FALLO y el A72 como VACIO, con el mismo `detalle: HTTP 503`. El visor
+mostraba «4 fallos» habiendo cinco fuentes caídas.
+
+EL ARREGLO. La regla vivía escrita dos veces y solo se corrigió una; ahora vive
+UNA sola vez, en `clasificar_ausencia()`, y la usan los dos sitios. La lección
+general: al sacar un caso de un bucle para darle un parámetro distinto, se sale
+también de todas las reglas que el bucle aplicaba.
+
+Y COMPROBABLE SIN ESPERAR A LA PRÓXIMA CAÍDA: `--autotest` ejercita la
+clasificación con los casos que importan. Sin él, la única forma de verificar
+este arreglo sería esperar a que ENTSO-E se caiga otra vez.
+
+⚠️ Las filas YA ARCHIVADAS no se reescriben —son lo que se archivó—, así que
+para la ventana del 30-ago al 2-sep sigue haciendo falta la regla de lectura
+del `contexto_archivador_bess`: no te fíes de `estado` a solas para el A72,
+cruza con `detalle`, y si empieza por `HTTP 5` es una caída.
+
 QUÉ CAMBIA EN LA v3.12
 ----------------------
 Sale del análisis de la semana de `seguimiento_programas.csv` (13 a 21-ago-2026,
@@ -265,6 +303,8 @@ import json
 import time
 import gzip
 import hashlib
+import inspect          # v3.13: solo lo usa --autotest, para comprobar que la
+                        # regla de clasificación no vuelve a estar duplicada
 import datetime as dt
 import xml.etree.ElementTree as ET
 from zoneinfo import ZoneInfo
@@ -1326,6 +1366,26 @@ def _entsoe(nombre, params_extra, campo, ini, fin):
     return df.sort_values("datetime_utc"), None
  
  
+def clasificar_ausencia(error):
+    """
+    Cuando ENTSO-E no devuelve datos, decide si fue VACIO o FALLO.
+
+    ⚠️ La distinción NO es cosmética y da de comer al análisis: `VACIO`
+    significa «la API respondió y no había datos» —o sea, «a esta hora todavía
+    no estaba publicado»—, y eso es la mitad de la respuesta a cuándo aparece
+    un dato por primera vez. `FALLO` significa «la API no respondió». Archivar
+    una caída como `VACIO` convierte una avería del proveedor en una ausencia
+    legítima de publicación, y no da ningún error al hacerlo.
+
+    ⚠️ Y vive AQUÍ, en un solo sitio, a propósito. Hasta la v3.13 la regla
+    estaba escrita dos veces —en el bucle de las vistas y en el bloque del
+    A72— y el segundo se quedó sin ella: anotaba VACIO pasara lo que pasara.
+    Si mañana hace falta una vista con parámetros especiales, que llame a esta
+    función en vez de copiar la condición.
+    """
+    return "VACIO" if "sin datos" in (error or "") else "FALLO"
+
+
 def capturar_entsoe(carpeta, hoy):
     titulo("ENTSO-E — previsiones, precios y reserva hidráulica")
     if not ENTSOE_TOKEN:
@@ -1355,8 +1415,7 @@ def capturar_entsoe(carpeta, hoy):
     for fichero, columna, extra, campo in vistas:
         df, error = _entsoe(columna, extra, campo, ini, fin)
         if df is None:
-            registrar(fichero, "VACIO" if "sin datos" in (error or "") else "FALLO",
-                      error)
+            registrar(fichero, clasificar_ausencia(error), error)
         else:
             guardar(df, carpeta, fichero)
             registrar(fichero, "OK",
@@ -1372,7 +1431,10 @@ def capturar_entsoe(carpeta, hoy):
                          "in_Domain": EIC_ES}, "quantity",
                         hoy - dt.timedelta(days=35), fin)
     if df is None:
-        registrar("entsoe_A72_reserva_hidraulica", "VACIO", error)
+        # v3.13: antes ponía "VACIO" fijo, sin mirar el error. Ver
+        # `clasificar_ausencia()` y el bloque QUÉ CAMBIA EN LA v3.13.
+        registrar("entsoe_A72_reserva_hidraulica",
+                  clasificar_ausencia(error), error)
     else:
         guardar(df, carpeta, "entsoe_A72_reserva_hidraulica")
         registrar("entsoe_A72_reserva_hidraulica", "OK",
@@ -2009,6 +2071,76 @@ def ejecutar():
     return 0
  
  
+def autotest():
+    """
+    Prueba interna. `python archivador_diario.py --autotest`.
+
+    ⚠️ Existe porque el fallo que arregla la v3.13 SOLO se manifiesta cuando
+    ENTSO-E se cae, y sin esta prueba la única forma de verificar el arreglo
+    sería esperar a la próxima caída. No toca la red ni escribe nada.
+    """
+    print("AUTOTEST — clasificación de ausencias de ENTSO-E\n")
+    casos = [
+        # (error devuelto por _entsoe, estado esperado, por qué)
+        ("HTTP 503",                       "FALLO",
+         "caída del proveedor: NO es una ausencia de publicación"),
+        ("HTTP 504",                       "FALLO", "timeout de la pasarela"),
+        ("HTTP 401",                       "FALLO", "token rechazado"),
+        ("timeout",                        "FALLO", "la red se cayó"),
+        (None,                             "FALLO",
+         "sin texto de error: no consta que respondiera, no se supone vacío"),
+        ("sin datos",                      "VACIO",
+         "respondió y no había: esto SÍ es «aún no publicado»"),
+        ("400 sin datos para ese rango",   "VACIO",
+         "el 400 de 'No matching data found' de ENTSO-E"),
+    ]
+    fallos = 0
+    for error, esperado, porque in casos:
+        obtenido = clasificar_ausencia(error)
+        ok = obtenido == esperado
+        fallos += not ok
+        print(f"  [{'✓' if ok else '✗'}] {str(error)!r:34} -> {obtenido:6}"
+              f" (esperado {esperado})  · {porque}")
+
+    # ⚠️ La comprobación que de verdad cierra el agujero de la v3.12: que los
+    # DOS sitios usen la misma regla. Con la condición copiada a mano, esto
+    # pasaba y el A72 seguía roto — por eso se mira el código fuente.
+    print()
+    # ⚠️ Se cuentan solo líneas de CÓDIGO. Contar sobre el texto entero hacía
+    # que un comentario que mencionara la función valiera como llamada: una
+    # comprobación que se puede cumplir sin que el cambio funcione no es una
+    # comprobación. Pasó en la primera pasada de esta misma prueba.
+    codigo = [l for l in inspect.getsource(capturar_entsoe).splitlines()
+              if not l.strip().startswith("#")]
+    fuente = "\n".join(codigo)
+    copias = fuente.count('"sin datos" in')
+    if copias:
+        print(f"  [✗] queda {copias} condición(es) de clasificación escrita a "
+              f"mano dentro de capturar_entsoe: la regla debe estar solo en "
+              f"clasificar_ausencia()")
+        fallos += 1
+    else:
+        print("  [✓] ninguna condición de clasificación duplicada dentro de "
+              "capturar_entsoe")
+    llamadas = fuente.count("clasificar_ausencia(")
+    if llamadas >= 2:
+        print(f"  [✓] los {llamadas} caminos de ausencia pasan por "
+              f"clasificar_ausencia()")
+    else:
+        print(f"  [✗] solo {llamadas} camino(s) llama a clasificar_ausencia(); "
+              f"se esperaban 2 o más (las vistas y el A72)")
+        fallos += 1
+
+    print()
+    print("AUTOTEST: TODO CORRECTO" if not fallos
+          else f"AUTOTEST: {fallos} FALLO(S)")
+    return 1 if fallos else 0
+
+
 if __name__ == "__main__":
+    # ⚠️ El workflow lo invoca como `python archivador_diario.py`, sin
+    # argumentos, así que esta rama no puede afectar a producción.
+    if "--autotest" in sys.argv:
+        sys.exit(autotest())
     sys.exit(ejecutar())
  
