@@ -19,6 +19,37 @@ con:
 Ninguna de las dos cosas se puede arreglar mirando atrás. Sí se pueden
 arreglar hacia delante.
  
+QUÉ CAMBIA EN LA v3.14
+----------------------
+La v3.13 se declaraba a sí misma «v3.12», y estuvo TRES DÍAS archivando con
+esa firma. Esta versión arregla eso y hace que no pueda repetirse.
+
+QUÉ PASÓ. El número de versión que va al manifiesto —y de ahí a la columna
+`version` de `indice.csv`— estaba escrito a mano dentro de
+`MANIFIESTO.update({...})`, a unas mil setecientas líneas del bloque de
+historial de la cabecera. Al entregar la v3.13 se subió la cabecera y se
+olvidó esa línea. El código nuevo corría —el arreglo del A72 estaba activo
+desde el 3-sep— pero cada captura se firmaba «v3.12».
+
+POR QUÉ IMPORTA, y no es cosmético: esa columna existe para saber QUÉ CÓDIGO
+produjo cada captura. El propio `contexto_archivador_bess` manda «filtrar por
+`version` antes de asumir un esquema». Con la firma equivocada, el archivo no
+distingue una captura de la v3.12 de una de la v3.13. Es la trampa 11 de
+`CLAUDE.md` con otra cara: datos que parecen de una versión y son de otra.
+
+⚠️ Y NO SE PUEDE CORREGIR HACIA ATRÁS. Las capturas del 3 al 6-sep-2026 dicen
+«v3.12» y llevan el código de la v3.13. Queda anotado en el §6.8 del
+`contexto_archivador_bess`, porque el archivo no lo puede decir por sí solo.
+
+EL ARREGLO, que es el mismo remedio que la v3.13 aplicó al A72: que el dato
+viva en UN solo sitio. Nace la constante `VERSION`, arriba con las demás, y el
+manifiesto la usa en vez de repetir el número.
+
+Y LA PRUEBA QUE LO IMPIDE: `--autotest` comprueba que `VERSION` concuerde con
+la cabecera y con el nombre del fichero. Sin ella, el próximo que suba versión
+tropieza igual — el fallo no lo cazó nada, porque un diff enseña lo que
+cambió, no lo que TENÍA que cambiar y no cambió.
+
 QUÉ CAMBIA EN LA v3.13
 ----------------------
 Un fallo de UNA LÍNEA que llevaba archivando mentiras, y la refactorización
@@ -303,6 +334,8 @@ import json
 import time
 import gzip
 import hashlib
+import re               # v3.14: solo lo usa --autotest, para leer la versión
+                        # de la cabecera y del nombre del fichero
 import inspect          # v3.13: solo lo usa --autotest, para comprobar que la
                         # regla de clasificación no vuelve a estar duplicada
 import datetime as dt
@@ -316,6 +349,15 @@ import pandas as pd
 # CONFIGURACIÓN
 # ============================================================================
  
+# ⚠️ LA VERSIÓN VIVE AQUÍ Y EN NINGÚN OTRO SITIO. Hasta la v3.14 estaba escrita
+# a mano dentro de `MANIFIESTO.update({...})`, a mil setecientas líneas del
+# bloque de historial de la cabecera, y al entregar la v3.13 se subió la
+# cabecera y se olvidó la constante: tres días de capturas se archivaron
+# diciendo «v3.12» con el código de la v3.13 dentro. `--autotest` comprueba
+# ahora que esta constante concuerde con la cabecera y con el nombre del
+# fichero. Al subir versión se toca AQUÍ, y la prueba avisa si falta algo.
+VERSION = "v3.14"
+
 TZ_MADRID = ZoneInfo("Europe/Madrid")
 CARPETA_RAIZ = "archivo"
  
@@ -1977,7 +2019,7 @@ def ejecutar():
     print(f"Destino:   {carpeta}/")
  
     MANIFIESTO.update({
-        "version": "v3.12",
+        "version": VERSION,
         "ejecucion_madrid": ahora_madrid.isoformat(timespec="seconds"),
         "ejecucion_utc": ahora_utc.isoformat(timespec="seconds"),
         "fecha": hoy.isoformat(),
@@ -2130,6 +2172,40 @@ def autotest():
         print(f"  [✗] solo {llamadas} camino(s) llama a clasificar_ausencia(); "
               f"se esperaban 2 o más (las vistas y el A72)")
         fallos += 1
+
+    # ⚠️ v3.14: que la versión sea la misma en los TRES sitios donde se dice.
+    # La v3.13 subió la cabecera y no la constante, y archivó tres días con la
+    # firma equivocada sin que nada avisara. Un diff no lo podía enseñar:
+    # muestra lo que cambió, no lo que tenía que cambiar y no cambió.
+    print()
+    doc = __doc__ or ""
+    en_cabecera = re.findall(r"QUÉ CAMBIA EN LA (v\d+\.\d+)", doc)
+    if not en_cabecera:
+        print("  [✗] no encuentro ningún bloque «QUÉ CAMBIA EN LA vN.MM» en la "
+              "cabecera")
+        fallos += 1
+    elif en_cabecera[0] != VERSION:
+        print(f"  [✗] la cabecera dice {en_cabecera[0]} y VERSION dice "
+              f"{VERSION}: al subir versión hay que tocar las dos")
+        fallos += 1
+    else:
+        print(f"  [✓] VERSION y la cabecera coinciden: {VERSION}")
+
+    # El nombre del fichero solo lleva versión en la copia de trabajo
+    # (`archivador_diario_v3_14.py`); en producción se llama
+    # `archivador_diario.py`. Solo se comprueba cuando la lleva.
+    m = re.search(r"_v(\d+)_(\d+)\.py$", os.path.basename(__file__))
+    if m:
+        del_nombre = f"v{m.group(1)}.{m.group(2)}"
+        if del_nombre != VERSION:
+            print(f"  [✗] el fichero se llama {del_nombre} y VERSION dice "
+                  f"{VERSION}")
+            fallos += 1
+        else:
+            print(f"  [✓] VERSION y el nombre del fichero coinciden: {VERSION}")
+    else:
+        print("  [·] el fichero no lleva versión en el nombre (es la copia "
+              "desplegada): esa comprobación se omite")
 
     print()
     print("AUTOTEST: TODO CORRECTO" if not fallos
