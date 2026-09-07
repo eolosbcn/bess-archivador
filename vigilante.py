@@ -33,6 +33,19 @@ nadie volvería a mirarlas.
 
 HISTORIAL
 =========
+v1.02  7-sep-2026. **Una avería REAL dejaba de salir etiquetada como
+       simulacro.** La v1.01 ponía el prefijo `[SIMULACRO]` a *todas* las
+       incidencias de una pasada de prueba, no solo a la que la prueba
+       forzaba. Pasó a la primera: al hacer la prueba de disparo de
+       `antiguedad`, ENTSO-E estaba caído de verdad y su alarma —cierta— se
+       abrió como `[SIMULACRO] La fuente entsoe está muda`.
+       ⚠️ Eso es **peor que no avisar**: una alarma real disfrazada de prueba
+       es la que alguien descarta de un vistazo pensando «ah, es el simulacro
+       de ayer». El chivato suena y además enseña a ignorarlo.
+       Ahora cada alarma lleva la marca **solo si es la que se ha forzado**, y
+       hay una prueba del escenario exacto: simulacro de antigüedad con una
+       fuente caída de verdad.
+
 v1.01  7-sep-2026. **Las incidencias se ASIGNAN**, y con eso el vigilante deja
        de estar a medias. La v1.00 abría la issue y daba el trabajo por hecho;
        media hora después de desplegarse cazó una caída real de ENTSO-E —cinco
@@ -205,7 +218,26 @@ def comprobar(raiz, ahora=None, token_aemet=None, simulacro=None):
     """
     ahora = ahora or dt.datetime.now(dt.timezone.utc)
     incidencias = []
-    prefijo = "[SIMULACRO] " if simulacro else ""
+
+    def marca(cual):
+        """El prefijo `[SIMULACRO]` SOLO lo lleva la alarma que se ha forzado.
+
+        ⚠️ CORREGIDO EN LA v1.02, y es el fallo más peligroso que ha tenido
+        este programa. La v1.01 ponía el prefijo a **todas** las incidencias de
+        una pasada de simulacro, así que una avería REAL detectada durante la
+        prueba salía etiquetada como simulacro.
+
+        Pasó de verdad el 7-sep-2026: al hacer la prueba de disparo de
+        `antiguedad`, ENTSO-E estaba caído y su alarma —cierta— se abrió como
+        `[SIMULACRO] La fuente entsoe está muda`.
+
+        Una alarma real disfrazada de prueba es **peor que no avisar**: es la
+        que alguien descarta de un vistazo pensando «ah, es el simulacro de
+        ayer». El chivato suena y además enseña a ignorarlo.
+        """
+        return "[SIMULACRO] " if simulacro == cual else ""
+
+    prefijo = marca("antiguedad")
 
     # ---- 1. antigüedad ----------------------------------------------------
     # En el simulacro el umbral se pone en 0 h: el archivo está perfectamente
@@ -238,7 +270,7 @@ def comprobar(raiz, ahora=None, token_aemet=None, simulacro=None):
     if not fuentes:
         incidencias.append(Incidencia(
             "sin_fuentes",
-            "%s⚠️ `ultimo.json` no trae ninguna fuente" % prefijo,
+            "⚠️ `ultimo.json` no trae ninguna fuente",
             "El manifiesto de la última captura existe pero su bloque "
             "`fuentes` está vacío. Eso no es una fuente muda: es el archivador "
             "escribiendo algo que no debería."))
@@ -269,7 +301,7 @@ def comprobar(raiz, ahora=None, token_aemet=None, simulacro=None):
             incidencias.append(Incidencia(
                 "muda:" + familia,
                 "%s⚠️ La fuente `%s` está muda: sus %d ficheros vacíos"
-                % (prefijo, familia, cuantas),
+                % (marca("fuente_muda"), familia, cuantas),
                 "**Ninguna** de las %d fuentes de la familia `%s` ha salido OK "
                 "en la última captura (`%s`).\n\n"
                 "Fuentes afectadas:\n%s\n\n"
@@ -297,7 +329,7 @@ def comprobar(raiz, ahora=None, token_aemet=None, simulacro=None):
         if caduca is None:
             incidencias.append(Incidencia(
                 "aemet_ilegible",
-                "%s⚠️ El token de AEMET ya no parece un JWT" % prefijo,
+                "⚠️ El token de AEMET ya no parece un JWT",
                 "No se ha podido leer la fecha de caducidad del token de "
                 "AEMET. O ha cambiado de formato, o el secreto contiene otra "
                 "cosa. **No se ha impreso el token en ningún sitio.**"))
@@ -308,7 +340,7 @@ def comprobar(raiz, ahora=None, token_aemet=None, simulacro=None):
                 incidencias.append(Incidencia(
                     "caducidad:aemet",
                     "%s⚠️ El token de AEMET caduca en %d días (%s)"
-                    % (prefijo, int(dias), caduca.date().isoformat()),
+                    % (marca("caducidad"), int(dias), caduca.date().isoformat()),
                     "El token de AEMET declara `exp` = **%s UTC**, dentro de "
                     "**%d días**.\n\nSe renueva desde el portal de AEMET "
                     "OpenData con el mismo correo. ⚠️ El token nuevo se guarda "
@@ -517,6 +549,27 @@ def autotest():
         comprobar_que(len(r) >= 1 and all(
             i.titulo.startswith("[SIMULACRO]") for i in r),
             "simulacro de fuente muda: salta y se marca")
+
+        # ⚠️ LA PRUEBA QUE FALTABA EN LA v1.01, y que habría cazado el fallo.
+        # Escenario real del 7-sep-2026: se hace el simulacro de ANTIGÜEDAD
+        # mientras una fuente está caída DE VERDAD. La alarma cierta NO puede
+        # salir etiquetada como simulacro.
+        escribir(reciente, dict(sanas, entsoe_a={"estado": "FALLO"},
+                                entsoe_b={"estado": "VACIO"}))
+        r = comprobar(tmp, ahora, simulacro="antiguedad")
+        por_clave = {i.clave: i for i in r}
+        comprobar_que(
+            por_clave["antiguedad"].titulo.startswith("[SIMULACRO]"),
+            "durante un simulacro, la alarma FORZADA sí lleva la marca")
+        comprobar_que(
+            not por_clave["muda:entsoe"].titulo.startswith("[SIMULACRO]"),
+            "⚠️ y la alarma REAL de la misma pasada NO la lleva")
+
+        # ⚠️ Se devuelve el fichero de mentira a su estado sano: la
+        # comprobación de más abajo mira que los simulacros no lo hayan
+        # tocado, y este bloque sí lo ha reescrito a propósito. Sin esto, esa
+        # comprobación falla y acusa al programa de algo que hizo la prueba.
+        escribir(reciente, sanas)
 
         # ⚠️ Y lo que de verdad importa del simulacro: que NO haya tocado nada.
         with io.open(os.path.join(tmp, "ultimo.json"), encoding="utf-8") as f:
