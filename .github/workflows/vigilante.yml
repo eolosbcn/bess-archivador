@@ -1,0 +1,149 @@
+# ============================================================================
+# VIGILANTE DEL ARCHIVADOR BESS
+# ============================================================================
+# ⚠️ ESTE FICHERO NO ES DE CASANDRA. Va en `eolosbcn/bess-archivador`, en
+# `.github/workflows/vigilante.yml`. Esta copia en `Casandra\` existe para que
+# quede bajo git y para poder leerla sin abrir GitHub. La que manda es la
+# desplegada. Copia del 7-sep-2026.
+#
+# QUÉ HACE
+# --------
+# Ejecuta `vigilante.py`, que lee `archivo/indice.csv` y `archivo/ultimo.json`
+# y abre una incidencia si el archivo lleva demasiado tiempo sin actualizarse,
+# si una familia entera de fuentes ha enmudecido, o si el token de AEMET está
+# a punto de caducar.
+#
+# ⚠️ LO QUE NO PUEDE HACER, Y NO ES UNA PROMESA SINO UN PERMISO
+# --------------------------------------------------------------
+# Se declara con `contents: read`. El archivador tiene `contents: write`; este
+# NO lo pide, así que aunque tuviera un fallo **no podría escribir en el
+# archivo ni hacer commit**. Lo único que puede escribir son incidencias.
+#
+# POR QUÉ SÍ USA EL `schedule` DE GITHUB, SI PARA CAPTURAR SE DESCARTÓ
+# --------------------------------------------------------------------
+# Porque a un vigilante la impuntualidad no le hace daño: si se salta una
+# ejecución, la siguiente detecta exactamente lo mismo. Para capturar sí
+# importaba, y por eso el disparo de `archivador.yml` lo hace cron-job.org.
+# ✅ Medido: en la era del `schedule` (14 al 26-ago-2026) llegaban 10-16 de las
+# 24 capturas programadas —42 % a 67 %—; cron-job.org lleva 88 de 88 huecos
+# medidos desde el 28-ago, con máximo de 3,02 h.
+#
+# ⚠️ ESO FIJA LA CADENCIA, y no está elegida a ojo: para cumplir el criterio de
+# salida de F−1 —«al menos 6 ejecuciones en 48 h»— con una entrega del 42 %
+# hacen falta ~14 programadas en 48 h. Cada 3 h son 16, que al 42 % dan 6,7.
+# Con una cadencia de 4 h serían 12, que al 42 % dan 5,0: no llegaría.
+#
+# ⚠️ COSTE EN MINUTOS DE ACTIONS, que hoy importa
+# -----------------------------------------------
+# 8 ejecuciones programadas al día, de las que llegan 3,4-5,4 según la medida
+# de arriba. GitHub factura por trabajo redondeando al minuto, así que salen
+# **~100-160 min/mes**. La acción X1 del plan encontró que el repositorio ya
+# consume ~3.000-3.300 min/mes y que Pro incluye 3.000, así que este coste
+# **no es despreciable y hay que volver a medirlo** cuando el vigilante lleve
+# un mes. Si aprieta, la cadencia puede bajar a 6 h **una vez cerrada F−1**:
+# el criterio de las 6 ejecuciones solo aplica a la ventana de validación.
+# ============================================================================
+
+name: Vigilante del archivador
+
+on:
+  schedule:
+    # Cada 3 horas, en el minuto 25. Ni en punto ni a y media: son los momentos
+    # de más cola en el cron de GitHub, y aquí la puntualidad no la necesitamos
+    # pero tampoco hace falta regalarla.
+    - cron: "25 */3 * * *"
+
+  # El botón «Run workflow», también desde el móvil. Es por donde se hace la
+  # PRUEBA DE DISPARO de F−1.
+  workflow_dispatch:
+    inputs:
+      simulacro:
+        description: >-
+          Prueba de disparo. Fuerza una alarma SIN tocar ningún fichero:
+          cambia la regla, no el dato. Comprobado el 7-sep-2026 sobre 2
+          ficheros que su sha256 es idéntico antes y después.
+        required: false
+        default: "no"
+        type: choice
+        options:
+          - "no"
+          - "antiguedad"
+          - "fuente_muda"
+          - "caducidad"
+
+  # Al tocar el propio vigilante, para que se pruebe solo al desplegarlo.
+  # ⚠️ Estas rutas son las SUYAS. No incluyen `archivador_diario.py`: si lo
+  # hicieran, cada despliegue del archivador dispararía también al vigilante.
+  push:
+    paths:
+      - "vigilante.py"
+      - ".github/workflows/vigilante.yml"
+
+# Solo mirar y avisar. Ver el aviso de arriba.
+permissions:
+  contents: read
+  issues: write
+
+# ⚠️ Grupo PROPIO, distinto del `archivador` del otro workflow: si compartieran
+# grupo, el vigilante se quedaría esperando detrás de una captura larga —las
+# completas se van a 25-30 minutos— justo cuando más falta hace que mire.
+concurrency:
+  group: vigilante
+  cancel-in-progress: false
+
+jobs:
+  vigilar:
+    runs-on: ubuntu-latest
+    # Generoso: la comprobación real tarda segundos. Si alguna vez se acerca a
+    # esto, es que algo va mal y prefiero que corte.
+    timeout-minutes: 5
+
+    steps:
+      - name: Descargar el repositorio
+        uses: actions/checkout@v4
+        # ⚠️ Se lee el archivo DESDE DENTRO del repositorio, con el checkout
+        # del runner, y nunca por `raw.githubusercontent.com`: el día que el
+        # repositorio pase a privado (decisión D4) esa URL deja de responder
+        # sin credencial, y el vigilante se quedaría ciego sin dar ningún
+        # error. Es exactamente el fallo mudo que viene a evitar.
+
+      - name: Preparar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # ⚠️ Sin `pip install`: `vigilante.py` usa solo la biblioteca estándar.
+      # Es deliberado — un vigilante que depende de que PyPI esté disponible
+      # falla los días en que más probable es que algo falle.
+
+      - name: Comprobar el archivo y avisar
+        env:
+          AEMET_TOKEN: ${{ secrets.AEMET_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # ⚠️ El valor del desplegable entra por AQUÍ, y no interpolado con
+          # `${{ }}` dentro del `run:`. Hoy es inofensivo —es un `type: choice`
+          # con cuatro opciones fijas—, pero la costumbre importa: quien copie
+          # este workflow con una entrada de texto libre estaría metiendo lo
+          # que el usuario escriba dentro de una orden de shell.
+          SIMULACRO: ${{ inputs.simulacro }}
+        run: |
+          set -euo pipefail
+          ARGS="--raiz archivo --publicar"
+          if [ -n "${SIMULACRO:-}" ] && [ "${SIMULACRO}" != "no" ]; then
+            echo "::warning::PRUEBA DE DISPARO «${SIMULACRO}»: se fuerza la regla, los ficheros NO se tocan"
+            ARGS="${ARGS} --simulacro ${SIMULACRO}"
+          fi
+
+          # Una sola pasada, y su salida va a la vez al registro y al resumen
+          # de la ejecución, que es lo que se ve desde el móvil sin abrir los
+          # registros. Ejecutarlo dos veces daría dos respuestas distintas si
+          # algo cambia entremedias, y encima cobraría el doble.
+          {
+            echo "### Vigilante del archivador"
+            echo ""
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          python vigilante.py ${ARGS} 2>&1 | tee -a "$GITHUB_STEP_SUMMARY"
+
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
