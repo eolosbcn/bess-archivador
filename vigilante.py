@@ -33,6 +33,18 @@ nadie volvería a mirarlas.
 
 HISTORIAL
 =========
+v1.01  7-sep-2026. **Las incidencias se ASIGNAN**, y con eso el vigilante deja
+       de estar a medias. La v1.00 abría la issue y daba el trabajo por hecho;
+       media hora después de desplegarse cazó una caída real de ENTSO-E —cinco
+       HTTP 503 a la vez— y Xevi preguntó lo único que faltaba por comprobar:
+       «¿dónde he recibido yo esta alarma?». En ninguna parte fiable: que una
+       issue de un bot llegue a una persona depende de su *watching* y de su
+       configuración de correo. Asignarla notifica siempre y llega al móvil.
+       ⚠️ Y va con su comprobación, porque la API **ignora en silencio** un
+       asignado que no puede asignar y devuelve 201 igualmente: sin mirar el
+       `assignees` de la respuesta, el fallo se disfrazaría de éxito y
+       volveríamos al mismo sitio, pero convencidos de lo contrario.
+
 v1.00  7-sep-2026. Primera versión. Nace de la fase F−1 del plan estratégico
        de Casandra, y de dos hechos del 7-sep-2026: (a) la acción X6 demostró
        que de las cuatro credenciales del proyecto **solo AEMET declara fecha
@@ -75,6 +87,22 @@ UMBRAL_CADUCIDAD_DIAS = 15
 # única familia de tamaño 1 es `mibgas`, que además no usa credencial, así que
 # no es la que esta alarma viene a proteger.
 MINIMO_FUENTES_POR_FAMILIA = 2
+
+# ⚠️ A QUIÉN SE LE ASIGNA LA INCIDENCIA, y por qué esto no es un adorno.
+# ---------------------------------------------------------------------------
+# La v1.00 abría la incidencia y ahí acababa su trabajo. El 7-sep-2026, media
+# hora después de desplegarla, cazó una caída real de ENTSO-E... y Xevi
+# preguntó lo único que importaba: «¿dónde he recibido yo esta alarma?».
+#
+# En ninguna parte fiable. Que una issue abierta por un bot llegue a una
+# persona depende de que esa persona esté *watching* del repositorio y de
+# cómo tenga la configuración de correo. **Una alarma que nadie recibe no es
+# una alarma**, que es la trampa 7 de la casa por su lado peor: el chivato
+# sonaba, y sonaba en una habitación vacía.
+#
+# Asignar la incidencia notifica al asignado SIEMPRE, sin depender del
+# *watching*, y llega como aviso a la app de GitHub del móvil.
+ASIGNAR_A = os.environ.get("VIGILANTE_ASIGNAR_A", "eolosbcn")
 
 
 # ============================================================================
@@ -297,7 +325,25 @@ def comprobar(raiz, ahora=None, token_aemet=None, simulacro=None):
 # PUBLICACIÓN — la única parte que habla con la red
 # ============================================================================
 
-def publicar(incidencias, repo, token, etiqueta="vigilante"):
+def peticion_de_issue(inc, etiqueta, asignar_a=None):
+    """Construye el cuerpo de la petición. PURA, para poder probarla.
+
+    Está fuera de `publicar()` a propósito: lo que se puede probar sin red se
+    prueba sin red. Dentro de la función que llama a la API no lo probaría
+    nadie, que es la trampa 3 de la casa —«nada que calcule vive dentro de la
+    ventana»— trasladada a un cliente HTTP.
+    """
+    # La clave va en un comentario HTML: invisible al leer, y estable aunque
+    # alguien edite el título.
+    cuerpo = ("<!-- clave: %s -->\n\n%s\n\n---\n*Abierta por el vigilante del "
+              "archivador.*" % (inc.clave, inc.cuerpo))
+    peticion = {"title": inc.titulo, "body": cuerpo, "labels": [etiqueta]}
+    if asignar_a:
+        peticion["assignees"] = [asignar_a]
+    return peticion
+
+
+def publicar(incidencias, repo, token, etiqueta="vigilante", asignar_a=None):
     """Abre una issue por incidencia, si no hay ya una abierta con su clave.
 
     ⚠️ El antiduplicado no es un lujo: sin él, una avería de un día abriría 8
@@ -334,11 +380,28 @@ def publicar(incidencias, repo, token, etiqueta="vigilante"):
             continue
         # La clave va en un comentario HTML: invisible al leer, y estable
         # aunque alguien edite el título.
-        cuerpo = "<!-- clave: %s -->\n\n%s\n\n---\n*Abierta por el vigilante " \
-                 "del archivador.*" % (inc.clave, inc.cuerpo)
-        api("/repos/%s/issues" % repo,
-            {"title": inc.titulo, "body": cuerpo, "labels": [etiqueta]})
+        creada = api("/repos/%s/issues" % repo,
+                     peticion_de_issue(inc, etiqueta, asignar_a))
         creadas.append(inc.clave)
+
+        # ⚠️ Y AQUÍ SE COMPRUEBA QUE LA ASIGNACIÓN HA PEGADO, que no es
+        # paranoia: la API de GitHub **ignora en silencio** un asignado que no
+        # puede asignar —usuario mal escrito, sin permiso sobre el
+        # repositorio— y devuelve la issue creada igual, con `assignees`
+        # vacío y código 201. O sea que el fallo devuelve ÉXITO.
+        #
+        # Sin esta comprobación volveríamos exactamente al problema que este
+        # cambio viene a resolver: una incidencia que existe y no avisa a
+        # nadie, y encima con la tranquilidad de creer que sí.
+        if asignar_a:
+            asignados = [u.get("login") for u in (creada.get("assignees") or [])]
+            if asignar_a not in asignados:
+                print("  ⚠️ AVISO: la incidencia #%s se ha creado pero NO se ha "
+                      "podido asignar a `%s`." % (creada.get("number"), asignar_a))
+                print("     GitHub no da error al ignorar un asignado, así que "
+                      "esto solo se ve mirándolo.")
+                print("     Consecuencia: puede que nadie reciba el aviso. "
+                      "Comprueba el nombre de usuario y sus permisos.")
     return creadas, omitidas
 
 
@@ -395,6 +458,17 @@ def autotest():
     comprobar_que(caducidad_del_jwt("esto-no-es-un-jwt") is None,
                   "una cadena cualquiera devuelve None, no revienta")
     comprobar_que(caducidad_del_jwt("") is None, "y la cadena vacía también")
+
+    print("\n-- peticion_de_issue (v1.01: el asignado) -------------------")
+    inc = Incidencia("muda:entsoe", "titulo de prueba", "cuerpo de prueba")
+    p = peticion_de_issue(inc, "vigilante", "eolosbcn")
+    comprobar_que(p.get("assignees") == ["eolosbcn"],
+                  "la incidencia se asigna: sin esto el aviso no llega a nadie")
+    comprobar_que(p["labels"] == ["vigilante"], "lleva su etiqueta")
+    comprobar_que("<!-- clave: muda:entsoe -->" in p["body"],
+                  "la clave viaja en el cuerpo, para el antiduplicado")
+    comprobar_que("assignees" not in peticion_de_issue(inc, "vigilante", None),
+                  "sin asignado, no se manda el campo vacío")
 
     print("\n-- comprobar, sobre un archivo de mentira -------------------")
     with tempfile.TemporaryDirectory() as tmp:
@@ -507,7 +581,11 @@ def main():
         if not repo or not token:
             print("\n⚠️ Falta GITHUB_REPOSITORY o GITHUB_TOKEN: no se publica.")
             return 1
-        creadas, omitidas = publicar(incidencias, repo, token)
+        creadas, omitidas = publicar(incidencias, repo, token,
+                                     asignar_a=ASIGNAR_A)
+        if creadas and ASIGNAR_A:
+            print("\n  asignadas a `%s`, que es lo que hace que el aviso "
+                  "llegue al móvil." % ASIGNAR_A)
         print("\n  abiertas: %s" % (", ".join(creadas) or "ninguna"))
         print("  ya estaban abiertas (no se duplican): %s"
               % (", ".join(omitidas) or "ninguna"))
