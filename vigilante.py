@@ -33,6 +33,44 @@ nadie volvería a mirarlas.
 
 HISTORIAL
 =========
+v1.03  8-sep-2026. **Dos alarmas nuevas y el registro de fallos.** Nace de dos
+       encargos de Xevi: *«vigila que no queden puntos ciegos con las nuevas
+       incorporaciones»* —vienen MITECO y SAIH— y *«necesitamos un archivo que
+       registre lo que ha fallado de manera precisa, pero no quiero crear algo
+       que crezca y crezca»*.
+
+       ✅ **Medido sobre 419 capturas, las tres alarmas anteriores dejaban tres
+       huecos:** una familia de UN solo fichero nunca puede disparar la de
+       «fuente muda» —`mibgas` **ya era ciega**, y MITECO y cada SAIH nacerían
+       igual—; un fichero perdido dentro de una familia sana es invisible
+       —`esios_catalogo_previsiones` llevaba **373 capturas sin aparecer desde
+       el 13-ago** y nadie se enteró—; y un fichero **presente pero congelado**
+       lo ve fresco la alarma 1 y lleno la 2.
+
+       **Alarma 4, DESAPARECIDO** y **alarma 5, CONGELADO**, las dos con
+       umbral que **no es un número sino un múltiplo del intervalo propio de
+       cada fuente**, calculado del archivo. ✅ Así el A72 —semanal— sale con
+       umbral 157 y `esios_previsiones` con 8, y **una fuente nueva se calibra
+       sola**. Con un número fijo, N=10 avisaba bien hoy pero habría saltado
+       cada día en cuanto entrara el boletín semanal del MITECO.
+
+       **El registro va en DOS ficheros porque tienen vidas distintas:**
+       `fallos_recientes.csv` con una línea por fallo y **ventana móvil de 30
+       días** —✅ techo fijo de ~150 KB, no crece nunca— y `episodios.csv` con
+       una línea por tramo continuo, para siempre —✅ 73 episodios en 29 días,
+       ~138 KB/año—.
+
+       ⚠️ **Y una trampa que casi queda cableada:** la primera versión
+       comparaba por nombre de fichero y daba `esios_602_energia_casada_diario`
+       por desaparecido. ✅ Falso: existió como `.csv.gz` en **1 captura** y
+       como `.csv` en **372** — cambió de compresión. Es la **trampa 5** de la
+       casa dentro de una alarma nueva, y de ahí `canonico()`.
+
+       ⚠️ **Lo que esto NO ve, y hay que decirlo:** la **usabilidad**. El
+       precio del indicador 600 se capturó perfecto durante meses y venía
+       multiplicado por 4. Ni «desaparecido» ni «congelado» lo habrían visto:
+       eso pide una comprobación semántica por fuente, que es otro trabajo.
+
 v1.02  7-sep-2026. **Una avería REAL dejaba de salir etiquetada como
        simulacro.** La v1.01 ponía el prefijo `[SIMULACRO]` a *todas* las
        incidencias de una pasada de prueba, no solo a la que la prueba
@@ -72,6 +110,8 @@ import base64
 import collections
 import csv
 import datetime as dt
+import gzip
+import hashlib
 import io
 import json
 import os
@@ -116,6 +156,19 @@ MINIMO_FUENTES_POR_FAMILIA = 2
 # Asignar la incidencia notifica al asignado SIEMPRE, sin depender del
 # *watching*, y llega como aviso a la app de GitHub del móvil.
 ASIGNAR_A = os.environ.get("VIGILANTE_ASIGNAR_A", "eolosbcn")
+
+# --- alarmas 4 y 5 y registro de fallos (v1.03) -----------------------------
+CAPTURAS_A_LEER = 500      # ⚠️ tope del barrido. Medido: 28 ms por captura, o
+#                            sea 14 s con 500. Sin tope, en un año habría
+#                            ~5.256 capturas y el barrido tardaría 147 s cada
+#                            tres horas. 500 son ~35 días, de sobra para medir
+#                            cadencias y detectar desapariciones.
+DIAS_VENTANA = 30          # ventana móvil de fallos_recientes.csv
+MINIMO_PRESENCIAS = 20     # apariciones para considerar «conocida» una fuente
+FACTOR_ALARMA = 3.0        # se avisa a 3× el intervalo normal de la fuente
+MINIMO_CAPTURAS_ALARMA = 8  # suelo: nunca avisar antes de 8 capturas
+TOLERANCIA_CIERRE = 2      # aciertos seguidos para cerrar un episodio
+EXTENSIONES = (".csv", ".csv.gz", ".json", ".gz")
 
 
 # ============================================================================
@@ -191,6 +244,251 @@ def caducidad_del_jwt(token):
     if not isinstance(exp, (int, float)):
         return None
     return dt.datetime.fromtimestamp(exp, dt.timezone.utc)
+
+
+
+
+# ============================================================================
+# REGISTRO DE FALLOS Y ALARMAS 4 Y 5 (v1.03)
+# ============================================================================
+# Probado antes en `casandra_registro_fallos_v1_00.py`, 17 de 17
+# comprobaciones. Lo que sigue es esa pieza integrada.
+# ============================================================================
+
+def canonico(nombre):
+    """Clave canónica de un fichero: sin extensión ni compresión.
+
+    ⚠️ TRAMPA 5 DE LA CASA, y casi queda cableada dentro de la alarma 4. La
+    primera versión comparaba por nombre de fichero y daba
+    `esios_602_energia_casada_diario` por desaparecido. Era falso: ✅ ese
+    fichero existió como `.csv.gz` en **1 captura** (13-ago-2026 11:22) y como
+    `.csv` en **372**. Cambió de compresión, no desapareció — y sin esta
+    función habría generado una incidencia que no se cierra nunca.
+    """
+    for e in (".csv.gz", ".csv", ".json", ".gz"):
+        if nombre.endswith(e):
+            return nombre[: -len(e)]
+    return nombre
+
+
+def huella_contenido(ruta):
+    """sha256 del CONTENIDO. Descomprime a propósito.
+
+    ⚠️ gzip guarda la marca de tiempo en su cabecera, así que dos `.gz` con el
+    mismo contenido tienen distinto sha256. Comparar los comprimidos daría
+    «siempre distinto» y la alarma 5 no detectaría un congelado jamás.
+    """
+    try:
+        if ruta.endswith(".gz"):
+            with gzip.open(ruta, "rb") as f:
+                b = f.read()
+        else:
+            with io.open(ruta, "rb") as f:
+                b = f.read()
+    except Exception:
+        return None
+    return hashlib.sha256(b).hexdigest()[:16] if b else None
+
+
+def leer_capturas(raiz, limite=CAPTURAS_A_LEER):
+    """[(etiqueta, {clave: huella|None}), ...] en orden del índice.
+
+    Huella `None` = AUSENTE O VACÍO: para estas alarmas es lo mismo, el dato
+    no está.
+    """
+    idx = os.path.join(raiz, "indice.csv")
+    if not os.path.isfile(idx):
+        # ⚠️ La ruta del vigilante ya ES `archivo/`, no su padre.
+        idx = os.path.join(raiz, "archivo", "indice.csv")
+    if not os.path.isfile(idx):
+        return [], 0
+    base = os.path.dirname(os.path.dirname(idx))
+    with io.open(idx, encoding="utf-8", newline="") as f:
+        filas = list(csv.DictReader(f))
+    if limite:
+        filas = filas[-limite:]
+    caps, sin_carpeta = [], 0
+    for fila in filas:
+        carpeta = os.path.join(base, fila.get("ruta", ""))
+        if not os.path.isdir(carpeta):
+            # ⚠️ Nada de continue mudo: se cuenta y se devuelve.
+            sin_carpeta += 1
+            continue
+        d = {}
+        for n in os.listdir(carpeta):
+            if n.endswith(EXTENSIONES) and n != "manifiesto.json":
+                d[canonico(n)] = huella_contenido(os.path.join(carpeta, n))
+        caps.append(("%s-%s" % (fila["fecha"], fila["hora"]), d))
+    return caps, sin_carpeta
+
+
+def intervalos(capturas):
+    """{clave: (presencias, intervalo_presencia, intervalo_cambio)}.
+
+    ⚠️ `intervalo_cambio` es una COTA SUPERIOR de la cadencia real: solo se ve
+    cambiar lo que se captura, así que una fuente que cambia más deprisa que
+    nuestras capturas se mide como si cambiara a nuestro ritmo.
+    """
+    total = len(capturas)
+    pres, cambios, ultima = collections.Counter(), collections.Counter(), {}
+    for _, d in capturas:
+        for k, h in d.items():
+            if h is None:
+                continue
+            pres[k] += 1
+            if k in ultima and ultima[k] != h:
+                cambios[k] += 1
+            ultima[k] = h
+    return {k: (n, total / float(n) if n else float("inf"),
+                total / float(cambios[k]) if cambios[k] else float("inf"))
+            for k, n in pres.items()}
+
+
+def umbral_de(intervalo):
+    """Capturas seguidas que hay que esperar antes de avisar.
+
+    ⚠️ EL UMBRAL NO ES UN NÚMERO, ES UN MÚLTIPLO, y ese es el hallazgo que hizo
+    falta para que esto sirva. La primera calibración usó «ausente en las
+    últimas N capturas»: ✅ con N=10 avisaba hoy de un solo fichero, el
+    correcto. Pero N=10 capturas son ~un día, y el boletín semanal del MITECO
+    saltaría todos los días. Multiplicando el intervalo propio de cada fuente,
+    ✅ el A72 —semanal— sale con umbral 157 y `esios_previsiones` con 8, sin que
+    nadie escriba una tabla. Una fuente nueva se calibra sola.
+    """
+    if intervalo == float("inf"):
+        return None            # nunca cambió: no hay intervalo que multiplicar
+    return max(MINIMO_CAPTURAS_ALARMA, int(round(FACTOR_ALARMA * intervalo)))
+
+
+def alarma_desaparecido(capturas, info):
+    """Fichero conocido que lleva > 3× su intervalo normal sin aparecer."""
+    avisos = []
+    for k, (n, ip, _) in sorted(info.items()):
+        if n < MINIMO_PRESENCIAS:
+            continue           # apareció poco: no es avería, es un raro
+        u = umbral_de(ip)
+        if u is None or u >= len(capturas):
+            continue
+        if all(d.get(k) is None for _, d in capturas[-u:]) and \
+                any(d.get(k) is not None for _, d in capturas[:-u]):
+            avisos.append((k, u, capturas[-u][0]))
+    return avisos
+
+
+def alarma_congelado(capturas, info):
+    """Presente, pero con el mismo contenido > 3× su intervalo de cambio."""
+    avisos = []
+    for k, (n, _, ic) in sorted(info.items()):
+        if n < MINIMO_PRESENCIAS:
+            continue
+        u = umbral_de(ic)
+        if u is None or u >= len(capturas):
+            continue
+        ult = [d.get(k) for _, d in capturas[-u:]]
+        if all(h is not None for h in ult) and len(set(ult)) == 1:
+            avisos.append((k, u, capturas[-u][0]))
+    return avisos
+
+
+def episodios(capturas, claves):
+    """Tramos continuos de fallo, con tolerancia al parpadeo.
+
+    ⚠️ `TOLERANCIA_CIERRE`: un fichero que falla, acierta una vez y vuelve a
+    fallar es UN episodio, no tres. ✅ Sin esto, medido sobre 419 capturas,
+    salían **323 episodios en 29 días** —once al día—, que nadie lee. Con
+    tolerancia y clave canónica quedan **73**.
+    """
+    fuera = []
+    for k in sorted(claves):
+        abierto, aciertos = None, 0
+        for i, (_, d) in enumerate(capturas):
+            if d.get(k) is None:
+                aciertos = 0
+                if abierto is None:
+                    abierto = [i, i, 1]
+                else:
+                    abierto[1], abierto[2] = i, abierto[2] + 1
+            elif abierto is not None:
+                aciertos += 1
+                if aciertos >= TOLERANCIA_CIERRE:
+                    fuera.append((k, capturas[abierto[0]][0],
+                                  capturas[abierto[1]][0], abierto[2]))
+                    abierto, aciertos = None, 0
+        if abierto is not None:
+            fuera.append((k, capturas[abierto[0]][0],
+                          capturas[abierto[1]][0], abierto[2]))
+    return fuera
+
+
+def escribir_registro(raiz, capturas, claves):
+    """Los DOS ficheros, y son dos porque tienen VIDAS distintas.
+
+    ⚠️⚠️ EL VIGILANTE NO LLAMA A ESTA FUNCIÓN, Y ES DELIBERADO. Su workflow
+    se declara con `contents: read` a propósito —«aunque tuviera un fallo no
+    podría escribir en el archivo ni hacer commit»—, y esa propiedad protege
+    la única pieza irreproducible del proyecto. Escribir desde aquí obligaría
+    a darle `contents: write` y la destruiría.
+
+    La función vive en este fichero porque es donde están `leer_capturas()` y
+    `episodios()`, y `registro.py` la importa desde aquí. Quien la llame
+    necesita permiso de escritura; el vigilante no lo tiene ni debe tenerlo.
+
+    Xevi, 8-sep-2026: *«necesitamos un archivo que registre lo que ha fallado
+    en cada ocasión de manera precisa. Pero no quiero crear algo que crezca y
+    crezca»*. Las dos cosas no las cumple un solo fichero:
+
+      · `fallos_recientes.csv` — una línea por fallo, **ventana móvil de 30
+        días**. ✅ Medido: 1.200 fallos en 29 días → **techo fijo ~150 KB**,
+        porque al entrar una captura sale la de hace 30 días.
+      · `episodios.csv` — una línea por tramo continuo, **para siempre**.
+        ✅ Medido: 73 episodios en 29 días → ~138 KB/año, y cada línea vale.
+
+    ⚠️ `episodios.csv` se FUNDE con lo que ya hubiera: el barrido solo ve las
+    últimas CAPTURAS_A_LEER, así que reescribirlo entero borraría la historia
+    anterior. Se conservan los episodios cuyo `hasta` es más antiguo que el
+    principio de la ventana leída.
+    """
+    destino = raiz if os.path.isfile(os.path.join(raiz, "indice.csv")) \
+        else os.path.join(raiz, "archivo")
+    if not capturas:
+        return 0, 0
+
+    # --- fallos recientes: ventana móvil, techo fijo ------------------------
+    corte = capturas[-1][0][:10]
+    y, m, d = (int(x) for x in corte.split("-")[:3])
+    limite = (dt.date(y, m, d) - dt.timedelta(days=DIAS_VENTANA)).isoformat()
+    filas = []
+    for etq, dd in capturas:
+        if etq[:10] < limite:
+            continue
+        for k in sorted(claves):
+            if k not in dd:
+                filas.append((etq, k, "ausente"))
+            elif dd[k] is None:
+                filas.append((etq, k, "vacio"))
+    with io.open(os.path.join(destino, "fallos_recientes.csv"), "w",
+                 encoding="utf-8", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["captura", "fuente", "motivo"])
+        w.writerows(filas)
+
+    # --- episodios: se funden, no se reescriben -----------------------------
+    nuevos = episodios(capturas, claves)
+    desde_ventana = capturas[0][0]
+    viejos = []
+    p = os.path.join(destino, "episodios.csv")
+    if os.path.isfile(p):
+        with io.open(p, encoding="utf-8", newline="") as f:
+            for fila in csv.DictReader(f):
+                if fila.get("hasta", "") < desde_ventana:
+                    viejos.append((fila["fuente"], fila["desde"],
+                                   fila["hasta"], int(fila["capturas"])))
+    todos = viejos + nuevos
+    with io.open(p, "w", encoding="utf-8", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["fuente", "desde", "hasta", "capturas"])
+        w.writerows(sorted(todos, key=lambda e: (e[1], e[0])))
+    return len(filas), len(todos)
 
 
 # ============================================================================
@@ -349,6 +647,63 @@ def comprobar(raiz, ahora=None, token_aemet=None, simulacro=None):
                     "segundo deja los programas locales sin AEMET sin que "
                     "nada avise."
                     % (caduca.isoformat(), int(dias))))
+
+    # --- 4 y 5: DESAPARECIDO y CONGELADO (v1.03) ---------------------------
+    # ⚠️ Cierran tres huecos que las tres primeras no ven, ✅ medidos sobre 419
+    # capturas: una familia de UN fichero (`mibgas` ya es ciega hoy, y MITECO
+    # y cada SAIH nacerían igual), un fichero perdido dentro de una familia
+    # sana (`esios_catalogo_previsiones` lleva 373 capturas sin aparecer y
+    # nadie se enteró), y un fichero presente pero CONGELADO.
+    capturas, _sin = leer_capturas(raiz)
+    if capturas:
+        info = intervalos(capturas)
+        conocidas = {k for k, (n, _, _) in info.items()
+                     if n >= MINIMO_PRESENCIAS}
+
+        # ⚠️ El simulacro añade una incidencia SINTÉTICA con clave propia, y
+        # NO etiqueta las reales. Escrito de la forma obvia —«si no hay
+        # ninguna, fabrica una»— la prueba de disparo del día en que SÍ hay una
+        # avería real le pondría a esa el prefijo [SIMULACRO], que es el fallo
+        # que el v1.02 vino a arreglar. Y hoy pasaría seguro: la incidencia
+        # `desaparecido:esios_catalogo_previsiones` está abierta de verdad.
+        desap = alarma_desaparecido(capturas, info)
+        if simulacro == "desaparecido":
+            desap = list(desap) + [("__simulacro__",
+                                    MINIMO_CAPTURAS_ALARMA, capturas[0][0])]
+        for k, u, desde in desap:
+            es_sintetica = (k == "__simulacro__")
+            incidencias.append(Incidencia(
+                "desaparecido:%s" % k,
+                "%s⚠️ La fuente `%s` lleva %d capturas sin aparecer"
+                % ("[SIMULACRO] " if es_sintetica else "", k, u),
+                "`%s` no aparece en las **últimas %d capturas**, desde "
+                "`%s`, y antes sí estaba.\n\n⚠️ Su familia puede estar sana: "
+                "esta alarma mira **fichero a fichero**, que es justo el hueco "
+                "que deja la de «fuente muda».\n\nEl umbral no es fijo: son "
+                "**%.1f veces** el intervalo con que esta fuente aparece "
+                "normalmente, calculado del propio archivo."
+                % (k, u, desde, FACTOR_ALARMA)))
+
+        # ⚠️ Mismo criterio que arriba: sintética con clave propia.
+        cong = alarma_congelado(capturas, info)
+        if simulacro == "congelado":
+            cong = list(cong) + [("__simulacro__",
+                                  MINIMO_CAPTURAS_ALARMA, capturas[0][0])]
+        for k, u, desde in cong:
+            es_sintetica = (k == "__simulacro__")
+            incidencias.append(Incidencia(
+                "congelado:%s" % k,
+                "%s⚠️ La fuente `%s` lleva %d capturas sirviendo lo mismo"
+                % ("[SIMULACRO] " if es_sintetica else "", k, u),
+                "`%s` **sí se captura**, pero su contenido no ha cambiado en "
+                "las últimas **%d capturas**, desde `%s`.\n\n⚠️ La alarma de "
+                "antigüedad la ve fresca y la de fuente muda la ve llena: "
+                "este es el fallo que **ninguna de las otras puede ver**.\n\n"
+                "El umbral son **%.1f veces** el intervalo con que esta fuente "
+                "cambia normalmente. Una fuente semanal y una que cambia en "
+                "cada captura salen con umbrales muy distintos sin que nadie "
+                "escriba una tabla."
+                % (k, u, desde, FACTOR_ALARMA)))
 
     return incidencias
 
@@ -583,6 +938,109 @@ def autotest():
         comprobar_que(not any(jwt in (i.titulo + i.cuerpo) for i in r),
                       "⚠️ el token NO aparece en ninguna incidencia")
 
+
+    print("\n-- el simulacro NO etiqueta alarmas reales -------------------")
+    rota = [("c%02d" % i, {"viva": "h%d" % i, "otra": "g%d" % i}
+             if i < 30 else {"otra": "g%d" % i}) for i in range(60)]
+    with tempfile.TemporaryDirectory() as tmp3:
+        os.makedirs(os.path.join(tmp3, "d"))
+        with io.open(os.path.join(tmp3, "indice.csv"), "w",
+                     encoding="utf-8", newline="") as f:
+            w = csv.writer(f)
+            w.writerow(["fecha", "hora", "ruta"])
+        # se prueba la lógica directamente, sin montar un archivo entero
+        info_r = intervalos(rota)
+        reales = alarma_desaparecido(rota, info_r)
+        comprobar_que(any(a[0] == "viva" for a in reales),
+                      "hay una alarma REAL de desaparecido en el escenario")
+        sintetica = list(reales) + [("__simulacro__", 8, rota[0][0])]
+        titulos = [("[SIMULACRO] " if k == "__simulacro__" else "") + k
+                   for k, _, _ in sintetica]
+        comprobar_que("[SIMULACRO] __simulacro__" in titulos,
+                      "la sintética SÍ lleva el prefijo")
+        comprobar_que("viva" in titulos,
+                      "⚠️ la REAL sale SIN prefijo aunque haya simulacro: es "
+                      "el fallo que el v1.02 vino a arreglar")
+
+    print("\n-- canonico (trampa 5) --------------------------------------")
+    comprobar_que(canonico("x.csv.gz") == canonico("x.csv"),
+                  "⚠️ .csv y .csv.gz dan LA MISMA clave: cambiar de compresión "
+                  "NO es desaparecer")
+    comprobar_que(canonico("esios_602_energia_casada_diario.csv")
+                  == "esios_602_energia_casada_diario",
+                  "la clave canónica quita la extensión")
+
+    print("\n-- umbral_de (el umbral es un MÚLTIPLO) ---------------------")
+    comprobar_que(umbral_de(1.0) == MINIMO_CAPTURAS_ALARMA,
+                  "el suelo protege a las fuentes que cambian siempre")
+    comprobar_que(umbral_de(52.0) == 156,
+                  "⚠️ una fuente semanal sale con umbral 156, no con el mismo "
+                  "que una que cambia en cada captura")
+    comprobar_que(umbral_de(float("inf")) is None,
+                  "⚠️ sin intervalo medible NO se pone umbral")
+
+    print("\n-- alarma_desaparecido --------------------------------------")
+    sana = [("c%02d" % i, {"viva": "h%d" % i}) for i in range(60)]
+    comprobar_que(not alarma_desaparecido(sana, intervalos(sana)),
+                  "una fuente sana no dispara")
+    ida = [("c%02d" % i, {"viva": "h%d" % i} if i < 30 else {})
+           for i in range(60)]
+    comprobar_que(any(a[0] == "viva"
+                      for a in alarma_desaparecido(ida, intervalos(ida))),
+                  "la que deja de aparecer SÍ dispara")
+    cambia_ext = [("c%02d" % i,
+                   {canonico("x.csv.gz" if i == 0 else "x.csv"): "h%d" % i})
+                  for i in range(60)]
+    comprobar_que(not alarma_desaparecido(cambia_ext,
+                                          intervalos(cambia_ext)),
+                  "⚠️ pasar de .gz a .csv NO se lee como desaparición "
+                  "(el caso real del esios_602)")
+    rara = [("c%02d" % i, {"rara": "h"} if i < 3 else {}) for i in range(60)]
+    comprobar_que(not alarma_desaparecido(rara, intervalos(rara)),
+                  "⚠️ una fuente que apareció 3 veces no genera alarma eterna")
+
+    print("\n-- alarma_congelado -----------------------------------------")
+    comprobar_que(not alarma_congelado(sana, intervalos(sana)),
+                  "una fuente que cambia no dispara")
+    cong = [("c%02d" % i, {"c": "IGUAL" if i >= 20 else "h%d" % i})
+            for i in range(60)]
+    comprobar_que(any(a[0] == "c"
+                      for a in alarma_congelado(cong, intervalos(cong))),
+                  "⚠️ la que se captura bien pero sirve lo mismo SÍ dispara: "
+                  "es el fallo que las otras alarmas no pueden ver")
+
+    print("\n-- episodios ------------------------------------------------")
+    parpadeo = [("c%02d" % i, {} if i in (10, 12, 13, 14) else {"f": "h"})
+                for i in range(30)]
+    eps = episodios(parpadeo, ["f"])
+    comprobar_que(len(eps) == 1,
+                  "⚠️ fallo-acierto-fallo es UN episodio, no dos: sin "
+                  "tolerancia salían 323 en 29 días y nadie los lee")
+    comprobar_que(eps and eps[0][3] == 4,
+                  "el episodio cuenta las 4 capturas fallidas")
+
+    print("\n-- escribir_registro ----------------------------------------")
+    with tempfile.TemporaryDirectory() as tmp2:
+        os.makedirs(os.path.join(tmp2, "2026", "09", "2026-09-01", "1000"))
+        with io.open(os.path.join(tmp2, "indice.csv"), "w",
+                     encoding="utf-8", newline="") as f:
+            w = csv.writer(f)
+            w.writerow(["fecha", "hora", "ruta"])
+            w.writerow(["2026-09-01", "1000", "2026/09/2026-09-01/1000"])
+        caps = [("2026-09-01-1000", {"a": "h1"}), ("2026-09-01-1300", {})]
+        n1, n2 = escribir_registro(tmp2, caps, {"a"})
+        comprobar_que(os.path.isfile(os.path.join(tmp2,
+                                                  "fallos_recientes.csv")),
+                      "escribe fallos_recientes.csv")
+        comprobar_que(os.path.isfile(os.path.join(tmp2, "episodios.csv")),
+                      "escribe episodios.csv")
+        comprobar_que(n1 == 1 and n2 == 1,
+                      "una captura fallida da 1 fallo y 1 episodio")
+        # ⚠️ Idempotencia: correrlo dos veces no debe duplicar la historia.
+        n1b, n2b = escribir_registro(tmp2, caps, {"a"})
+        comprobar_que(n2b == n2,
+                      "⚠️ correrlo dos veces NO duplica los episodios")
+
     print("\n" + "=" * 64)
     if fallos:
         print("  %d PRUEBAS FALLIDAS: %s" % (len(fallos), ", ".join(fallos)))
@@ -600,7 +1058,8 @@ def main():
     p.add_argument("--raiz", default="archivo",
                    help="carpeta con indice.csv y ultimo.json")
     p.add_argument("--simulacro",
-                   choices=["antiguedad", "fuente_muda", "caducidad"],
+                   choices=["antiguedad", "fuente_muda", "caducidad",
+                            "desaparecido", "congelado"],
                    help="fuerza una condición SIN tocar ningún fichero, para "
                         "comprobar que la alarma suena (prueba de disparo)")
     p.add_argument("--publicar", action="store_true",
@@ -614,6 +1073,7 @@ def main():
     incidencias = comprobar(a.raiz,
                             token_aemet=os.environ.get("AEMET_TOKEN"),
                             simulacro=a.simulacro)
+
 
     if a.simulacro:
         print("⚠️  SIMULACRO «%s»: la regla se fuerza, los ficheros NO se "
