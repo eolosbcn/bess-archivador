@@ -31,25 +31,46 @@
 # con `--raiz archivo_saih`. ✅ Comprobado el 8-sep-2026: el vigilante lee la
 # captura y ve sus dos fuentes.
 #
-# ⚠️ LA CADENCIA: TRES AL DÍA PARA CONSEGUIR UNA
-# ----------------------------------------------
-# El dato es diario —los volúmenes cambian una vez al día—, así que con una
-# captura bastaría. Pero ✅ está medido en este mismo repositorio que **el cron
-# de GitHub entrega entre el 42 % y el 67 %** de lo programado (era del 14 al
-# 26-ago-2026, ver `archivador.yml`). Con una sola programada al día, uno de
-# cada dos días no habría captura, y eso en una serie que solo se puede
-# construir hacia adelante es pérdida permanente.
+# ⚠️ QUIÉN LO DISPARA: cron-job.org, con el cron de GitHub como RED
+# ------------------------------------------------------------------
+# **El disparo principal es cron-job.org**, igual que el del archivador, por
+# `workflow_dispatch`. ✅ Medido: cron-job.org lleva **88 de 88** disparos en
+# 11 días completos, con hueco máximo de 3,02 h; el cron de GitHub entrega
+# entre el **42 % y el 67 %** (del 14 al 26-ago-2026, ver `archivador.yml`).
 #
-# Con tres, incluso al 42 % salen 1,3 al día. Cuesta 51 KB diarios en vez de
-# 17: irrelevante frente a perder días.
+# ⚠️ Y la aritmética es lo que decide, no la media: con TRES pasadas de GitHub
+# al día, la probabilidad de que **no llegue ninguna** es 0,58³ = **19,5 %** al
+# 42 % de entrega. Un día de cada cinco sin captura — y en una serie que solo
+# se puede construir hacia adelante, un día perdido no se recupera nunca.
 #
-# ⚠️ Y no se usa cron-job.org como el archivador porque aquí la puntualidad no
-# importa —el dato es diario, da igual a qué hora se coja—; lo que importa es
-# no saltarse el día, y para eso basta con repetir.
+# ⚠️⚠️ PERO AQUÍ NO SE DESACTIVA EL CRON DE GITHUB, Y ESO ES UNA DIFERENCIA
+# DELIBERADA CON EL ARCHIVADOR. Aquél lo comentó entero el 28-ago-2026 porque
+# **capturar el mercado exige puntualidad** —a las 11:50, antes del cierre de
+# ofertas—, así que un disparo impuntual puede ser PEOR que ninguno: coge el
+# dato en el momento equivocado.
+#
+# El SAIH no tiene esa restricción: **da igual a qué hora del día se coja**.
+# Un respaldo impuntual es ganancia pura, y cubre el caso de que cron-job.org
+# falle o su token caduque. Por eso se deja **una al día** como red — ni tres,
+# que sería redundante, ni ninguna, que dejaría todo colgando de un servicio
+# gratuito de terceros.
+#
+# CÓMO SE CONFIGURA EN cron-job.org (misma receta que el archivador, ver
+# `guia_cron_externo_*` de Casandra; ⚠️ NO hace falta un token nuevo: el
+# `cron-archivador` es fine-grained con Actions en escritura sobre este
+# repositorio, y eso cubre TODOS sus workflows):
+#
+#   URL     https://api.github.com/repos/eolosbcn/bess-archivador/actions/workflows/saih.yml/dispatches
+#   Método  POST
+#   Cabeceras   Accept: application/vnd.github+json
+#               Authorization: Bearer <el token cron-archivador>
+#   Cuerpo  {"ref":"main"}
+#   Hora    09:15 de Madrid — las lecturas de embalse se toman sobre las 8:00
 #
 # COSTE
 # -----
-# 3 ejecuciones al día de ~30 s. El repositorio es **público**, así que GitHub
+# 2 ejecuciones al día de ~30 s —una de cron-job.org y la red de GitHub—. El
+# repositorio es **público**, así que GitHub
 # no cobra minutos de Actions (confirmado por Xevi el 8-sep-2026). ⚠️ Si algún
 # día pasa a privado, esto vuelve a costar y habría que revisarlo.
 # ============================================================================
@@ -57,10 +78,36 @@
 name: Captura del SAIH
 
 on:
-  schedule:
-    # Cada 8 horas, en el minuto 47. ⚠️ Ni en punto ni a y media: son los
-    # momentos de más cola en el cron de GitHub.
-    - cron: "47 5,13,21 * * *"
+  # ⚠️⚠️ EL `schedule` ESTÁ DESACTIVADO DESDE EL 8-sep-2026, Y NO POR GUSTO:
+  # **`saihebro.com` NO ES ALCANZABLE DESDE LOS RUNNERS DE GITHUB.**
+  #
+  # ✅ Medido sobre DOS ejecuciones independientes (#1 a las 19:37 y #2 a las
+  # 19:48): `ConnectTimeout` en los dos endpoints, las dos veces, con la
+  # ejecución tardando **279 s** en esperar conexiones que no llegan. Desde la
+  # IP residencial de Xevi el mismo servidor responde **HTTP 200 en 0,5 s**.
+  #
+  # ⚠️ Y el certificado NO era el problema: el intermedio de la FNMT sí se
+  # descargó, porque `cert.fnmt.es` está en una CDN de Akamai (23.43.x.x) que
+  # responde desde cualquier parte, mientras `saihebro.com` es una IP única y
+  # directa del Estado (192.148.213.77). La causa más probable es que bloquee
+  # rangos de centros de datos o IPs de fuera de España.
+  #
+  # Con el `schedule` puesto, cada día habría una ejecución de 279 s que falla,
+  # escribe una captura vacía y hace que el vigilante avise de una fuente muda
+  # cuya causa ya conocemos. **Un aviso que se sabe de antemano enseña a
+  # ignorar los avisos**, que es justo lo que no queremos.
+  #
+  # ⚠️ LO QUE ESTO NO SIGNIFICA: que los datos se pierdan. La API sirve los
+  # **últimos 365 días**, así que mientras se vuelva dentro del año no se
+  # pierde nada. La ruta buena es descargar el histórico desde la máquina de
+  # Xevi, que sí llega, y refrescarlo de vez en cuando. La urgencia que
+  # parecía haber venía de suponer que solo se podía capturar el día en curso.
+  #
+  # Se deja `workflow_dispatch` para poder reintentarlo con un clic el día que
+  # el bloqueo se levante — y ahora cuesta 20 s, no cinco minutos.
+  #
+  # schedule:
+  #   - cron: "47 19 * * *"
 
   workflow_dispatch:
 
