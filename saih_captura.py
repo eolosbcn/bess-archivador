@@ -173,7 +173,11 @@ def capturar(confederacion, ca, carpeta):
         url = cfg["base"] + ruta
         t0 = time.time()
         try:
-            r = requests.get(url, timeout=120, verify=ca,
+            # ⚠️ 15 s, no 120. Un servidor que contesta en 0,5 s no
+            # necesita dos minutos, y con 120 una pasada fallida tardaba
+            # **279 s** en decir que había fallado. 15 s sigue siendo treinta
+            # veces el tiempo de respuesta medido el 8-sep-2026.
+            r = requests.get(url, timeout=15, verify=ca,
                              headers={"Accept": "application/json"})
         except Exception as e:
             fichas[clave] = {"estado": "FALLO", "detalle": type(e).__name__}
