@@ -13,11 +13,33 @@
 # si una familia entera de fuentes ha enmudecido, o si el token de AEMET está
 # a punto de caducar.
 #
+# Desde el v1.03 vigila además dos cosas que ninguna de esas tres podía ver,
+# ✅ medidas sobre 419 capturas:
+#   4. DESAPARECIDO — un fichero conocido que deja de aparecer, **aunque su
+#      familia siga sana**. `esios_catalogo_previsiones` llevaba 373 capturas
+#      ausente desde el 13-ago-2026 y nadie se enteró.
+#   5. CONGELADO — un fichero que sí se captura pero sirve siempre lo mismo.
+#      La alarma 1 lo ve fresco y la 2 lo ve lleno.
+#
+# ⚠️ Sus umbrales NO son números fijos: son 3 veces el intervalo propio de
+# cada fuente, calculado del propio archivo. ✅ Así el A72 —semanal— sale con
+# umbral 157 y `esios_previsiones` con 8, y **una fuente nueva se calibra
+# sola**. Es lo que permite incorporar MITECO (semanal) y SAIH (diario) sin
+# tocar una línea de esto.
+#
 # ⚠️ LO QUE NO PUEDE HACER, Y NO ES UNA PROMESA SINO UN PERMISO
 # --------------------------------------------------------------
 # Se declara con `contents: read`. El archivador tiene `contents: write`; este
 # NO lo pide, así que aunque tuviera un fallo **no podría escribir en el
 # archivo ni hacer commit**. Lo único que puede escribir son incidencias.
+#
+# ⚠️⚠️ Y ESO DECIDIÓ UN DISEÑO EL 8-sep-2026. El registro de fallos
+# —`fallos_recientes.csv` y `episodios.csv`— se escribió primero DENTRO del
+# vigilante, y eso habría obligado a darle `contents: write`, destruyendo esta
+# propiedad. Se separó: el vigilante solo lee y avisa, y el registro lo
+# escribirá otro workflow. **Las alarmas no necesitan esos ficheros**
+# —recalculan del archivo en cada pasada—, así que separarlo no cuesta nada
+# funcionalmente y conserva la garantía.
 #
 # POR QUÉ SÍ USA EL `schedule` DE GITHUB, SI PARA CAPTURAR SE DESCARTÓ
 # --------------------------------------------------------------------
@@ -33,8 +55,17 @@
 # hacen falta ~14 programadas en 48 h. Cada 3 h son 16, que al 42 % dan 6,7.
 # Con una cadencia de 4 h serían 12, que al 42 % dan 5,0: no llegaría.
 #
-# ⚠️ COSTE EN MINUTOS DE ACTIONS, que hoy importa
-# -----------------------------------------------
+# ⚠️ COSTE EN MINUTOS DE ACTIONS — ❌ ESTE APARTADO YA NO APLICA
+# --------------------------------------------------------------
+# ❌ CORREGIDO EL 8-sep-2026: partía de que los minutos se facturan, y **no se
+# facturan**. Xevi confirmó ese día que `eolosbcn/bess-archivador` es y
+# seguirá siendo **público**, y GitHub no cobra minutos de Actions en
+# repositorios públicos. La acción X1 del plan queda cerrada por esa vía.
+#
+# ⚠️ Lo que sigue NO se borra: vale como registro de lo que se pensó, y
+# **volverá a aplicar el día que el repositorio pase a privado** (decisión D4).
+# Xevi: «cuando llegue el día de hacerlo privado te aviso».
+#
 # 8 ejecuciones programadas al día, de las que llegan 3,4-5,4 según la medida
 # de arriba. GitHub factura por trabajo redondeando al minuto, así que salen
 # **~100-160 min/mes**. La acción X1 del plan encontró que el repositorio ya
@@ -70,6 +101,8 @@ on:
           - "antiguedad"
           - "fuente_muda"
           - "caducidad"
+          - "desaparecido"
+          - "congelado"
 
   # Al tocar el propio vigilante, para que se pruebe solo al desplegarlo.
   # ⚠️ Estas rutas son las SUYAS. No incluyen `archivador_diario.py`: si lo
