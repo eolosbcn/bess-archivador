@@ -1187,6 +1187,20 @@ def autotest():
 
 
     print("\n-- avisos de recuperación y recaída --------------------------")
+    # ⚠️ La primera de todas: que el camino SIN incidencias llegue a publicar.
+    # Sin esto, el aviso de recuperación solo salía si algo seguía fallando.
+    import inspect
+    fuente_main = inspect.getsource(main)
+    trozo = fuente_main.split("if not incidencias:")[1].split("if a.publicar:")[0]
+    # ⚠️ Se quitan los COMENTARIOS antes de mirar. La primera versión de esta
+    # prueba buscaba el texto «return 0» y lo encontraba dentro del comentario
+    # que explica el arreglo — o sea, miraba la forma y no el fondo, que es
+    # justo el fallo que viene a evitar.
+    codigo = "\n".join(l for l in trozo.splitlines()
+                       if not l.strip().startswith("#"))
+    comprobar_que("return 0" not in codigo,
+                  "⚠️ sin incidencias NO se sale antes de publicar(): el aviso "
+                  "de recuperación tiene que salir justo cuando todo va bien")
     comprobar_que(transiciones({"a"}, {"a": None}) == ([], []),
                   "sigue fallando y nunca se comentó: no se dice nada")
     comprobar_que(transiciones(set(), {"a": None}) == (["a"], []),
@@ -1384,12 +1398,23 @@ def main():
     if not incidencias:
         print("✅ Sin incidencias. El archivo está al día y ninguna fuente "
               "está muda.")
-        return 0
+    else:
+        print("Se han encontrado %d incidencia(s):\n" % len(incidencias))
+        for i in incidencias:
+            print("  [%s] %s" % (i.clave, i.titulo))
 
-    print("Se han encontrado %d incidencia(s):\n" % len(incidencias))
-    for i in incidencias:
-        print("  [%s] %s" % (i.clave, i.titulo))
-
+    # ⚠️⚠️ AQUÍ NO SE SALE AUNQUE NO HAYA INCIDENCIAS, y es el arreglo de un
+    # fallo real del 8-sep-2026. Antes había un `return 0` justo encima, y eso
+    # hacía que `publicar()` —donde vive el aviso de RECUPERACIÓN— no se
+    # llamara nunca cuando todo iba bien. O sea: **el aviso de «ya no arde»
+    # solo se mandaba si algo seguía ardiendo**, que es exactamente la
+    # analogía del incendio que este código venía a resolver.
+    #
+    # Xevi desplegó el v1.03, no le llegó ningún comentario y preguntó si es
+    # que no sabía verlo. No: era esto.
+    #
+    # Cerrar el ciclo de las incidencias abiertas es el OTRO trabajo de
+    # `publicar()`, y es el más importante justo cuando no hay novedades.
     if a.publicar:
         repo = os.environ.get("GITHUB_REPOSITORY")
         token = os.environ.get("GITHUB_TOKEN")
