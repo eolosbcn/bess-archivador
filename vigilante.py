@@ -71,6 +71,45 @@ v1.03  8-sep-2026. **Dos alarmas nuevas y el registro de fallos.** Nace de dos
        multiplicado por 4. Ni «desaparecido» ni «congelado» lo habrían visto:
        eso pide una comprobación semántica por fuente, que es otro trabajo.
 
+       **Y todo lo que sigue entró DESPUÉS, empujado por el criterio de Xevi
+       de esa misma tarde: «es mejor una alarma duplicada que ninguna alarma»
+       y «el problema es que algo que deba generar una alarma no lo haga».**
+
+       **`RETIRADAS` y la ALARMA 6.** La primera incidencia que abrió la
+       alarma 4 —la #7— era una detección correcta y **no una avería**:
+       `esios_catalogo_previsiones` se mudó a `archivo/catalogo.csv` el
+       5-sep-2026, en ruta fija. Sin una tabla de retiradas, esa incidencia
+       se reabriría para siempre. ⚠️⚠️ Pero una lista de «no me avises de
+       esto» **esconde averías**, así que cada retirada declara
+       OBLIGATORIAMENTE su sustituto y la **alarma 6** comprueba que ese
+       sustituto sigue vivo. **No se silencia: se redirige.**
+
+       ❌ **Se quita `MINIMO_PRESENCIAS = 20`**, que impedía que una fuente
+       vista pocas veces disparara nunca. Era una protección que elimina
+       alarmas, y ✅ medido: con mínimo 1, 3, 10 o 20 salen **exactamente las
+       mismas 5 incidencias** en 29 días. No silenciaba nada, porque el
+       trabajo ya lo hacían el umbral-múltiplo y la guarda de longitud.
+
+       ⚠️ **Y el caso que enseña el criterio, porque sin él suena a eslogan:**
+       al añadir la alarma 6 fallaron 6 pruebas heredadas, y la reacción iba a
+       ser ponerle la guarda «si no hay capturas, no avises». Eso habría
+       silenciado **en producción** el peor caso posible —que el archivo
+       entero haya desaparecido— para que unos escenarios sintéticos dejaran
+       de quejarse. Lo que fallaba no era la alarma: eran los escenarios.
+
+       **AVISOS DE RECUPERACIÓN Y RECAÍDA.** Los destapó una analogía de Xevi:
+       *«es como eliminar una alarma de incendios a los 20 min mientras sigue
+       el incendio, y en el otro lado de la casa se piensan que ya no hay
+       fuego»*. El antiduplicado impedía abrir una incidencia repetida —bien—
+       pero dejaba un hueco: **la incidencia abierta decía que empezó un
+       incendio y no decía si seguía ardiendo.** ⚠️ Y pasó de verdad ese día:
+       Xevi cerró la #6 sin que nada le dijera que ENTSO-E había vuelto;
+       había vuelto a las 20:51, pero lo supo por casualidad de horario.
+       Ahora el vigilante **comenta en la incidencia cuando el estado
+       CAMBIA** —al recuperarse y al recaer—, con marcadores HTML para no
+       repetirse. ⚠️ **No la cierra: informa.** Cerrar sigue siendo decisión
+       de Xevi.
+
 v1.02  7-sep-2026. **Una avería REAL dejaba de salir etiquetada como
        simulacro.** La v1.01 ponía el prefijo `[SIMULACRO]` a *todas* las
        incidencias de una pasada de prueba, no solo a la que la prueba
@@ -164,11 +203,42 @@ CAPTURAS_A_LEER = 500      # ⚠️ tope del barrido. Medido: 28 ms por captura,
 #                            tres horas. 500 son ~35 días, de sobra para medir
 #                            cadencias y detectar desapariciones.
 DIAS_VENTANA = 30          # ventana móvil de fallos_recientes.csv
-MINIMO_PRESENCIAS = 20     # apariciones para considerar «conocida» una fuente
+# ⚠️ MINIMO_PRESENCIAS = 1, o sea DESACTIVADO, y es deliberado. Empezó en 20
+# —«una fuente vista menos de 20 veces no avisa»— y eso era una protección que
+# elimina alarmas. ✅ Medido sobre 419 capturas: con mínimo 1, 3, 10 o 20 salen
+# EXACTAMENTE las mismas 5 incidencias de desaparecido y 0 de congelado en 29
+# días. No silenciaba nada, porque ese trabajo ya lo hacen dos cosas mejores:
+# el umbral como MÚLTIPLO del intervalo propio de cada fuente —una que solo
+# sale en las capturas completas tiene intervalo 38 y umbral 114, y se trata
+# sola— y la guarda `u >= len(capturas)`, que descarta a las que no tienen
+# historia suficiente. Se deja la constante en 1 en vez de borrarla para que
+# la decisión quede a la vista.
+MINIMO_PRESENCIAS = 1
 FACTOR_ALARMA = 3.0        # se avisa a 3× el intervalo normal de la fuente
 MINIMO_CAPTURAS_ALARMA = 8  # suelo: nunca avisar antes de 8 capturas
 TOLERANCIA_CIERRE = 2      # aciertos seguidos para cerrar un episodio
 EXTENSIONES = (".csv", ".csv.gz", ".json", ".gz")
+
+# ⚠️ FUENTES RETIRADAS A PROPÓSITO — no son averías, y sin esta tabla la
+# alarma 4 abriría una incidencia por cada una en cada pasada, para siempre.
+#
+# ⚠️⚠️ CADA ENTRADA DECLARA A DÓNDE SE FUE EL DATO, Y ES OBLIGATORIO. Una
+# lista de «no me avises de esto» esconde averías: si mañana el fichero
+# sustituto dejara de actualizarse, habríamos silenciado el nombre viejo y
+# nadie se enteraría. **No se silencia: se redirige**, y el vigilante
+# comprueba que el sustituto sigue vivo (alarma 6).
+RETIRADAS = {
+    "esios_catalogo_previsiones": {
+        "sustituto": "catalogo.csv",
+        "desde": "2026-09-05",
+        "motivo":
+            "el archivador lo mudó a `archivo/catalogo.csv`, en ruta fija y "
+            "acumulativa, y dejó de escribirlo dentro de cada captura. ✅ "
+            "Comprobado el 8-sep-2026: 1.561 filas y su columna `visto` marca "
+            "el día en curso. Fue la primera incidencia que abrió la alarma 4 "
+            "(#7) y resultó ser un cambio deliberado, no una avería.",
+    },
+}
 
 
 # ============================================================================
@@ -247,6 +317,34 @@ def caducidad_del_jwt(token):
 
 
 
+
+# ============================================================================
+# ⚠️⚠️ EL CRITERIO QUE GOBIERNA ESTE PROGRAMA — Xevi, 8-sep-2026
+# ============================================================================
+#   «Para mí recibir alarmas de más no es problema. Lo investigamos y llegamos
+#    a una conclusión. EL PROBLEMA ES QUE ALGO QUE DEBA GENERAR UNA ALARMA NO
+#    LO HAGA.»
+#
+#   «A veces es mejor una alarma que no sepamos bien qué es e investigar, que
+#    empezar a poner protecciones que eliminen alarmas. Es mejor una alarma
+#    duplicada que ninguna alarma.»
+#
+# ⚠️ NO deroga la trampa 7 de la casa —un aviso que salta SIEMPRE deja de ser
+# un aviso—, la ordena: lo que se combate es el aviso CONSTANTE, no el aviso
+# que hay que investigar. Un falso positivo ocasional se mira y se cierra; uno
+# permanente se convierte en `RETIRADAS` con su motivo escrito.
+#
+# ⚠️⚠️ Y va con el caso que lo obligó a formularlo, porque sin él suena a
+# eslogan. Al añadir la alarma 6 fallaron 6 pruebas heredadas, y la reacción
+# iba a ser ponerle una guarda: «si no hay capturas, no avises». Eso habría
+# silenciado EN PRODUCCIÓN el peor caso posible —que el archivo entero haya
+# desaparecido— para que unos escenarios sintéticos dejaran de quejarse. Lo
+# que fallaba no era la alarma: eran los escenarios.
+#
+# La regla práctica que sale de ahí: **antes de añadir una condición que
+# impide que una alarma salte, escribe qué avería quedaría muda.** Si la
+# respuesta es «ninguna», adelante; si es «esta», no.
+# ============================================================================
 
 # ============================================================================
 # REGISTRO DE FALLOS Y ALARMAS 4 Y 5 (v1.03)
@@ -364,6 +462,8 @@ def alarma_desaparecido(capturas, info):
     """Fichero conocido que lleva > 3× su intervalo normal sin aparecer."""
     avisos = []
     for k, (n, ip, _) in sorted(info.items()):
+        if k in RETIRADAS:
+            continue           # retirada a propósito: la vigila la alarma 6
         if n < MINIMO_PRESENCIAS:
             continue           # apareció poco: no es avería, es un raro
         u = umbral_de(ip)
@@ -387,6 +487,34 @@ def alarma_congelado(capturas, info):
         ult = [d.get(k) for _, d in capturas[-u:]]
         if all(h is not None for h in ult) and len(set(ult)) == 1:
             avisos.append((k, u, capturas[-u][0]))
+    return avisos
+
+
+def alarma_sustituto_muerto(raiz, ahora=None, horas=48.0):
+    """El fichero al que se mudó una fuente retirada, ¿sigue vivo?
+
+    ⚠️ ES LA MITAD QUE HACE HONESTA A `RETIRADAS`. Saltarse una fuente
+    retirada sin comprobar su sustituto sería silenciar el nombre viejo y
+    perder el dato sin que nadie avise — la trampa 6 de la casa, un fallo
+    mudo, creado por la propia defensa contra los falsos positivos.
+
+    Se mira la fecha de modificación, no el contenido: el sustituto es un
+    fichero en ruta fija y acumulativa, así que no hay capturas con las que
+    comparar. `horas` es generoso a propósito: lo que se detecta es que dejó
+    de tocarse, no un retraso de unas horas.
+    """
+    import time
+    avisos = []
+    base = raiz if os.path.isfile(os.path.join(raiz, "indice.csv")) \
+        else os.path.join(raiz, "archivo")
+    for viejo, d in sorted(RETIRADAS.items()):
+        p = os.path.join(base, d["sustituto"])
+        if not os.path.isfile(p):
+            avisos.append((viejo, d["sustituto"], None))
+            continue
+        edad = (time.time() - os.path.getmtime(p)) / 3600.0
+        if edad > horas:
+            avisos.append((viejo, d["sustituto"], edad))
     return avisos
 
 
@@ -705,12 +833,62 @@ def comprobar(raiz, ahora=None, token_aemet=None, simulacro=None):
                 "escriba una tabla."
                 % (k, u, desde, FACTOR_ALARMA)))
 
+    # --- 6: el SUSTITUTO de una fuente retirada dejó de tocarse ------------
+    # ⚠️ Sin esto, `RETIRADAS` sería una lista de silencio y el dato podría
+    # perderse sin que nadie avisara.
+    for viejo, sust, edad in alarma_sustituto_muerto(raiz):
+        incidencias.append(Incidencia(
+            "sustituto:%s" % sust,
+            "%s⚠️ `%s` sustituyó a `%s` y lleva %s"
+            % (marca("sustituto"), sust, viejo,
+               "SIN EXISTIR" if edad is None
+               else "%.0f h sin actualizarse" % edad),
+            "La fuente `%s` está declarada como RETIRADA A PROPÓSITO en "
+            "`RETIRADAS`, y su dato se mudó a `%s`.\n\n%s\n\n⚠️ Ese fichero "
+            "**%s**, así que el dato se ha perdido de verdad: la alarma 4 no "
+            "avisa de la fuente vieja precisamente porque se declaró "
+            "retirada, y sin esta comprobación el fallo sería mudo."
+            % (viejo, sust, RETIRADAS[viejo]["motivo"],
+               "no existe" if edad is None
+               else "lleva %.0f horas sin tocarse" % edad)))
+
     return incidencias
 
 
 # ============================================================================
 # PUBLICACIÓN — la única parte que habla con la red
 # ============================================================================
+
+# Marcadores invisibles en los comentarios. Van en HTML por el mismo motivo
+# que la clave en el cuerpo: no se ven al leer y sobreviven a que alguien edite
+# el texto.
+MARCA_RECUPERADA = "<!-- vigilante: recuperada -->"
+MARCA_RECAIDA = "<!-- vigilante: recaida -->"
+
+
+def transiciones(claves_ahora, estado_por_issue):
+    """Qué incidencias han CAMBIADO de estado desde la última pasada.
+
+    `estado_por_issue` es {clave: ultimo_marcador} donde el marcador es
+    `MARCA_RECUPERADA`, `MARCA_RECAIDA` o None si nunca se comentó.
+
+    Devuelve (recuperadas, recaidas): las que estaban fallando y ya no, y las
+    que se habían recuperado y vuelven a fallar.
+
+    ⚠️ SOLO SE COMENTA EN LOS CAMBIOS. Un comentario cada 3 horas diciendo
+    «sigue fallando» sería la trampa 7 por el lado del volumen: al tercer día
+    nadie leería la incidencia. Lo que falta hoy no es repetición, es saber
+    **cuándo dejó de arder**.
+    """
+    recuperadas, recaidas = [], []
+    for clave, ultimo in sorted(estado_por_issue.items()):
+        falla_ahora = clave in claves_ahora
+        if not falla_ahora and ultimo != MARCA_RECUPERADA:
+            recuperadas.append(clave)
+        elif falla_ahora and ultimo == MARCA_RECUPERADA:
+            recaidas.append(clave)
+    return recuperadas, recaidas
+
 
 def peticion_de_issue(inc, etiqueta, asignar_a=None):
     """Construye el cuerpo de la petición. PURA, para poder probarla.
@@ -754,11 +932,14 @@ def publicar(incidencias, repo, token, etiqueta="vigilante", asignar_a=None):
     abiertas = api("/repos/%s/issues?state=open&labels=%s&per_page=100"
                    % (repo, etiqueta))
     ya = set()
+    numero_de = {}
     for issue in abiertas:
         cuerpo = issue.get("body") or ""
         for linea in cuerpo.splitlines():
             if linea.startswith("<!-- clave:"):
-                ya.add(linea.split(":", 1)[1].strip().rstrip("->").strip())
+                clave = linea.split(":", 1)[1].strip().rstrip("->").strip()
+                ya.add(clave)
+                numero_de[clave] = issue.get("number")
 
     creadas, omitidas = [], []
     for inc in incidencias:
@@ -789,6 +970,58 @@ def publicar(incidencias, repo, token, etiqueta="vigilante", asignar_a=None):
                       "esto solo se ve mirándolo.")
                 print("     Consecuencia: puede que nadie reciba el aviso. "
                       "Comprueba el nombre de usuario y sus permisos.")
+
+    # --- LOS AVISOS DE CAMBIO DE ESTADO ------------------------------------
+    # ⚠️ Sin esto, una incidencia abierta dice que empezó un incendio y no dice
+    # si sigue ardiendo. Xevi cerró la #6 el 8-sep-2026 sin que nada le dijera
+    # que ENTSO-E había vuelto; había vuelto, pero por casualidad de horario.
+    claves_ahora = {i.clave for i in incidencias}
+    estado = {}
+    for clave, numero in numero_de.items():
+        # ⚠️ Solo el ÚLTIMO comentario decide: una incidencia puede haberse
+        # recuperado, recaído y recuperado otra vez, y lo que importa es dónde
+        # está ahora, no su historia.
+        try:
+            coms = api("/repos/%s/issues/%d/comments?per_page=100"
+                       % (repo, numero))
+        except Exception:
+            # ⚠️ Nada de continue mudo: se dice y se sigue con las demás.
+            print("  ⚠️ no se pudieron leer los comentarios de la #%d" % numero)
+            estado[clave] = None
+            continue
+        ultimo = None
+        for c in coms:
+            cuerpo = c.get("body") or ""
+            if MARCA_RECUPERADA in cuerpo:
+                ultimo = MARCA_RECUPERADA
+            elif MARCA_RECAIDA in cuerpo:
+                ultimo = MARCA_RECAIDA
+        estado[clave] = ultimo
+
+    recuperadas, recaidas = transiciones(claves_ahora, estado)
+    ahora_txt = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+
+    for clave in recuperadas:
+        api("/repos/%s/issues/%d/comments" % (repo, numero_de[clave]),
+            {"body": "✅ **Recuperada** el %s. El vigilante ya no detecta esta "
+                     "condición.\n\n⚠️ La incidencia **NO se cierra sola**: "
+                     "cerrarla es tu decisión. Este aviso existe porque una "
+                     "incidencia abierta decía que empezó un incendio y no "
+                     "decía si seguía ardiendo.\n\n%s"
+                     % (ahora_txt, MARCA_RECUPERADA)})
+        print("  ✅ comentada la recuperación de `%s` (#%d)"
+              % (clave, numero_de[clave]))
+
+    for clave in recaidas:
+        api("/repos/%s/issues/%d/comments" % (repo, numero_de[clave]),
+            {"body": "⚠️ **Vuelve a fallar** el %s, después de haberse dado "
+                     "por recuperada.\n\nUna avería que va y viene suele ser "
+                     "peor que una constante: se cierra en cuanto se mira y "
+                     "vuelve cuando nadie está delante.\n\n%s"
+                     % (ahora_txt, MARCA_RECAIDA)})
+        print("  ⚠️ comentada la RECAÍDA de `%s` (#%d)"
+              % (clave, numero_de[clave]))
+
     return creadas, omitidas
 
 
@@ -870,6 +1103,20 @@ def autotest():
             with io.open(os.path.join(tmp, "ultimo.json"), "w",
                          encoding="utf-8") as f:
                 json.dump({"ruta": "archivo/x", "fuentes": fuentes}, f)
+            # ⚠️ El escenario tiene que parecerse al archivo REAL, y desde el
+            # 5-sep-2026 un archivo real tiene `catalogo.csv` —ahí se mudó el
+            # catálogo de previsiones—. Sin este fichero la alarma 6 avisaba,
+            # con razón, de que el sustituto no existe.
+            #
+            # ⚠️⚠️ Y se arregla AQUÍ, no en la alarma. La tentación era ponerle
+            # a la alarma una guarda del tipo «si no hay capturas, no avises»,
+            # y eso habría silenciado en producción el peor caso posible —que
+            # el archivo entero haya desaparecido— para que una prueba dejara
+            # de quejarse. Criterio de Xevi, 8-sep-2026: «es mejor una alarma
+            # duplicada que ninguna alarma».
+            with io.open(os.path.join(tmp, "catalogo.csv"), "w",
+                         encoding="utf-8") as f:
+                f.write("id,grupo,nombre,visto\n1,x,y,2026-09-07\n")
 
         sanas = {"esios_a": {"estado": "OK"}, "esios_b": {"estado": "OK"},
                  "entsoe_a": {"estado": "OK"}, "entsoe_b": {"estado": "OK"}}
@@ -938,6 +1185,61 @@ def autotest():
         comprobar_que(not any(jwt in (i.titulo + i.cuerpo) for i in r),
                       "⚠️ el token NO aparece en ninguna incidencia")
 
+
+    print("\n-- avisos de recuperación y recaída --------------------------")
+    comprobar_que(transiciones({"a"}, {"a": None}) == ([], []),
+                  "sigue fallando y nunca se comentó: no se dice nada")
+    comprobar_que(transiciones(set(), {"a": None}) == (["a"], []),
+                  "⚠️ dejó de fallar: se avisa de la RECUPERACIÓN")
+    comprobar_que(transiciones(set(), {"a": MARCA_RECUPERADA}) == ([], []),
+                  "⚠️ ya se avisó de la recuperación: NO se repite cada 3 h")
+    comprobar_que(transiciones({"a"}, {"a": MARCA_RECUPERADA}) == ([], ["a"]),
+                  "⚠️ vuelve a fallar tras recuperarse: se avisa de la RECAÍDA")
+    comprobar_que(transiciones({"a"}, {"a": MARCA_RECAIDA}) == ([], []),
+                  "y la recaída tampoco se repite")
+    comprobar_que(transiciones(set(), {"a": MARCA_RECAIDA}) == (["a"], []),
+                  "tras una recaída, la siguiente recuperación SÍ se avisa")
+    comprobar_que(transiciones({"a", "b"}, {}) == ([], []),
+                  "sin incidencias abiertas no hay transiciones que comentar")
+
+    print("\n-- el silenciador está desactivado ---------------------------")
+    comprobar_que(MINIMO_PRESENCIAS <= 1,
+                  "⚠️ MINIMO_PRESENCIAS está en 1: medido que con 1, 3, 10 o "
+                  "20 salen las mismas 5 incidencias, así que silenciaba sin "
+                  "aportar")
+    rarita = [("c%02d" % i, {"rara": "h%d" % i} if i < 5 else {})
+              for i in range(200)]
+    # con intervalo 40 el umbral es 120, y 120 < 200: la alarma SÍ puede verla
+    comprobar_que(any(a[0] == "rara"
+                      for a in alarma_desaparecido(rarita,
+                                                   intervalos(rarita))),
+                  "⚠️ una fuente vista solo 5 veces YA puede disparar: antes "
+                  "el mínimo de 20 la dejaba muda para siempre")
+
+    print("\n-- RETIRADAS y su sustituto ---------------------------------")
+    comprobar_que(all("sustituto" in d and "motivo" in d
+                      for d in RETIRADAS.values()),
+                  "⚠️ toda retirada declara sustituto y motivo: sin eso sería "
+                  "una lista de silencio")
+    retirada = [("c%02d" % i,
+                 {"esios_catalogo_previsiones": "h"} if i < 20 else {"otra": "g"})
+                for i in range(60)]
+    comprobar_que(not alarma_desaparecido(retirada, intervalos(retirada)),
+                  "una fuente RETIRADA no dispara la alarma 4")
+    with tempfile.TemporaryDirectory() as tmp4:
+        with io.open(os.path.join(tmp4, "indice.csv"), "w",
+                     encoding="utf-8") as f:
+            f.write("fecha,hora,ruta\n")
+        comprobar_que(len(alarma_sustituto_muerto(tmp4)) == 1,
+                      "⚠️ si el sustituto NO EXISTE, la alarma 6 avisa")
+        with io.open(os.path.join(tmp4, "catalogo.csv"), "w",
+                     encoding="utf-8") as f:
+            f.write("id\n1\n")
+        comprobar_que(not alarma_sustituto_muerto(tmp4),
+                      "con el sustituto recién escrito, no avisa")
+        comprobar_que(len(alarma_sustituto_muerto(tmp4, horas=-1)) == 1,
+                      "y con umbral imposible sí avisa (la comprobación mira "
+                      "la edad, no la existencia)")
 
     print("\n-- el simulacro NO etiqueta alarmas reales -------------------")
     rota = [("c%02d" % i, {"viva": "h%d" % i, "otra": "g%d" % i}
@@ -1059,7 +1361,7 @@ def main():
                    help="carpeta con indice.csv y ultimo.json")
     p.add_argument("--simulacro",
                    choices=["antiguedad", "fuente_muda", "caducidad",
-                            "desaparecido", "congelado"],
+                            "desaparecido", "congelado", "sustituto"],
                    help="fuerza una condición SIN tocar ningún fichero, para "
                         "comprobar que la alarma suena (prueba de disparo)")
     p.add_argument("--publicar", action="store_true",
