@@ -1,0 +1,15 @@
+{
+ "ejecucion_utc": "2026-09-08T19:37:40.980889+00:00",
+ "confederacion": "ebro",
+ "version": "v1.00",
+ "fuentes": {
+  "saih_ebro_aforos_cuenca": {
+   "estado": "FALLO",
+   "detalle": "ConnectTimeout"
+  },
+  "saih_ebro_volumenes_embalsados": {
+   "estado": "FALLO",
+   "detalle": "ConnectTimeout"
+  }
+ }
+}
