@@ -1,21 +1,40 @@
 {
- "ejecucion_utc": "2026-09-09T09:04:26.337398+00:00",
- "confederacion": "ebro",
- "version": "v1.01",
+ "ejecucion_utc": "2026-09-09T09:34:40.946780+00:00",
+ "confederacion": [
+  "duero",
+  "ebro",
+  "mino_sil"
+ ],
+ "peso_cubierto": 77.71,
+ "version": "v1.02",
  "fuentes": {
+  "saih_duero_situacion_embalses": {
+   "estado": "OK",
+   "bytes": 47123,
+   "comprimido": 9432,
+   "elementos": 38,
+   "segundos": 1.67
+  },
   "saih_ebro_aforos_cuenca": {
    "estado": "OK",
-   "bytes": 87640,
-   "comprimido": 7638,
+   "bytes": 87649,
+   "comprimido": 7742,
    "elementos": 5,
    "segundos": 0.79
   },
   "saih_ebro_volumenes_embalsados": {
    "estado": "OK",
-   "bytes": 93261,
-   "comprimido": 10035,
+   "bytes": 93270,
+   "comprimido": 10048,
    "elementos": 2,
-   "segundos": 0.95
+   "segundos": 0.94
+  },
+  "saih_mino_sil_situacion_embalses": {
+   "estado": "OK",
+   "bytes": 52473,
+   "comprimido": 7670,
+   "elementos": 34,
+   "segundos": 4.11
   }
  },
  "ruta": "archivo_saih/2026/09/2026-09-09"
