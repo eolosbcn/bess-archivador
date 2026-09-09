@@ -60,6 +60,30 @@ ciego, que es justo lo que Xevi pidió evitar.
 
 HISTORIAL
 =========
+v1.02  9-sep-2026. **Entran el DUERO y el MIÑO-SIL**, y con ellos la cobertura
+       pasa del **22,76 % al 77,71 %** del volumen embalsado peninsular. El
+       Ebro solo, que era todo lo que había, pesa menos que cualquiera de las
+       dos por separado.
+
+       ⚠️ Y no se pudieron añadir copiando la entrada del Ebro, que es lo que
+       la v1.00 ya advertía: **ninguna de las dos tiene API**. Sirven la tabla
+       montada en HTML, así que:
+       · cada endpoint declara su `formato`, y el HTML se archiva crudo —lo que
+         no se captura hoy no se recupera; lo que se parsea mal se reparsea—;
+       · y con `marca`, porque la validación de JSON dejaba de proteger: **una
+         página de error TAMBIÉN es HTML válido**. La marca es una cadena que
+         tiene que estar. Identidad, no firma (trampa 10).
+       · el Miño-Sil además exige la cookie `lang=es`: sin ella el servidor
+         entra en un bucle de 50 redirecciones que parece una caída y no lo es.
+
+       ⚠️ Y el defecto de `--confederacion` pasa de `ebro` a TODAS. La tarea
+       programada llama sin ese argumento, así que dejarlo en `ebro` habría
+       capturado el 22 % de España creyendo que se capturaba todo.
+
+       ❌ El TAJO (10,23 %) queda fuera porque **su servidor está roto**: su
+       `/get-embalses` devuelve `Division by zero` con traza de PHP. ✅
+       Comprobado por dos vías, con `curl` y con un navegador real.
+
 v1.01  9-sep-2026. **Escribe `ultimo.json` en la raíz**, con el mismo contenido
        que el `manifiesto.json` del día. Es lo que el vigilante lee para saber
        qué fuentes trajo la última captura, y sin él este archivo no se podía
@@ -105,21 +129,79 @@ ESPERA_S = 3.0
 # ⚠️ `peso` es el % de la hidráulica GESTIONABLE de España, ✅ medido sobre 151
 # meses (ver `conocimiento_mercado_*` §1.8). Sirve para saber qué se pierde
 # mientras las demás no estén.
+# ⚠️ CADA ENDPOINT DECLARA SU FORMATO Y SU MARCA, y eso no es burocracia.
+#
+# La v1.00 solo sabía de JSON, y validaba el contenido intentando parsearlo:
+# así un HTML de error servido con código 200 —una página de mantenimiento, un
+# desafío de cortafuegos— no podía colarse como dato bueno. Al entrar el Duero
+# y el Miño-Sil, que **no tienen API y sirven la tabla en HTML**, esa red
+# desaparecería: cualquier página de error es HTML válido.
+#
+# La sustituye la `marca`: una cadena que TIENE que estar en la respuesta. No
+# es una firma con umbrales, es una identidad —está o no está—, que es lo que
+# la trampa 10 de la casa manda preferir. Si el Duero deja de decir «Volumen
+# embalsado», no queremos guardar lo que sea que haya devuelto.
 CONFEDERACIONES = {
     "ebro": {
         "peso": 22.76,
         "base": "https://www.saihebro.com",
         "endpoints": {
-            "volumenes_embalsados": "/api/principal/getVolumenesEmbalsados",
-            "aforos_cuenca": ("/api/mapa/getDatosMapa"
-                              "?slug=mapa-aforos-HG-toda-la-cuenca"),
+            "volumenes_embalsados": {
+                "ruta": "/api/principal/getVolumenesEmbalsados",
+                "formato": "json"},
+            "aforos_cuenca": {
+                "ruta": ("/api/mapa/getDatosMapa"
+                         "?slug=mapa-aforos-HG-toda-la-cuenca"),
+                "formato": "json"},
         },
     },
-    # PENDIENTES, por peso: duero 30,35 % · mino_sil 24,60 % · tajo 10,23 % ·
-    # cantabrico 6,63 % · jucar 2,30 % · guadalquivir 1,24 % · c_cataluna
-    # 0,89 % · guadiana 0,40 % · sur 0,37 % · segura 0,23 %.
-    # ⚠️ Cada una tiene su propio sistema: no se pueden añadir copiando la
-    # entrada del Ebro y cambiando el host.
+    # ⚠️ El Duero sirve la tabla ya montada en HTML, sin API. Se archiva cruda
+    # y se parsea después, que es la filosofía del archivador: lo que no se
+    # captura hoy no se recupera, y lo que se parsea mal se vuelve a parsear.
+    # ✅ La página se auto-fecha —«9 de septiembre de 2026»— así que nunca hay
+    # que adivinar a qué día corresponde.
+    "duero": {
+        "peso": 30.35,
+        "base": "https://www.saihduero.es",
+        "endpoints": {
+            "situacion_embalses": {
+                "ruta": "/situacion-embalses",
+                "formato": "html",
+                "marca": "Volumen embalsado"},
+        },
+    },
+    # ⚠️ El Miño-Sil corre «WEBSAIH ws 2022», un producto de terceros, y da
+    # volumen por embalse en TIEMPO REAL —lecturas cada 15 min— en vez del D-1
+    # del Ebro. ✅ Medido el 9-sep-2026: 34 filas con capacidad, volumen en hm³
+    # y en %, caudal de salida y fecha por embalse.
+    #
+    # ⚠️ NECESITA LA COOKIE `lang=es`. Sin ella el servidor entra en un bucle
+    # de redirecciones —medido: 50 saltos y curl se rinde— que parece una caída
+    # y no lo es. Se descubrió comparando con un navegador, que sí la pone.
+    "mino_sil": {
+        "peso": 24.60,
+        "base": "https://saih.chminosil.es",
+        "cookies": {"lang": "es"},
+        "endpoints": {
+            "situacion_embalses": {
+                "ruta": "/index.php?url=/datos/situacionEmbalses",
+                "formato": "html",
+                "marca": "Capacidad Total"},
+        },
+    },
+    # ❌ TAJO (10,23 %): SU SERVIDOR ESTÁ ROTO, y no es cosa nuestra. Su portal
+    # es una aplicación JS que pide `/get-embalses`, y ese endpoint devuelve
+    # `Exception (0) Division by zero` con una traza de PHP. ✅ Comprobado el
+    # 9-sep-2026 por dos vías: con `curl` y dentro de un navegador real, con
+    # sesión y cabeceras propias. No se añade porque no hay nada que capturar;
+    # se reintenta cuando lo arreglen.
+    #
+    # PENDIENTES, por peso: tajo 10,23 % · cantabrico 6,63 % · jucar 2,30 % ·
+    # guadalquivir 1,24 % · c_cataluna 0,89 % · guadiana 0,40 % · sur 0,37 % ·
+    # segura 0,23 %. Suman 22,29 %.
+    # ⚠️ Cada una tiene su propio sistema: ✅ comprobado el 9-sep-2026 sobre 8
+    # dominios que la ruta del Miño-Sil NO la comparte ninguna otra, así que no
+    # se pueden añadir copiando una entrada y cambiando el host.
 }
 
 
@@ -179,17 +261,26 @@ def capturar(confederacion, ca, carpeta):
     import requests
     cfg = CONFEDERACIONES[confederacion]
     fichas = {}
-    for nombre, ruta in sorted(cfg["endpoints"].items()):
+    for nombre, spec in sorted(cfg["endpoints"].items()):
         clave = "saih_%s_%s" % (confederacion, nombre)
-        url = cfg["base"] + ruta
+        url = cfg["base"] + spec["ruta"]
+        formato = spec["formato"]
         t0 = time.time()
         try:
             # ⚠️ 15 s, no 120. Un servidor que contesta en 0,5 s no
             # necesita dos minutos, y con 120 una pasada fallida tardaba
             # **279 s** en decir que había fallado. 15 s sigue siendo treinta
             # veces el tiempo de respuesta medido el 8-sep-2026.
-            r = requests.get(url, timeout=15, verify=ca,
-                             headers={"Accept": "application/json"})
+            r = requests.get(
+                url, timeout=15, verify=ca,
+                cookies=cfg.get("cookies"),
+                headers={"Accept": ("application/json" if formato == "json"
+                                    else "text/html"),
+                         # ⚠️ Un User-Agent explícito y honesto: dice qué somos.
+                         # Sin ninguno, `requests` manda `python-requests/x.y`,
+                         # que varios portales públicos filtran.
+                         "User-Agent": "Revenergetica-Casandra/1.0 "
+                                       "(archivador hidrologico)"})
         except Exception as e:
             fichas[clave] = {"estado": "FALLO", "detalle": type(e).__name__}
             print("    %-40s ❌ %s" % (clave, type(e).__name__))
@@ -208,25 +299,47 @@ def capturar(confederacion, ca, carpeta):
             print("    %-40s ⚠️ vacío" % clave)
             time.sleep(ESPERA_S)
             continue
-        # ⚠️ Se comprueba que es JSON antes de guardarlo. Un HTML de error con
-        # código 200 —una página de mantenimiento, un desafío de cortafuegos—
-        # se guardaría tan campante y parecería un dato bueno.
-        try:
-            datos = json.loads(cuerpo.decode("utf-8"))
-        except Exception:
-            fichas[clave] = {"estado": "FALLO",
-                             "detalle": "la respuesta no es JSON"}
-            print("    %-40s ❌ no es JSON (%d bytes)" % (clave, len(cuerpo)))
-            time.sleep(ESPERA_S)
-            continue
-        ruta_f = os.path.join(carpeta, clave + ".json.gz")
+        # ⚠️ SE VALIDA EL CONTENIDO ANTES DE GUARDARLO, y de la forma que
+        # corresponda a cada formato. Un error servido con código 200 —una
+        # página de mantenimiento, un desafío de cortafuegos— se guardaría tan
+        # campante y parecería un dato bueno.
+        #
+        # Para JSON, la validación es parsearlo. Para HTML no sirve —una página
+        # de error TAMBIÉN es HTML válido—, así que se exige la `marca`: una
+        # cadena que tiene que estar. Está o no está, sin umbrales que calibrar.
+        elementos = None
+        if formato == "json":
+            try:
+                datos = json.loads(cuerpo.decode("utf-8"))
+            except Exception:
+                fichas[clave] = {"estado": "FALLO",
+                                 "detalle": "la respuesta no es JSON"}
+                print("    %-40s ❌ no es JSON (%d bytes)"
+                      % (clave, len(cuerpo)))
+                time.sleep(ESPERA_S)
+                continue
+            elementos = len(datos) if isinstance(datos, (list, dict)) else None
+        else:
+            marca = spec["marca"]
+            if marca.encode("utf-8") not in cuerpo:
+                fichas[clave] = {"estado": "FALLO",
+                                 "detalle": "falta la marca %r" % marca}
+                print("    %-40s ❌ falta la marca %r (%d bytes)"
+                      % (clave, marca, len(cuerpo)))
+                time.sleep(ESPERA_S)
+                continue
+            # Cuenta de filas: no valida nada por sí sola, pero deja en el
+            # manifiesto una cifra que cambia si la tabla se vacía.
+            elementos = cuerpo.count(b"<tr")
+
+        ruta_f = os.path.join(carpeta, "%s.%s.gz" % (clave, formato))
         with gzip.open(ruta_f, "wb") as f:
             f.write(cuerpo)
         fichas[clave] = {
             "estado": "OK",
             "bytes": len(cuerpo),
             "comprimido": os.path.getsize(ruta_f),
-            "elementos": len(datos) if isinstance(datos, (list, dict)) else None,
+            "elementos": elementos,
             "segundos": round(dur, 2),
         }
         print("    %-40s ✅ %6.1f KB → %5.1f KB comprimido · %.1f s"
@@ -337,8 +450,14 @@ def autotest():
 def main():
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument("--raiz", default=CARPETA)
-    p.add_argument("--confederacion", default="ebro",
-                   choices=sorted(CONFEDERACIONES))
+    # ⚠️ POR DEFECTO, TODAS. Hasta la v1.01 el defecto era solo `ebro`, que
+    # pesa el 22,76 %: la tarea programada y el workflow llaman sin este
+    # argumento, así que un defecto parcial habría dejado fuera el 77 % de
+    # España sin que nadie lo notara. Un defecto que captura de menos es un
+    # fallo mudo.
+    p.add_argument("--confederacion", nargs="+", default=sorted(CONFEDERACIONES),
+                   choices=sorted(CONFEDERACIONES),
+                   help="una o varias. Por defecto, todas las configuradas")
     p.add_argument("--autotest", action="store_true")
     a = p.parse_args()
 
@@ -346,7 +465,10 @@ def main():
         return 0 if autotest() else 1
 
     ahora = dt.datetime.now(dt.timezone.utc)
-    print("  SAIH · %s · %s" % (a.confederacion, ahora.isoformat()))
+    peso = sum(CONFEDERACIONES[c]["peso"] for c in a.confederacion)
+    print("  SAIH · %s · %s" % (", ".join(a.confederacion), ahora.isoformat()))
+    print("  cobertura de estas cuencas: %.2f %% del volumen embalsado "
+          "peninsular" % peso)
 
     ca = paquete_de_ca()
     if ca is None:
@@ -369,11 +491,18 @@ def main():
                            ahora.strftime("%m"), ahora.strftime("%Y-%m-%d"))
     os.makedirs(carpeta, exist_ok=True)
 
-    fichas = capturar(a.confederacion, ca, carpeta)
+    # ⚠️ Una confederación que falla NO impide capturar las demás. Cada una
+    # deja su estado en las fichas y el manifiesto las lleva todas: si el
+    # servidor del Duero está caído, el Miño-Sil se captura igual. Perder una
+    # captura es irreversible, y perder tres por culpa de una sería absurdo.
+    fichas = {}
+    for conf in a.confederacion:
+        fichas.update(capturar(conf, ca, carpeta))
 
     manifiesto = {"ejecucion_utc": ahora.isoformat(),
                   "confederacion": a.confederacion,
-                  "version": "v1.01",
+                  "peso_cubierto": round(peso, 2),
+                  "version": "v1.02",
                   "fuentes": fichas}
     with io.open(os.path.join(carpeta, "manifiesto.json"), "w",
                  encoding="utf-8") as f:
