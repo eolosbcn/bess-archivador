@@ -356,7 +356,7 @@ import pandas as pd
 # diciendo «v3.12» con el código de la v3.13 dentro. `--autotest` comprueba
 # ahora que esta constante concuerde con la cabecera y con el nombre del
 # fichero. Al subir versión se toca AQUÍ, y la prueba avisa si falta algo.
-VERSION = "v3.15"
+VERSION = "v3.16"
 
 TZ_MADRID = ZoneInfo("Europe/Madrid")
 CARPETA_RAIZ = "archivo"
@@ -1899,6 +1899,127 @@ def capturar_mibgas(carpeta, hoy):
  
  
 # ============================================================================
+# SENDECO2 — precio del derecho de emisión de CO2 (EUA)
+# ============================================================================
+
+
+def capturar_sendeco2(carpeta, hoy):
+    """El precio del derecho de emisión, que es la mitad del coste marginal.
+
+    POR QUÉ ESTÁ AQUÍ, Y ES LO MÁS IMPORTANTE DE ESTA FUNCIÓN
+    ==========================================================
+    Criterio de dominio de Xevi, 9-sep-2026: *«en horas marginales el precio
+    del gas y las emisiones es determinante en el precio. Lo más importante.»*
+
+    Cuando el sistema está en régimen marginal, el precio no puede bajar del
+    coste de producir ese MWh con gas, y ese coste tiene DOS componentes:
+
+        precio mínimo = gas / rendimiento  +  CO2 · factor  +  OPEX + margen
+
+    Hasta hoy capturábamos el gas y **no el CO2**. ⚠️ En los 2.584 indicadores
+    de e·sios no hay precio del derecho: solo «CO2 evitable» por sectores, que
+    es una CANTIDAD. Sin este dato, la cuña que separa el coste del combustible
+    del precio final es un RESIDUO que mezcla CO2, escasez, rampas e
+    importaciones, y no se puede saber cuánto pesa cada cosa.
+
+    ✅ Y el número cuadra: medido sobre 17.539 horas, la cuña en horas de
+    renovable muy baja es de **+39,66 €/MWh**; con el EUA a 84,78 €/t y ~0,4
+    tCO2 por MWh eléctrico, solo el CO2 son **~33,9**, dejando ~5,8 para OPEX y
+    margen — el orden de magnitud correcto para un ciclo combinado.
+
+    QUÉ SE GUARDA, Y POR QUÉ LAS CUATRO CIFRAS
+    ===========================================
+    SENDECO2 publica el último cierre y las medias de 5, 30 y 365 sesiones.
+    Se guardan las cuatro por decisión de Xevi: las medias son gratis y dan la
+    tendencia sin que tengamos que construirla nosotros — y protegen de que un
+    cierre suelto sea atípico.
+
+    ⚠️ QUÉ ES Y QUÉ NO ES ESTE PRECIO
+    ==================================
+    · ✅ **Es europeo**: EUA = *European Union Allowance*, el derecho del
+      régimen de la UE, que es el que entrega una central española.
+    · ✅ **El nivel es representativo**: el EUA de referencia tocó 86,60 €/t el
+      22-jul-2026 y rondaba 82,50 en agosto; SENDECO2 daba 84,78 el 8-sep.
+    · ⚠️ **NO es el futuro de ICE**, que es el instrumento con el que de verdad
+      se cubre una central. La diferencia es de acarreo, unos pocos por ciento.
+      Para estimar la cuña sobra; para valorar una cobertura real, no.
+    · ⓘ El `CER` sale a 0,00 y no es un fallo: son créditos Kyoto, muertos
+      desde hace años. Se guarda igual, por si algún día revive.
+
+    ⚠️ LA VALIDACIÓN ES POR MARCA, no por código HTTP
+    =================================================
+    La respuesta es HTML, así que un 200 no garantiza nada: una página de error
+    o de mantenimiento también es HTML válido. Se exige que aparezca
+    `Último cierre (` y que se puedan leer las OCHO cifras del bloque. Si no,
+    se guarda el HTML crudo y se registra FALLO — el dato no se pierde y la
+    causa queda para mirarla.
+    """
+    import re
+
+    MARCA = "Último cierre ("
+    cabeceras = {
+        "User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                       "AppleWebKit/537.36 (KHTML, like Gecko) "
+                       "Chrome/126.0.0.0 Safari/537.36"),
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "es-ES,es;q=0.9,en;q=0.8",
+    }
+    try:
+        r = requests.get("https://www.sendeco2.com", timeout=60,
+                         headers=cabeceras)
+    except Exception as e:
+        registrar("sendeco2_eua", "FALLO", f"error de red: {e}")
+        return
+    if r.status_code != 200:
+        registrar("sendeco2_eua", "FALLO", f"HTTP {r.status_code}")
+        return
+
+    html = r.content.decode("utf-8", errors="replace")
+    i = html.find("Precios CO2 (SPOT)")
+    if i < 0 or MARCA not in html[i:i + 4000]:
+        # ⚠️ Se guarda el crudo: si la página cambia de forma, el dato de hoy
+        # no se pierde y se puede reparsear mañana sin haber perdido un día.
+        ruta = os.path.join(carpeta, "sendeco2_crudo.html.gz")
+        import gzip as _gz
+        with _gz.open(ruta, "wb") as f:
+            f.write(r.content)
+        registrar("sendeco2_eua", "FALLO",
+                  "no aparece la marca del bloque de precios; "
+                  "guardado el HTML crudo para reparsear")
+        return
+
+    bloque = html[i:i + 3000]
+    fecha = re.search(r"Último cierre \((\d{2})-(\d{2})-(\d{4})\)", bloque)
+    cifras = re.findall(r"(\d{1,3},\d{2})\s*(?:&euro;|€)", bloque)
+
+    # ⚠️ OCHO cifras: cuatro filas × (EUA, CER). Si no son ocho exactas, la
+    # página ha cambiado de forma y NO se inventa nada.
+    if not fecha or len(cifras) < 8:
+        ruta = os.path.join(carpeta, "sendeco2_crudo.html.gz")
+        import gzip as _gz
+        with _gz.open(ruta, "wb") as f:
+            f.write(r.content)
+        registrar("sendeco2_eua", "FALLO",
+                  f"leídas {len(cifras)} cifras y fecha={bool(fecha)}; "
+                  f"se esperaban 8 y una fecha. Guardado el HTML crudo")
+        return
+
+    v = [float(c.replace(",", ".")) for c in cifras[:8]]
+    fila = {
+        "fecha_captura": hoy.isoformat(),
+        "fecha_cierre": f"{fecha.group(3)}-{fecha.group(2)}-{fecha.group(1)}",
+        "eua_cierre": v[0], "cer_cierre": v[1],
+        "eua_media_5s": v[2], "cer_media_5s": v[3],
+        "eua_media_30s": v[4], "cer_media_30s": v[5],
+        "eua_media_12m": v[6], "cer_media_12m": v[7],
+    }
+    guardar(pd.DataFrame([fila]), carpeta, "sendeco2_eua", comprimir=False)
+    registrar("sendeco2_eua", "OK",
+              f"EUA {v[0]:.2f} EUR/t, cierre del {fila['fecha_cierre']}",
+              filas=1)
+
+
+# ============================================================================
 # Índice en ruta fija
 # ============================================================================
 #
@@ -2103,6 +2224,9 @@ def ejecutar():
         ("ENTSO-E", capturar_entsoe, (carpeta, hoy)),
         ("AEMET", capturar_aemet, (carpeta, ahora_madrid)),
         ("MIBGAS", capturar_mibgas, (carpeta, hoy)),
+        # ⚠️ Detras de MIBGAS a proposito: las dos son el coste marginal
+        # del ciclo combinado, y quien lea el manifiesto las vera juntas.
+        ("SENDECO2 (CO2)", capturar_sendeco2, (carpeta, hoy)),
     ):
         try:
             funcion(*args)
@@ -2234,7 +2358,7 @@ def autotest():
         print(f"  [✓] VERSION y la cabecera coinciden: {VERSION}")
 
     # El nombre del fichero solo lleva versión en la copia de trabajo
-    # (`archivador_diario_v3_15.py`); en producción se llama
+    # (`archivador_diario_v3_16.py`); en producción se llama
     # `archivador_diario.py`. Solo se comprueba cuando la lleva.
     m = re.search(r"_v(\d+)_(\d+)\.py$", os.path.basename(__file__))
     if m:
