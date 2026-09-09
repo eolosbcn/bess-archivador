@@ -33,6 +33,42 @@ nadie volvería a mirarlas.
 
 HISTORIAL
 =========
+v1.04  9-sep-2026. **El vigilante pasa a vigilar DOS archivos**, el del
+       archivador y el del SAIH, y los tres cambios que hacen falta son los
+       tres la misma trampa: **evitar una alarma que salte siempre**.
+
+       El SAIH ya no se captura en GitHub —`saihebro.com` no es alcanzable
+       desde los runners— sino desde la máquina de Xevi, que empuja lo
+       capturado a `archivo_saih/`. Sin esto era un punto ciego, y de los
+       gordos: ⚠️ **nunca llegó a vigilarse**, porque el workflow desplegado
+       decía `--raiz archivo` a secas. Lo que se comprobó el 8-sep fue que el
+       formato del índice servía, no que estuviera conectado.
+
+       · **`--etiqueta`**, y es la pieza que permite ejecutarlo dos veces.
+         `publicar()` filtra las issues abiertas por etiqueta y con ellas
+         calcula `claves_ahora`; compartiendo etiqueta, **cada archivo vería
+         las incidencias del otro como recuperadas y se las cerraría cada tres
+         horas**, con un comentario diciendo que ya no arde.
+       · **`--horas`**, umbral de la alarma 1. El SAIH se captura 3 veces al
+         día y su hueco nocturno es de **13,5 h**: con el umbral de 6 h del
+         archivador saltaría todas las mañanas.
+       · **`RETIRADAS` declara su archivo.** Sin eso, la alarma 6 buscaría
+         `archivo_saih/catalogo.csv` —que no existe ni debe existir— y abriría
+         una incidencia permanente.
+       · ⚠️⚠️ **Y el cuarto, que es el grave: un `ultimo.json` que falta ya no
+         mata al vigilante.** Lo abría con un `io.open()` sin red, así que su
+         ausencia lanzaba una excepción que se llevaba por delante la función
+         entera: **cero alarmas evaluadas y nada publicado**. La avería más
+         tonta imaginable apagaba el sistema de avisos completo. Ahora es una
+         incidencia más —`sin_ultimo`— y las otras cinco alarmas siguen
+         corriendo. Se arregla también por el otro lado: `saih_captura.py`
+         v1.01 escribe su `ultimo.json`, que es lo que faltaba de verdad.
+
+       ⚠️ Ninguno de los tres se ve leyendo el código: los tres aparecen solo
+       al preguntarse qué haría cada alarma sobre el archivo nuevo. Es la
+       trampa 8 —la comprobación cruzada que está escrita y no se hace—
+       aplicada a una alarma que se da por buena porque funciona en otro sitio.
+
 v1.03  8-sep-2026. **Dos alarmas nuevas y el registro de fallos.** Nace de dos
        encargos de Xevi: *«vigila que no queden puntos ciegos con las nuevas
        incorporaciones»* —vienen MITECO y SAIH— y *«necesitamos un archivo que
@@ -229,6 +265,13 @@ EXTENSIONES = (".csv", ".csv.gz", ".json", ".gz")
 # comprueba que el sustituto sigue vivo (alarma 6).
 RETIRADAS = {
     "esios_catalogo_previsiones": {
+        # ⚠️ `archivo` dice A QUÉ RAÍZ pertenece esta retirada, y no es
+        # decorativo. Desde el 9-sep-2026 el vigilante corre también sobre
+        # `archivo_saih`, y sin esta clave la alarma 6 buscaría
+        # `archivo_saih/catalogo.csv` —que no existe ni debe existir—, abriría
+        # una incidencia y la mantendría abierta para siempre. Es la trampa 7
+        # de la casa: un aviso que salta siempre deja de ser un aviso.
+        "archivo": "archivo",
         "sustituto": "catalogo.csv",
         "desde": "2026-09-05",
         "motivo":
@@ -507,7 +550,14 @@ def alarma_sustituto_muerto(raiz, ahora=None, horas=48.0):
     avisos = []
     base = raiz if os.path.isfile(os.path.join(raiz, "indice.csv")) \
         else os.path.join(raiz, "archivo")
+    # ⚠️ El nombre de la carpeta raíz, para saber qué retiradas son de ESTE
+    # archivo. `archivo_saih/` no tiene ninguna, y sin este filtro heredaría
+    # las de `archivo/` y avisaría de que le falta un `catalogo.csv` que nunca
+    # debió tener. Ver el comentario de `RETIRADAS`.
+    nombre = os.path.basename(os.path.normpath(base))
     for viejo, d in sorted(RETIRADAS.items()):
+        if d.get("archivo", "archivo") != nombre:
+            continue
         p = os.path.join(base, d["sustituto"])
         if not os.path.isfile(p):
             avisos.append((viejo, d["sustituto"], None))
@@ -635,12 +685,21 @@ class Incidencia(object):
         return "Incidencia(%r)" % self.clave
 
 
-def comprobar(raiz, ahora=None, token_aemet=None, simulacro=None):
+def comprobar(raiz, ahora=None, token_aemet=None, simulacro=None,
+              umbral_horas=None):
     """Devuelve la lista de incidencias. Función PURA: no habla con la red.
 
     `simulacro` fuerza una de las condiciones sin tocar un solo fichero, que es
     la prueba de disparo de F−1: el archivo sigue sano y lo que cambia es la
     regla, no el dato.
+
+    ⚠️ `umbral_horas` existe desde el 9-sep-2026 porque **no todos los archivos
+    tienen la misma cadencia**. `UMBRAL_HORAS = 6` está bien para el
+    archivador, que captura ~14 veces al día. El archivo del SAIH se captura
+    **tres veces al día** desde la máquina de Xevi —09:30, 14:00 y 20:00—, así
+    que su hueco nocturno es de **13,5 h**: con el umbral de 6 h saltaría la
+    alarma TODAS LAS MAÑANAS, y un aviso que salta siempre deja de ser un
+    aviso (trampa 7). Sin valor, se usa la constante de siempre.
     """
     ahora = ahora or dt.datetime.now(dt.timezone.utc)
     incidencias = []
@@ -668,7 +727,8 @@ def comprobar(raiz, ahora=None, token_aemet=None, simulacro=None):
     # ---- 1. antigüedad ----------------------------------------------------
     # En el simulacro el umbral se pone en 0 h: el archivo está perfectamente
     # al día, pero la regla es imposible de cumplir y la alarma salta.
-    umbral = 0.0 if simulacro == "antiguedad" else UMBRAL_HORAS
+    umbral = 0.0 if simulacro == "antiguedad" \
+        else (UMBRAL_HORAS if umbral_horas is None else umbral_horas)
     instante, fila = leer_ultima_captura(os.path.join(raiz, "indice.csv"))
     horas = (ahora - instante).total_seconds() / 3600.0
     if horas > umbral:
@@ -689,11 +749,42 @@ def comprobar(raiz, ahora=None, token_aemet=None, simulacro=None):
                fila.get("ruta", "?"), fila.get("run_id", "?"))))
 
     # ---- 2. fuente muda ---------------------------------------------------
+    # ⚠️⚠️ AQUÍ HABÍA UN `io.open()` SIN RED, y era el peor fallo posible de
+    # este programa. Si `ultimo.json` no está, la excepción se lleva por delante
+    # la función entera: **no se evalúa ninguna de las seis alarmas y no se
+    # publica nada**. O sea que la avería más tonta —un fichero que falta—
+    # apagaba el vigilante completo, en silencio, dejándolo en rojo.
+    #
+    # Salió al conectar `archivo_saih`, que escribe `manifiesto.json` en la
+    # carpeta del día pero no escribía `ultimo.json` en la raíz. Se arregla por
+    # los dos lados: `saih_captura.py` v1.01 ya lo escribe, y aquí su ausencia
+    # pasa a ser UNA INCIDENCIA MÁS en vez de una excepción.
     ruta_ultimo = os.path.join(raiz, "ultimo.json")
-    with io.open(ruta_ultimo, encoding="utf-8") as f:
-        ultimo = json.load(f)
-    fuentes = ultimo.get("fuentes") or {}
-    if not fuentes:
+    ultimo, ausente = None, None
+    if not os.path.isfile(ruta_ultimo):
+        ausente = "no existe"
+    else:
+        try:
+            with io.open(ruta_ultimo, encoding="utf-8") as f:
+                ultimo = json.load(f)
+        except ValueError as e:
+            ausente = "existe pero no es JSON válido (%s)" % e
+    fuentes = (ultimo or {}).get("fuentes") or {}
+
+    if ausente:
+        incidencias.append(Incidencia(
+            "sin_ultimo",
+            "%s⚠️ Falta `ultimo.json` en `%s`" % (marca("antiguedad"), raiz),
+            "El vigilante necesita `%s` para saber qué fuentes trajo la última "
+            "captura, y ese fichero **%s**.\n\n"
+            "⚠️ Hasta la v1.04 esto no era una incidencia sino una EXCEPCIÓN, "
+            "que dejaba al vigilante sin evaluar ninguna alarma. Ahora se "
+            "avisa y las demás comprobaciones siguen.\n\n"
+            "**Qué mirar:** que el capturador de este archivo escriba "
+            "`ultimo.json` en su raíz, con el mismo contenido que el "
+            "`manifiesto.json` de la captura."
+            % (ruta_ultimo, ausente)))
+    elif not fuentes:
         incidencias.append(Incidencia(
             "sin_fuentes",
             "⚠️ `ultimo.json` no trae ninguna fuente",
@@ -1240,7 +1331,16 @@ def autotest():
                 for i in range(60)]
     comprobar_que(not alarma_desaparecido(retirada, intervalos(retirada)),
                   "una fuente RETIRADA no dispara la alarma 4")
-    with tempfile.TemporaryDirectory() as tmp4:
+    with tempfile.TemporaryDirectory() as base4:
+        # ⚠️ La raíz se llama `archivo` a propósito, y desde la v1.04 hace
+        # falta: `RETIRADAS` declara a qué archivo pertenece cada entrada, y el
+        # filtro compara con el NOMBRE de la carpeta raíz. Estas tres pruebas
+        # usaban el temporal a pelo —`tmp4hs73k`— y empezaron a fallar al
+        # añadirlo. No era un falso positivo del banco: era el banco diciendo
+        # que la regla nueva depende del nombre de la carpeta, que es cierto y
+        # conviene tener escrito.
+        tmp4 = os.path.join(base4, "archivo")
+        os.makedirs(tmp4)
         with io.open(os.path.join(tmp4, "indice.csv"), "w",
                      encoding="utf-8") as f:
             f.write("fecha,hora,ruta\n")
@@ -1357,6 +1457,76 @@ def autotest():
         comprobar_que(n2b == n2,
                       "⚠️ correrlo dos veces NO duplica los episodios")
 
+    # ---- v1.04: los tres cambios que hacen posible vigilar DOS archivos ----
+    # Los tres existen para lo mismo —que ninguna alarma salte siempre sobre el
+    # archivo nuevo—, así que se prueban por su EFECTO, no por su forma.
+
+    print("\n-- v1.04 · un `ultimo.json` que falta NO mata al vigilante ---")
+    with tempfile.TemporaryDirectory() as tmp5:
+        with io.open(os.path.join(tmp5, "indice.csv"), "w",
+                     encoding="utf-8", newline="") as f:
+            ahora_iso = dt.datetime.now(dt.timezone.utc).isoformat()
+            f.write("fecha,hora,ejecucion_utc,ok,vacio,fallo,kb_total,ruta\n")
+            f.write("2026-09-09,0930,%s,2,0,0,17.3,x/2026-09-09\n" % ahora_iso)
+        # ⚠️ Antes de la v1.04 esta llamada lanzaba FileNotFoundError y el
+        # vigilante no evaluaba NINGUNA alarma. La prueba es que ahora vuelve.
+        claves = {i.clave for i in comprobar(tmp5)}
+        comprobar_que("sin_ultimo" in claves,
+                      "⚠️ sin `ultimo.json` avisa en vez de reventar")
+        comprobar_que("sin_fuentes" not in claves,
+                      "y no avisa además de «sin fuentes»: es una cosa, no dos")
+
+    print("\n-- v1.04 · umbral de antigüedad por archivo -----------------")
+    with tempfile.TemporaryDirectory() as tmp3:
+        hace_13h = dt.datetime.now(dt.timezone.utc) - dt.timedelta(hours=13.5)
+        with io.open(os.path.join(tmp3, "indice.csv"), "w",
+                     encoding="utf-8", newline="") as f:
+            f.write("fecha,hora,ejecucion_utc,ok,vacio,fallo,kb_total,ruta\n")
+            f.write("%s,%s,%s,2,0,0,17.3,x/%s\n"
+                    % (hace_13h.strftime("%Y-%m-%d"),
+                       hace_13h.strftime("%H%M"), hace_13h.isoformat(),
+                       hace_13h.strftime("%Y-%m-%d")))
+        # Un `ultimo.json` sano, para que lo único que se mida sea el umbral.
+        with io.open(os.path.join(tmp3, "ultimo.json"), "w",
+                     encoding="utf-8") as f:
+            json.dump({"fuentes": {"saih_a": {"estado": "OK"},
+                                   "saih_b": {"estado": "OK"}}}, f)
+        claves_6 = {i.clave for i in comprobar(tmp3)}
+        claves_30 = {i.clave for i in comprobar(tmp3, umbral_horas=30.0)}
+        comprobar_que("antiguedad" in claves_6,
+                      "con el umbral de 6 h, 13,5 h SÍ dispara (archivador)")
+        comprobar_que("antiguedad" not in claves_30,
+                      "⚠️ con 30 h NO dispara: es el hueco nocturno normal "
+                      "del SAIH, y avisar de él sería la trampa 7")
+
+    print("\n-- v1.04 · las retiradas son de UN archivo -------------------")
+    with tempfile.TemporaryDirectory() as tmp4:
+        # Un archivo que se llama `archivo_saih` y no tiene `catalogo.csv`.
+        saih = os.path.join(tmp4, "archivo_saih")
+        os.makedirs(saih)
+        with io.open(os.path.join(saih, "indice.csv"), "w",
+                     encoding="utf-8") as f:
+            f.write("fecha,hora,ejecucion_utc,ok,vacio,fallo,kb_total,ruta\n")
+        comprobar_que(alarma_sustituto_muerto(saih) == [],
+                      "⚠️ el archivo del SAIH NO hereda las retiradas del "
+                      "archivador (si no, incidencia abierta para siempre)")
+        # Y el del archivador sí las mira: sin `catalogo.csv`, avisa.
+        arch = os.path.join(tmp4, "archivo")
+        os.makedirs(arch)
+        with io.open(os.path.join(arch, "indice.csv"), "w",
+                     encoding="utf-8") as f:
+            f.write("fecha,hora,ejecucion_utc,ok,vacio,fallo,kb_total,ruta\n")
+        comprobar_que(len(alarma_sustituto_muerto(arch)) == len(RETIRADAS),
+                      "y el del archivador sí las mira, las %d"
+                      % len(RETIRADAS))
+
+    print("\n-- v1.04 · la etiqueta llega a la issue ---------------------")
+    inc = Incidencia("x", "titulo", "cuerpo")
+    comprobar_que(peticion_de_issue(inc, "vigilante-saih")["labels"]
+                  == ["vigilante-saih"],
+                  "⚠️ la etiqueta viaja hasta la petición: es lo único que "
+                  "impide que un archivo cierre las alarmas del otro")
+
     print("\n" + "=" * 64)
     if fallos:
         print("  %d PRUEBAS FALLIDAS: %s" % (len(fallos), ", ".join(fallos)))
@@ -1373,6 +1543,21 @@ def main():
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument("--raiz", default="archivo",
                    help="carpeta con indice.csv y ultimo.json")
+    # ⚠️⚠️ LA ETIQUETA ES LO QUE AÍSLA UN ARCHIVO DE OTRO, y sin ella este
+    # programa NO se puede ejecutar dos veces. `publicar()` lista las
+    # incidencias abiertas filtrando por etiqueta y construye con ellas
+    # `claves_ahora`; si los dos archivos compartieran etiqueta, cada pasada
+    # vería las incidencias del otro como AUSENTES y las declararía
+    # «recuperadas» — o sea que se cerrarían mutuamente las alarmas cada tres
+    # horas, y encima con un comentario diciendo que ya no arde.
+    p.add_argument("--etiqueta", default="vigilante",
+                   help="etiqueta de las issues. UNA POR ARCHIVO: la del "
+                        "archivador es `vigilante` y la del SAIH, "
+                        "`vigilante-saih`")
+    p.add_argument("--horas", type=float, default=None,
+                   help="umbral de la alarma de antigüedad. Por defecto %.0f, "
+                        "que vale para el archivador; el SAIH se captura 3 "
+                        "veces al día y necesita más" % UMBRAL_HORAS)
     p.add_argument("--simulacro",
                    choices=["antiguedad", "fuente_muda", "caducidad",
                             "desaparecido", "congelado", "sustituto"],
@@ -1388,7 +1573,8 @@ def main():
 
     incidencias = comprobar(a.raiz,
                             token_aemet=os.environ.get("AEMET_TOKEN"),
-                            simulacro=a.simulacro)
+                            simulacro=a.simulacro,
+                            umbral_horas=a.horas)
 
 
     if a.simulacro:
@@ -1422,6 +1608,7 @@ def main():
             print("\n⚠️ Falta GITHUB_REPOSITORY o GITHUB_TOKEN: no se publica.")
             return 1
         creadas, omitidas = publicar(incidencias, repo, token,
+                                     etiqueta=a.etiqueta,
                                      asignar_a=ASIGNAR_A)
         if creadas and ASIGNAR_A:
             print("\n  asignadas a `%s`, que es lo que hace que el aviso "

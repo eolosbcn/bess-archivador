@@ -60,6 +60,17 @@ ciego, que es justo lo que Xevi pidió evitar.
 
 HISTORIAL
 =========
+v1.01  9-sep-2026. **Escribe `ultimo.json` en la raíz**, con el mismo contenido
+       que el `manifiesto.json` del día. Es lo que el vigilante lee para saber
+       qué fuentes trajo la última captura, y sin él este archivo no se podía
+       vigilar. ⚠️ El 8-sep se comprobó que el `indice.csv` tenía el formato
+       bueno y se dio por hecho que con eso bastaba: no bastaba. El vigilante
+       usa DOS ficheros, y del segundo nadie se acordó — hasta el punto de que
+       apuntarle a este archivo lo habría hecho reventar entero, sin evaluar
+       ninguna alarma. Es la trampa 8 de la casa: la comprobación cruzada que
+       está escrita y no se hace. La otra mitad del arreglo va en
+       `vigilante.py` v1.04, que ya no revienta si falta.
+
 v1.00  8-sep-2026. Primera versión. Solo el Ebro.
 """
 import argparse
@@ -360,12 +371,30 @@ def main():
 
     fichas = capturar(a.confederacion, ca, carpeta)
 
+    manifiesto = {"ejecucion_utc": ahora.isoformat(),
+                  "confederacion": a.confederacion,
+                  "version": "v1.01",
+                  "fuentes": fichas}
     with io.open(os.path.join(carpeta, "manifiesto.json"), "w",
                  encoding="utf-8") as f:
-        json.dump({"ejecucion_utc": ahora.isoformat(),
-                   "confederacion": a.confederacion,
-                   "version": "v1.00",
-                   "fuentes": fichas}, f, ensure_ascii=False, indent=1)
+        json.dump(manifiesto, f, ensure_ascii=False, indent=1)
+
+    # ⚠️⚠️ Y EL MISMO CONTENIDO EN LA RAÍZ, COMO `ultimo.json`. No es un
+    # duplicado por gusto: **es lo que el vigilante lee**, y sin él no puede
+    # vigilar este archivo. Peor todavía, hasta `vigilante.py` v1.04 lo abría
+    # sin red, así que su ausencia lanzaba una excepción que dejaba al
+    # vigilante sin evaluar NINGUNA de sus seis alarmas — no sobre el SAIH:
+    # sobre nada.
+    #
+    # El archivador hace exactamente esto mismo, y por eso el vigilante lo ve.
+    # Aquí faltaba, y era la razón de fondo por la que el SAIH nacía siendo un
+    # punto ciego aunque su `indice.csv` tuviera el formato correcto.
+    #
+    # Es la carpeta del día la que se sobrescribe cada pasada; éste, también:
+    # «último» quiere decir el último, y su historia ya está en las carpetas.
+    with io.open(os.path.join(a.raiz, "ultimo.json"), "w",
+                 encoding="utf-8") as f:
+        json.dump(dict(manifiesto, ruta=rel), f, ensure_ascii=False, indent=1)
 
     ok, vacio, fallo = anotar_indice(a.raiz, rel, fichas, ahora)
     print("")
