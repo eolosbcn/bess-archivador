@@ -1,15 +1,21 @@
 {
- "ejecucion_utc": "2026-09-09T09:02:18.664039+00:00",
+ "ejecucion_utc": "2026-09-09T09:04:26.337398+00:00",
  "confederacion": "ebro",
  "version": "v1.01",
  "fuentes": {
   "saih_ebro_aforos_cuenca": {
-   "estado": "FALLO",
-   "detalle": "ConnectTimeout"
+   "estado": "OK",
+   "bytes": 87640,
+   "comprimido": 7638,
+   "elementos": 5,
+   "segundos": 0.79
   },
   "saih_ebro_volumenes_embalsados": {
-   "estado": "FALLO",
-   "detalle": "ConnectTimeout"
+   "estado": "OK",
+   "bytes": 93261,
+   "comprimido": 10035,
+   "elementos": 2,
+   "segundos": 0.95
   }
  },
  "ruta": "archivo_saih/2026/09/2026-09-09"
