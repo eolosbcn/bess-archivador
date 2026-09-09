@@ -1,0 +1,169 @@
+# ============================================================================
+# REGISTRO DE FALLOS DEL ARCHIVO
+# ============================================================================
+# ⚠️ ESTE FICHERO NO ES DE CASANDRA. Va en `eolosbcn/bess-archivador`, en
+# `.github/workflows/registro.yml`. Esta copia en `Casandra\` existe para que
+# quede bajo git y para poder leerla sin abrir GitHub. La que manda es la
+# desplegada.
+#
+# QUÉ HACE
+# ========
+# Ejecuta `registro.py`, que reconstruye del archivo los dos ficheros que
+# contestan «¿qué ha fallado, cuándo, y durante cuánto?»:
+#
+#   · `fallos_recientes.csv` — una línea por fallo, ventana móvil de 30 días.
+#     ✅ Medido sobre 427 capturas el 9-sep-2026: 1.261 fallos → 62,6 KB, y no
+#     crece con el tiempo porque al entrar una captura sale la de hace 30 días.
+#   · `episodios.csv` — una línea por tramo continuo, para siempre.
+#     ✅ Medido sobre 427 capturas el 9-sep-2026: 73 episodios → 4,4 KB.
+#
+# ⚠️⚠️ POR QUÉ ES UN WORKFLOW APARTE Y NO UN PASO DEL VIGILANTE
+# =============================================================
+# **Porque escribir exige `contents: write`.** El vigilante corre con
+# `contents: read` a propósito, y esa es su única garantía: un fallo suyo NO
+# PUEDE tocar el archivo. Meterle la escritura dentro habría cambiado la
+# garantía por comodidad — y el archivo es la pieza irreproducible del
+# proyecto, la que no se puede volver a descargar.
+#
+# ⚠️ POR QUÉ AQUÍ SÍ VALE EL CRON DE GITHUB, Y EN EL ARCHIVADOR NO
+# ================================================================
+# El cron de GitHub entrega entre el **42 % y el 67 %** (medido del 14 al
+# 26-ago-2026), y por eso el archivador se dispara desde cron-job.org, que
+# lleva **88 de 88**. Aquí no hace falta, y la diferencia es de fondo:
+#
+# **El registro se RECONSTRUYE del archivo en cada pasada.** No acumula nada
+# que dependa de haber corrido ayer, así que una pasada perdida no pierde
+# ningún dato: la siguiente rehace la ventana entera. Lo único que crece de
+# verdad es `episodios.csv`, y ése se FUNDE con lo que ya había en vez de
+# reescribirse.
+#
+# Al archivador un disparo perdido le cuesta una captura irrecuperable. A esto,
+# nada. Misma aritmética, resultado distinto, y por eso queda escrito.
+#
+# ⚠️ EL AUTOTEST CORRE ANTES, Y ES UN CANARIO DE `vigilante.py`
+# =============================================================
+# `registro.py` no tiene motor propio: importa `leer_capturas()`,
+# `intervalos()`, `episodios()` y `escribir_registro()` de `vigilante.py`. O
+# sea que **un cambio en el vigilante puede romper el registro sin tocarlo**.
+# Por eso el workflow se dispara también al empujar `vigilante.py`, y por eso
+# lo primero que hace es `--autotest`: si el motor cambió de forma, se entera
+# aquí y no el día que alguien vaya a leer los fallos.
+#
+# COSTE
+# =====
+# Una ejecución diaria de ~40 s. El repositorio es público, así que GitHub no
+# cobra minutos de Actions. ⚠️ Si algún día pasa a privado, esto vuelve a
+# costar y habría que revisarlo — igual que el archivador y el vigilante.
+# ============================================================================
+
+name: Registro de fallos
+
+on:
+  schedule:
+    # Una al día. En el minuto 13 y no en punto ni a y media: son los momentos
+    # de más cola en el cron de GitHub, y aquí la puntualidad no importa nada.
+    # 06:13 UTC son las 08:13 de Madrid en horario de verano.
+    - cron: "13 6 * * *"
+
+  workflow_dispatch:
+
+  # ⚠️ Incluye `vigilante.py` a propósito: ver «el autotest es un canario».
+  push:
+    paths:
+      - "registro.py"
+      - "vigilante.py"
+      - ".github/workflows/registro.yml"
+
+# ⚠️ ESCRIBE, al revés que el vigilante. Ese es justamente el motivo de que
+# sean dos workflows y no uno.
+permissions:
+  contents: write
+
+# ⚠️ Grupo PROPIO. Si compartiera el del archivador se quedaría esperando
+# detrás de una captura completa —25-30 minutos— sin ninguna necesidad.
+concurrency:
+  group: registro
+  cancel-in-progress: false
+
+jobs:
+  registrar:
+    runs-on: ubuntu-latest
+    # Generoso: la pasada real sobre 427 capturas tarda ~30 s. Si se acerca a
+    # esto, algo va mal.
+    timeout-minutes: 10
+
+    steps:
+      - name: Descargar el repositorio
+        uses: actions/checkout@v4
+
+      - name: Preparar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # ⚠️ Sin dependencias externas: `registro.py` solo usa la biblioteca
+      # estándar y `vigilante.py`. Si algún día necesita una, que se note aquí.
+      - name: Comprobar que el motor sigue siendo el que espera
+        run: |
+          set -euo pipefail
+          python registro.py --autotest | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Reconstruir el registro
+        run: |
+          set -euo pipefail
+          {
+            echo "### Registro de fallos"
+            echo ""
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          # ⚠️ Los DOS archivos en una sola pasada, cada uno con su propio par
+          # de ficheros dentro de su carpeta: son series con vidas distintas y
+          # mezclarlas haría ilegibles las dos.
+          python registro.py --raiz archivo archivo_saih 2>&1 \
+            | tee -a "$GITHUB_STEP_SUMMARY"
+
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Guardar el registro
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # ⚠️ POR RUTAS EXPLÍCITAS, nunca `git add -A`. Este workflow tiene
+          # permiso de escritura sobre el repositorio que guarda la pieza
+          # irreproducible del proyecto: lo único que puede tocar son estos
+          # cuatro ficheros, y se nombran uno a uno para que así sea.
+          #
+          # ⚠️ Y se comprueba que cada uno exista ANTES de añadirlo, en vez de
+          # tapar el error con `|| true`. `archivo_saih/` puede no tener aún
+          # sus ficheros, y eso es normal; pero un `|| true` global también
+          # taparía que falte `archivo/episodios.csv`, que no lo sería. Lo que
+          # se salta, se dice: nada de continue mudo.
+          for f in archivo/fallos_recientes.csv archivo/episodios.csv \
+                   archivo_saih/fallos_recientes.csv archivo_saih/episodios.csv
+          do
+            if [ -f "$f" ]; then
+              git add -- "$f"
+            else
+              echo "::notice::$f no existe todavia, no se anade"
+            fi
+          done
+
+          # ⚠️ Si no hay nada que guardar, NO se falla: que el registro no haya
+          # cambiado es información, no una avería. Un día sin fallos nuevos y
+          # sin episodios cerrados deja los ficheros idénticos.
+          if git diff --cached --quiet; then
+            echo "::notice::El registro no ha cambiado en esta pasada"
+            exit 0
+          fi
+
+          git commit -m "Registro: fallos y episodios al $(date -u +%Y-%m-%d\ %H:%M) UTC"
+
+          # ⚠️ Rebase antes de empujar: el archivador escribe en el mismo
+          # repositorio y puede haber committeado entre medias. Sin esto el
+          # push falla y el registro del día se pierde — que no es grave,
+          # porque se reconstruye, pero ensucia el historial de ejecuciones.
+          git pull --rebase --autostash origin main
+          git push origin main

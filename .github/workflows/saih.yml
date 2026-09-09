@@ -109,15 +109,22 @@ on:
   # schedule:
   #   - cron: "47 19 * * *"
 
+  # ⚠️⚠️ Y DESDE EL 9-sep-2026 EL `push` TAMBIÉN ESTÁ FUERA, por un motivo
+  # NUEVO y más serio que el ruido. Estaba puesto para que el capturador se
+  # probara solo al desplegarlo, y con el `schedule` ya desactivado parecía
+  # inofensivo. Ha dejado de serlo: **la captura del SAIH la hace ahora la
+  # máquina de Xevi y EMPUJA lo capturado a `archivo_saih/`**. O sea que esa
+  # carpeta tiene dueño, y no es este workflow.
+  #
+  # Con el `push` puesto, tocar `saih_captura.py` —que hay que tocarlo, es
+  # nuestro— lanzaría aquí una pasada que no puede alcanzar el servidor,
+  # escribiría una captura VACÍA en el archivo del que depende el vigilante y
+  # la commitearía. El resultado sería una fuente muda inventada por nosotros
+  # mismos, sobre datos que sí existen en local.
+  #
+  # ⚠️ Se deja `workflow_dispatch` y solo eso: es el botón para reintentarlo el
+  # día que el bloqueo se levante, y cuesta 20 s. Nada dispara esto solo.
   workflow_dispatch:
-
-  # Al tocar el propio capturador, para que se pruebe solo al desplegarlo.
-  # ⚠️ Estas rutas son las SUYAS: no incluyen `archivador_diario.py` ni
-  # `vigilante.py`, o cada despliegue de aquéllos dispararía también a éste.
-  push:
-    paths:
-      - "saih_captura.py"
-      - ".github/workflows/saih.yml"
 
 # ⚠️ Necesita ESCRIBIR, al revés que el vigilante: su trabajo es archivar.
 # Por eso está separado de él — el vigilante conserva `contents: read` y la

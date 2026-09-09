@@ -180,3 +180,56 @@ jobs:
           python vigilante.py ${ARGS} 2>&1 | tee -a "$GITHUB_STEP_SUMMARY"
 
           echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+      # ======================================================================
+      # ⚠️⚠️ Y AHORA EL ARCHIVO DEL SAIH, QUE HASTA HOY NADIE VIGILABA
+      # ======================================================================
+      # El 8-sep-2026 se comprobó que su `indice.csv` tenía el formato del
+      # archivador y se escribió que «el vigilante lo vigila sin una línea de
+      # código nueva». Era verdad a medias: el formato servía, pero **el paso
+      # de arriba dice `--raiz archivo` a secas**, así que nunca llegó a
+      # mirarlo. Un punto ciego que parecía cubierto es peor que uno abierto.
+      #
+      # ⚠️ TRES COSAS DISTINTAS, Y LAS TRES SON OBLIGATORIAS:
+      #
+      #   · `--etiqueta vigilante-saih`. `publicar()` lista las issues abiertas
+      #     FILTRANDO POR ETIQUETA y con ellas calcula qué se ha recuperado.
+      #     Compartiendo etiqueta, cada pasada vería las incidencias del otro
+      #     archivo como ausentes y **las cerraría con un comentario diciendo
+      #     que ya no arde**, cada tres horas y en las dos direcciones.
+      #
+      #   · `--horas 30`. El SAIH se captura desde la máquina de Xevi tres
+      #     veces al día —09:30, 14:00 y 20:00—, así que su hueco nocturno es
+      #     de **13,5 h**. Con el umbral de 6 h del archivador saltaría todas
+      #     las mañanas, y un aviso que salta siempre deja de ser un aviso.
+      #
+      #   · **NADA de `AEMET_TOKEN`**. La alarma de caducidad del token es
+      #     global, no de un archivo: pasándolo aquí también, cada pasada
+      #     abriría la misma incidencia dos veces, una por etiqueta.
+      #
+      # ✅ Prueba de disparo hecha en local el 9-sep-2026 sobre 5 simulacros:
+      # antigüedad, fuente muda, desaparecido y congelado disparan; `sustituto`
+      # NO dispara, y es correcto — el SAIH no tiene fuentes retiradas, y que
+      # heredara las del archivador era justo el falso positivo que arregla
+      # `vigilante.py` v1.04.
+      - name: Comprobar el archivo del SAIH y avisar
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SIMULACRO: ${{ inputs.simulacro }}
+        run: |
+          set -euo pipefail
+          ARGS="--raiz archivo_saih --etiqueta vigilante-saih --horas 30 --publicar"
+          if [ -n "${SIMULACRO:-}" ] && [ "${SIMULACRO}" != "no" ]; then
+            echo "::warning::PRUEBA DE DISPARO «${SIMULACRO}» tambien sobre el SAIH"
+            ARGS="${ARGS} --simulacro ${SIMULACRO}"
+          fi
+
+          {
+            echo "### Vigilante del archivo del SAIH"
+            echo ""
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          python vigilante.py ${ARGS} 2>&1 | tee -a "$GITHUB_STEP_SUMMARY"
+
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
