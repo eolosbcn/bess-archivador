@@ -356,7 +356,7 @@ import pandas as pd
 # diciendo «v3.12» con el código de la v3.13 dentro. `--autotest` comprueba
 # ahora que esta constante concuerde con la cabecera y con el nombre del
 # fichero. Al subir versión se toca AQUÍ, y la prueba avisa si falta algo.
-VERSION = "v3.14"
+VERSION = "v3.15"
 
 TZ_MADRID = ZoneInfo("Europe/Madrid")
 CARPETA_RAIZ = "archivo"
@@ -1844,11 +1844,53 @@ def capturar_mibgas(carpeta, hoy):
         df[col_dia] = pd.to_datetime(df[col_dia], errors="coerce")
         corte = pd.Timestamp(hoy - dt.timedelta(days=DIAS_PRECIO_ATRAS + 7))
         recorte = df[df[col_dia] >= corte]
+        # ====================================================================
+        # ⚠️⚠️ DOS FICHEROS, Y `mibgas_gdaes` NO SE TOCA (v3.15)
+        # ====================================================================
+        # El libro anual que ya nos descargamos trae 32 productos y hasta hoy
+        # se guardaban 6: esta linea tiraba la CURVA FORWARD entera.
+        #
+        # ✅ Medido el 9-sep-2026 sobre el libro de 2026, 5.437 filas: ademas
+        # de los `GDAES_*` (dia siguiente) estan los meses `GMES_M+2..M+6`,
+        # los trimestres `GQES_Q+1..Q+4`, los anos `GYES_Y+1/Y+2`, las
+        # estaciones `GSES_W/S`, el resto de mes `GBoMES` y los equivalentes
+        # portugueses. No hay que descargar nada nuevo: ya estaba dentro.
+        #
+        # ⚠️ POR QUE DOS FICHEROS Y NO UNO MAS ANCHO. Ensanchar el filtro de
+        # `mibgas_gdaes` habria cambiado el significado de un fichero que ya
+        # consumen otros programas —`casandra_lab_*` lee de el el precio del
+        # gas—, y ademas su nombre pasaria a mentir. Con un fichero nuevo el
+        # cambio es ADITIVO PURO: nada de lo que existe cambia, y el vigilante
+        # ve aparecer una fuente mas, que es lo normal.
+        #
+        # PARA QUE SIRVE: la curva forward es la valoracion que hace el propio
+        # mercado de lo que viene, y responde con un numero a lo que un titular
+        # cuenta en prosa. ✅ El 9-sep-2026, con el dia siguiente a 79,47, el
+        # mercado cotizaba diciembre a 74,20 y abril de 2027 a 52,49: curva
+        # INVERTIDA, o sea «tension de ahora, no escalon permanente».
         if "Product" in recorte.columns:
-            recorte = recorte[recorte["Product"].astype(str).str.startswith("GDAES")]
-        guardar(recorte, carpeta, "mibgas_gdaes")
+            productos = recorte["Product"].astype(str)
+            dia_siguiente = recorte[productos.str.startswith("GDAES")]
+            curva = recorte[~productos.str.startswith("GDAES")]
+        else:
+            dia_siguiente, curva = recorte, recorte.iloc[0:0]
+
+        guardar(dia_siguiente, carpeta, "mibgas_gdaes")
         registrar("mibgas_gdaes", "OK",
-                  f"hasta {recorte[col_dia].max().date()}", filas=len(recorte))
+                  f"hasta {dia_siguiente[col_dia].max().date()}",
+                  filas=len(dia_siguiente))
+
+        # ⚠️ Si algun dia no hubiera curva, se registra VACIO y NO se falla:
+        # los productos a plazo no cotizan todos los dias, y confundir «hoy no
+        # cotizo» con «la captura se rompio» seria un aviso falso recurrente.
+        if len(curva):
+            guardar(curva, carpeta, "mibgas_curva")
+            registrar("mibgas_curva", "OK",
+                      f"{curva['Product'].nunique()} productos, hasta "
+                      f"{curva[col_dia].max().date()}", filas=len(curva))
+        else:
+            registrar("mibgas_curva", "VACIO",
+                      "el libro no trae productos a plazo en la ventana")
     except Exception as e:
         registrar("mibgas", "FALLO", f"{type(e).__name__}: {e}")
     finally:
@@ -2192,7 +2234,7 @@ def autotest():
         print(f"  [✓] VERSION y la cabecera coinciden: {VERSION}")
 
     # El nombre del fichero solo lleva versión en la copia de trabajo
-    # (`archivador_diario_v3_14.py`); en producción se llama
+    # (`archivador_diario_v3_15.py`); en producción se llama
     # `archivador_diario.py`. Solo se comprueba cuando la lleva.
     m = re.search(r"_v(\d+)_(\d+)\.py$", os.path.basename(__file__))
     if m:
