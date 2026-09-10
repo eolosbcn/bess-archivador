@@ -2,7 +2,9 @@ fuente,desde,hasta,capturas
 aemet_prediccion_horaria,2026-08-11-1132,2026-08-14-0112,57
 aemet_prediccion_periodos,2026-08-11-1132,2026-08-14-0112,57
 esios_602_energia_casada_diario,2026-08-11-1132,2026-08-13-1038,46
-esios_capacidad_instalada,2026-08-11-1132,2026-09-09-0850,416
+esios_capacidad_instalada,2026-08-11-1132,2026-09-10-0550,424
+mibgas_curva,2026-08-11-1132,2026-09-09-1451,430
+sendeco2_eua,2026-08-11-1132,2026-09-09-1517,431
 aemet_prediccion_diaria,2026-08-11-1143,2026-08-11-1143,1
 aemet_prediccion_diaria,2026-08-11-2053,2026-08-12-0715,3
 aemet_prediccion_diaria,2026-08-12-1007,2026-08-12-1750,9
@@ -72,3 +74,12 @@ entsoe_A72_reserva_hidraulica,2026-09-07-1751,2026-09-08-1751,10
 aemet_prediccion_diaria,2026-09-07-2050,2026-09-07-2050,1
 aemet_prediccion_horaria,2026-09-07-2050,2026-09-07-2050,1
 aemet_prediccion_periodos,2026-09-07-2050,2026-09-07-2050,1
+entsoe_A44_precio_es,2026-09-09-1151,2026-09-09-1151,1
+entsoe_A69_prev_renovable_es,2026-09-09-1151,2026-09-09-1151,1
+entsoe_A72_reserva_hidraulica,2026-09-09-1151,2026-09-09-1151,1
+aemet_prediccion_diaria,2026-09-09-1517,2026-09-09-1619,2
+aemet_prediccion_horaria,2026-09-09-1517,2026-09-09-1619,2
+aemet_prediccion_periodos,2026-09-09-1517,2026-09-09-1619,2
+entsoe_A44_precio_francia,2026-09-09-1619,2026-09-09-1619,1
+entsoe_A69_prev_renovable_es,2026-09-09-1619,2026-09-09-1619,1
+entsoe_A72_reserva_hidraulica,2026-09-09-1619,2026-09-09-1619,1
