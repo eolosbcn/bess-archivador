@@ -103,6 +103,12 @@ on:
           - "caducidad"
           - "desaparecido"
           - "congelado"
+          # ⚠⚠ FALTABA HASTA EL 11-sep-2026, y por eso nadie descubrio que
+          # la alarma 6 no podia dispararse. `vigilante.py` ya aceptaba esta
+          # opcion en su linea de ordenes y ya ponia la marca [SIMULACRO],
+          # pero aqui no estaba: **un ensayo que no se puede lanzar desde
+          # donde se lanzan los demas no es un ensayo**.
+          - "sustituto"
 
   # Al tocar el propio vigilante, para que se pruebe solo al desplegarlo.
   # ⚠️ Estas rutas son las SUYAS. No incluyen `archivador_diario.py`: si lo
@@ -209,9 +215,19 @@ jobs:
       #
       # ✅ Prueba de disparo hecha en local el 9-sep-2026 sobre 5 simulacros:
       # antigüedad, fuente muda, desaparecido y congelado disparan; `sustituto`
-      # NO dispara, y es correcto — el SAIH no tiene fuentes retiradas, y que
-      # heredara las del archivador era justo el falso positivo que arregla
-      # `vigilante.py` v1.04.
+      # NO dispara.
+      #
+      # ⚠⚠ ESA MEDICION ERA CIERTA Y SU EXPLICACION ERA FALSA, y se corrige
+      # el 11-sep-2026. Aqui decia «es correcto — el SAIH no tiene fuentes
+      # retiradas». Cierto para el SAIH, pero **`sustituto` tampoco disparaba
+      # contra `archivo/`**, y no por las retiradas: porque la alarma 6 medi
+      # el `mtime`, que `actions/checkout` reescribe, y **no podia dispararse
+      # en ningun caso** (A17, arreglado en `vigilante.py` v1.05).
+      #
+      # ℹ︎ Lo que enseña, que vale mas que el parche: el ensayo se hizo, salio
+      # en blanco, y el blanco se explico con una razon plausible en vez de
+      # investigarse. Un simulacro que no dispara **nunca** es «correcto» por
+      # defecto: o dispara, o hay que saber por que no.
       - name: Comprobar el archivo del SAIH y avisar
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

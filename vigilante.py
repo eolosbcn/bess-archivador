@@ -33,6 +33,34 @@ nadie volvería a mirarlas.
 
 HISTORIAL
 =========
+v1.05  11-sep-2026. **A17: la alarma 6 no podia dispararse JAMAS, y nadie lo
+       noto porque su silencio se leia como «todo bien».** Mediía
+       `os.path.getmtime` del sustituto, y `actions/checkout` **reescribe el
+       `mtime` de todos los ficheros al clonar**: en el runner la edad valia
+       siempre ~0 y `edad > 48` no se cumplia nunca. La alarma se ejecutaba
+       cada 3 horas, no daba error, y no miraba nada.
+
+       ⚠️ Es la **trampa 10** de la casa: se media un METADATO que el entorno
+       reescribe en vez de un DATO que el fichero declara. Ahora se lee la
+       columna que `RETIRADAS[...]["fecha_por"]` nombre —hoy `visto` del
+       catalogo—, que es **contenido** y sobrevive al checkout.
+
+       ⚠⚠ Y el arreglo obvio NO servia: `git log -1 --format=%ct -- <ruta>`
+       devolveria la fecha del unico commit que el checkout se trae, porque
+       el workflow no pide `fetch-depth`. Habria cambiado una alarma que
+       nunca salta por otra que lee un numero plausible y falso.
+
+       ✅ **Y el simulacro `sustituto` pasa a forzarla de verdad.** Estaba
+       aceptado en la linea de ordenes y ya ponia la marca `[SIMULACRO]`,
+       pero la llamada era `alarma_sustituto_muerto(raiz)` sin forzar nada:
+       un ensayo que no probaba nada. Ademas **no estaba en el desplegable
+       del workflow**, asi que nadie lo pulso nunca para descubrirlo.
+
+       ℹ︎ Efecto lateral util: el fallo deja de ser reproducible solo en el
+       runner. Un fichero con fecha vieja dentro y `mtime` de ahora —que es
+       exactamente lo que hace el checkout— se fabrica en local, y el banco
+       de pruebas lo hace.
+
 v1.04  9-sep-2026. **El vigilante pasa a vigilar DOS archivos**, el del
        archivador y el del SAIH, y los tres cambios que hacen falta son los
        tres la misma trampa: **evitar una alarma que salte siempre**.
@@ -191,6 +219,7 @@ import io
 import json
 import os
 import sys
+import time
 
 # ============================================================================
 # LOS UMBRALES, Y LA MEDICIÓN QUE LOS SOSTIENE
@@ -273,6 +302,11 @@ RETIRADAS = {
         # de la casa: un aviso que salta siempre deja de ser un aviso.
         "archivo": "archivo",
         "sustituto": "catalogo.csv",
+        # ⚠️ COMO se fecha este sustituto, desde la v1.05. No se mira su
+        # `mtime` —el checkout lo reescribe— sino la fecha que el archivador
+        # ESCRIBE DENTRO, en esta columna. Una retirada cuyo sustituto no se
+        # pueda fechar avisa, porque no poder fecharlo es no vigilarlo.
+        "fecha_por": "columna:visto",
         "desde": "2026-09-05",
         "motivo":
             "el archivador lo mudó a `archivo/catalogo.csv`, en ruta fija y "
@@ -533,6 +567,32 @@ def alarma_congelado(capturas, info):
     return avisos
 
 
+def fecha_declarada_dentro(ruta, columna):
+    """La fecha MÁS NUEVA que el propio fichero declara en `columna`.
+
+    ⚠️ Se parsea con el módulo `csv` y NO partiendo por comas: las
+    descripciones del catálogo llevan comas y saltos de línea dentro de
+    comillas. ✅ Comprobado sobre `archivo/catalogo.csv` el 11-sep-2026:
+    2.583 filas, y su `visto` más nuevo es el día en curso.
+
+    Devuelve `None` si el fichero no declara ninguna fecha legible. ⚠️ Y eso
+    NO significa «está bien»: significa «no lo estoy vigilando», que es
+    justo el fallo mudo que esta alarma existe para evitar. Quien llama avisa.
+    """
+    mejor = None
+    try:
+        with io.open(ruta, encoding="utf-8", newline="") as f:
+            for fila in csv.DictReader(f):
+                v = (fila.get(columna) or "").strip()
+                # Formato AAAA-MM-DD, comparable como texto.
+                if len(v) == 10 and v[4] == "-" and v[7] == "-":
+                    if mejor is None or v > mejor:
+                        mejor = v
+    except (OSError, UnicodeDecodeError, csv.Error):
+        return None
+    return mejor
+
+
 def alarma_sustituto_muerto(raiz, ahora=None, horas=48.0):
     """El fichero al que se mudó una fuente retirada, ¿sigue vivo?
 
@@ -541,13 +601,29 @@ def alarma_sustituto_muerto(raiz, ahora=None, horas=48.0):
     perder el dato sin que nadie avise — la trampa 6 de la casa, un fallo
     mudo, creado por la propia defensa contra los falsos positivos.
 
-    Se mira la fecha de modificación, no el contenido: el sustituto es un
-    fichero en ruta fija y acumulativa, así que no hay capturas con las que
-    comparar. `horas` es generoso a propósito: lo que se detecta es que dejó
-    de tocarse, no un retraso de unas horas.
+    ⚠⚠ **NO SE MIRA EL `mtime`, Y ÉSE FUE EL FALLO** (A17, corregido en la
+    v1.05). `actions/checkout` reescribe la fecha de modificación de todos
+    los ficheros al clonar, así que EN EL RUNNER la edad valía siempre ~0 y
+    `edad > horas` **no podía cumplirse jamás**. Se ejecutaba cada 3 horas,
+    no daba error, y su silencio no significaba nada. Es la trampa 10 de la
+    casa: un METADATO que el entorno reescribe, en vez de un DATO que el
+    fichero declara.
+
+    Ahora se lee la fecha que el archivador ESCRIBE DENTRO del fichero —la
+    columna que declare `RETIRADAS[...]["fecha_por"]`—, que es contenido y
+    por tanto sobrevive al checkout.
+
+    ⚠️ La fecha declarada es de día y sin hora, así que la edad se mide desde
+    su medianoche UTC: con el umbral de 48 h la alarma salta cuando el
+    sustituto lleva **dos días** sin verse. `horas` es generoso a propósito,
+    porque lo que se detecta es que dejó de tocarse, no un retraso de unas
+    horas.
+
+    Tercer elemento de cada aviso: `None` si el fichero no existe, la cadena
+    `"sin_fecha"` si existe y no se puede fechar, y las horas si está viejo.
     """
-    import time
     avisos = []
+    ahora = ahora or dt.datetime.now(dt.timezone.utc)
     base = raiz if os.path.isfile(os.path.join(raiz, "indice.csv")) \
         else os.path.join(raiz, "archivo")
     # ⚠️ El nombre de la carpeta raíz, para saber qué retiradas son de ESTE
@@ -562,7 +638,15 @@ def alarma_sustituto_muerto(raiz, ahora=None, horas=48.0):
         if not os.path.isfile(p):
             avisos.append((viejo, d["sustituto"], None))
             continue
-        edad = (time.time() - os.path.getmtime(p)) / 3600.0
+        modo = d.get("fecha_por", "")
+        columna = modo.split(":", 1)[1] if modo.startswith("columna:") else None
+        fecha = fecha_declarada_dentro(p, columna) if columna else None
+        if fecha is None:
+            avisos.append((viejo, d["sustituto"], "sin_fecha"))
+            continue
+        visto = dt.datetime.strptime(fecha, "%Y-%m-%d").replace(
+            tzinfo=dt.timezone.utc)
+        edad = (ahora - visto).total_seconds() / 3600.0
         if edad > horas:
             avisos.append((viejo, d["sustituto"], edad))
     return avisos
@@ -927,13 +1011,21 @@ def comprobar(raiz, ahora=None, token_aemet=None, simulacro=None,
     # --- 6: el SUSTITUTO de una fuente retirada dejó de tocarse ------------
     # ⚠️ Sin esto, `RETIRADAS` sería una lista de silencio y el dato podría
     # perderse sin que nadie avisara.
-    for viejo, sust, edad in alarma_sustituto_muerto(raiz):
+    # ⚠⚠ El simulacro la FUERZA con un umbral imposible, como hacen las
+    # demás. Hasta la v1.05 esta llamada iba sin `horas`, así que la opción
+    # `sustituto` se aceptaba, ponía la marca `[SIMULACRO]` y **no probaba
+    # nada** — y encima no estaba en el desplegable del workflow, así que
+    # nadie la pulso nunca para enterarse.
+    for viejo, sust, edad in alarma_sustituto_muerto(
+            raiz, ahora, horas=-1.0 if simulacro == "sustituto" else 48.0):
         incidencias.append(Incidencia(
             "sustituto:%s" % sust,
-            "%s⚠️ `%s` sustituyó a `%s` y lleva %s"
+            "%s⚠️ `%s` sustituyó a `%s` y %s"
             % (marca("sustituto"), sust, viejo,
-               "SIN EXISTIR" if edad is None
-               else "%.0f h sin actualizarse" % edad),
+               "NO EXISTE" if edad is None
+               else "no declara ninguna fecha legible"
+               if isinstance(edad, str)
+               else "lleva %.0f h sin verse" % edad),
             "La fuente `%s` está declarada como RETIRADA A PROPÓSITO en "
             "`RETIRADAS`, y su dato se mudó a `%s`.\n\n%s\n\n⚠️ Ese fichero "
             "**%s**, así que el dato se ha perdido de verdad: la alarma 4 no "
@@ -941,7 +1033,9 @@ def comprobar(raiz, ahora=None, token_aemet=None, simulacro=None,
             "retirada, y sin esta comprobación el fallo sería mudo."
             % (viejo, sust, RETIRADAS[viejo]["motivo"],
                "no existe" if edad is None
-               else "lleva %.0f horas sin tocarse" % edad)))
+               else "existe pero no declara ninguna fecha legible, o sea que "
+               "NO SE ESTÁ VIGILANDO" if isinstance(edad, str)
+               else "lleva %.0f horas sin verse" % edad)))
 
     return incidencias
 
@@ -1346,14 +1440,45 @@ def autotest():
             f.write("fecha,hora,ruta\n")
         comprobar_que(len(alarma_sustituto_muerto(tmp4)) == 1,
                       "⚠️ si el sustituto NO EXISTE, la alarma 6 avisa")
-        with io.open(os.path.join(tmp4, "catalogo.csv"), "w",
-                     encoding="utf-8") as f:
+
+        cat = os.path.join(tmp4, "catalogo.csv")
+        ahora = dt.datetime(2026, 9, 11, 12, 0, tzinfo=dt.timezone.utc)
+
+        # ⚠️ v1.05 · un sustituto que existe pero NO se puede fechar avisa.
+        # No poder fecharlo es no vigilarlo, y darlo por bueno sería el fallo
+        # mudo que esta alarma existe para evitar. Antes de la v1.05 esto
+        # pasaba por «recién escrito, no avisa».
+        with io.open(cat, "w", encoding="utf-8") as f:
             f.write("id\n1\n")
-        comprobar_que(not alarma_sustituto_muerto(tmp4),
-                      "con el sustituto recién escrito, no avisa")
-        comprobar_que(len(alarma_sustituto_muerto(tmp4, horas=-1)) == 1,
-                      "y con umbral imposible sí avisa (la comprobación mira "
-                      "la edad, no la existencia)")
+        comprobar_que(len(alarma_sustituto_muerto(tmp4, ahora)) == 1,
+                      "⚠️ un sustituto sin fecha legible AVISA: no poder "
+                      "fecharlo es no vigilarlo")
+
+        with io.open(cat, "w", encoding="utf-8") as f:
+            f.write("id,visto\n1,2026-09-11\n")
+        comprobar_que(not alarma_sustituto_muerto(tmp4, ahora),
+                      "con `visto` del día en curso, no avisa")
+
+        # ⚠⚠⚠ LA PRUEBA DE A17, Y ES LA QUE IMPORTA. Se fabrica en local lo
+        # que hace `actions/checkout`: contenido VIEJO y `mtime` de AHORA. La
+        # v1.04 miraba el `mtime` y habría dicho «fresco»; la v1.05 mira el
+        # contenido y dice la verdad. Si esta prueba pasara con el código
+        # viejo, no probaría nada.
+        with io.open(cat, "w", encoding="utf-8") as f:
+            f.write("id,visto\n1,2026-09-01\n")
+        os.utime(cat, None)          # ← esto es el checkout
+        fresco = (time.time() - os.path.getmtime(cat)) / 3600.0
+        comprobar_que(fresco < 1.0,
+                      "el fichero tiene `mtime` de hace %.2f h: para la v1.04 "
+                      "estaba fresco" % fresco)
+        avisos = alarma_sustituto_muerto(tmp4, ahora)
+        comprobar_que(len(avisos) == 1 and avisos[0][2] > 48.0,
+                      "⚠⚠ y aun así la v1.05 AVISA, porque su `visto` es del "
+                      "1-sep: %s h" % (round(avisos[0][2]) if avisos else "—"))
+
+        comprobar_que(len(alarma_sustituto_muerto(tmp4, ahora, horas=-1)) == 1,
+                      "y con umbral imposible avisa igual (es lo que usa el "
+                      "simulacro `sustituto`)")
 
     print("\n-- el simulacro NO etiqueta alarmas reales -------------------")
     rota = [("c%02d" % i, {"viva": "h%d" % i, "otra": "g%d" % i}
