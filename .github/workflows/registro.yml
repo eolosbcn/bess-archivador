@@ -65,7 +65,26 @@ on:
     # 06:13 UTC son las 08:13 de Madrid en horario de verano.
     - cron: "13 6 * * *"
 
+  # ⚠⚠ EL BOTON «Run workflow», Y SU DESPLEGABLE ES LO QUE CIERRA A19.
+  # Sin el, la alarma «el vigilante lleva mudo» estaba desplegada y en verde
+  # pero **no se habia visto saltar**, y verla de otro modo exigiria parar el
+  # vigilante unas horas — o sea dejar el archivo irreproducible sin vigilar
+  # mientras dure. Es la misma leccion que dejo A17: un criterio que pide
+  # danar algo se pospone solo; uno que pide un ensayo se cumple con un boton.
   workflow_dispatch:
+    inputs:
+      simulacro:
+        description: >-
+          Prueba de disparo de A19. Fuerza la alarma «el vigilante lleva
+          mudo» BAJANDO EL UMBRAL: no toca ningun fichero ni ninguna
+          ejecucion. Solo fuerza si la alarma no saltaba ya — una averia
+          real nunca sale etiquetada como simulacro.
+        required: false
+        default: "no"
+        type: choice
+        options:
+          - "no"
+          - "vigilante_mudo"
 
   # ⚠️ Incluye `vigilante.py` a propósito: ver «el autotest es un canario».
   push:
@@ -185,6 +204,7 @@ jobs:
       - name: Comprobar que el vigilante sigue vivo (A19)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SIMULACRO: ${{ inputs.simulacro }}
         run: |
           set -euo pipefail
           {
@@ -193,7 +213,16 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
-          python registro.py --solo-vigilante --repo "${{ github.repository }}" 2>&1 \
+          # ⚠️ `inputs.simulacro` viene VACIO cuando no es un `workflow_dispatch`
+          # —el cron diario y los push—, asi que se comprueba que tenga valor
+          # Y que no sea «no». Mismo patron que el workflow del vigilante.
+          ARGS="--solo-vigilante --repo ${{ github.repository }}"
+          if [ -n "${SIMULACRO:-}" ] && [ "${SIMULACRO}" != "no" ]; then
+            echo "::warning::PRUEBA DE DISPARO de A19 «${SIMULACRO}»: baja el umbral, NO toca ningun fichero"
+            ARGS="${ARGS} --simulacro ${SIMULACRO}"
+          fi
+
+          python registro.py ${ARGS} 2>&1 \
             | tee -a "$GITHUB_STEP_SUMMARY"
 
           echo '```' >> "$GITHUB_STEP_SUMMARY"

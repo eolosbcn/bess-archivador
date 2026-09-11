@@ -85,6 +85,30 @@ ficheros** dentro de su carpeta, porque son series con vidas distintas y
 mezclarlas haría ilegibles las dos.
 
 HISTORIAL
+v1.02  11-sep-2026. **A19 gana su BOTÓN DE SIMULACRO**, que es lo que le
+       faltaba para poder cerrarse: la alarma estaba desplegada y en verde, pero
+       **no se había visto saltar**, y verla de otro modo exigiría parar el
+       vigilante unas horas — o sea dejar el archivo irreproducible sin vigilar
+       mientras dure. El simulacro **baja el umbral, no toca el dato**.
+
+       ⚠⚠ **Y lleva dentro la lección de `vigilante.py` v1.02, que fue su fallo
+       más peligroso:** se fuerza **SOLO si la alarma no saltaba ya**. Si el
+       vigilante estuviera mudo de verdad mientras alguien lanza el ensayo, la
+       incidencia sale **SIN** la marca `[SIMULACRO]` — porque una avería real
+       etiquetada como simulacro es una avería que alguien descarta de un
+       vistazo.
+
+v1.01  11-sep-2026. **A19: `registro` pasa a vigilar al VIGILANTE.** Vive aquí
+       y no allí porque un vigilante que se vigila a sí mismo no vigila nada: si
+       está caído, no pregunta. Ver `vigilante.py` v1.06 para el razonamiento
+       entero y para por qué se lee el registro de ejecuciones de GitHub en vez
+       de un latido que él escriba.
+
+       ⚠️ Esta entrada se escribe **a posteriori**: la v1.01 se desplegó en el
+       commit `ff1f5d0` **sin subir el número ni anotar el cambio aquí**, que es
+       la disciplina de versiones de la casa incumplida. Se anota con su fecha
+       real y no se finge que no pasó.
+
 v1.00  9-sep-2026. Versión inicial. El motor ya estaba en `vigilante.py` v1.03;
        lo que faltaba era el llamador y su workflow con permiso de escritura.
 """
@@ -340,6 +364,36 @@ def autotest():
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 
+    # ═══ v1.02 · el simulacro de A19 ═══════════════════════════════════
+    # ⚠️ Sin red: se inyecta la respuesta de la API. Lo que se prueba no es
+    # que hable con GitHub —eso ya se probo contra la API real— sino la regla
+    # de cuando se marca y cuando NO.
+    def api(fin):
+        return lambda camino, token=None: {"workflow_runs": [{"updated_at": fin}]}
+
+    import datetime as _dt
+    _ahora = _dt.datetime.now(_dt.timezone.utc)
+    recien = (_ahora - _dt.timedelta(hours=1)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    antiguo = (_ahora - _dt.timedelta(hours=48)).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    sano = vigilante.alarma_vigilante_mudo("x/y", None, horas=6.0,
+                                           consultar=api(recien))
+    comprobar("5a sin simulacro y con el vigilante vivo, no hay incidencia",
+              sano is None)
+
+    forzada = vigilante.alarma_vigilante_mudo("x/y", None, horas=-1.0,
+                                              consultar=api(recien))
+    comprobar("5b con umbral forzado si hay incidencia",
+              forzada is not None)
+
+    # ⚠⚠ LA PRUEBA QUE IMPORTA, y es la leccion de `vigilante.py` v1.02: con
+    # el vigilante MUDO DE VERDAD, el simulacro NO debe etiquetar la averia.
+    real = vigilante.alarma_vigilante_mudo("x/y", None, horas=6.0,
+                                           consultar=api(antiguo))
+    comprobar("5c una averia REAL se detecta con el umbral normal",
+              real is not None and "[SIMULACRO]" not in real.titulo,
+              "-> %r" % (real.titulo if real else None))
+
     print("\n  AUTOTEST · %d comprobaciones · %d fallos"
           % (hechas, len(fallos)))
     for f in fallos:
@@ -347,7 +401,7 @@ def autotest():
     return 0 if not fallos else 1
 
 
-def vigilar_al_vigilante(repo, horas):
+def vigilar_al_vigilante(repo, horas, simulacro=False, consultar=None):
     """A19 · ¿ha corrido el vigilante? Abre incidencia si lleva mudo.
 
     ⚠⚠ VIVE AQUÍ Y NO EN `vigilante.py` POR UN MOTIVO DE FONDO: un vigilante
@@ -369,7 +423,20 @@ def vigilar_al_vigilante(repo, horas):
     # dice y la pasada queda en rojo, que es una señal visible. Tragarlo
     # crearía el fallo mudo que esta comprobación viene a cerrar.
     try:
-        inc = vigilante.alarma_vigilante_mudo(repo, token, horas=horas)
+        inc = vigilante.alarma_vigilante_mudo(repo, token, horas=horas,
+                                              consultar=consultar)
+        # ⚠⚠ EL SIMULACRO FUERZA SOLO SI NO SALTABA YA, y ésa es la lección de
+        # `vigilante.py` v1.02 —su fallo más peligroso—. Si el vigilante está
+        # mudo de verdad mientras alguien lanza el ensayo, la incidencia sale
+        # SIN la marca: una avería real etiquetada como simulacro es una avería
+        # que alguien descarta de un vistazo pensando «ah, es la prueba».
+        if inc is None and simulacro:
+            inc = vigilante.alarma_vigilante_mudo(repo, token, horas=-1.0,
+                                                  consultar=consultar)
+            if inc is not None:
+                inc = vigilante.Incidencia(inc.clave,
+                                           "[SIMULACRO] " + inc.titulo,
+                                           inc.cuerpo)
     except Exception as e:
         print("    ERROR al preguntar a la API: %s: %s" % (type(e).__name__, e))
         print("    ⚠️ NO se sabe si el vigilante ha corrido. Eso no es "
@@ -405,6 +472,11 @@ def main():
                         "haya corrido y abre incidencia si lleva mudo (A19)")
     p.add_argument("--vigilar-al-vigilante-horas", type=float, default=6.0,
                    help="dos veces su cadencia de 3 h (por defecto 6)")
+    p.add_argument("--simulacro", default="no",
+                   help="⚠️ `vigilante_mudo` fuerza la alarma A19 para verla "
+                        "saltar. BAJA EL UMBRAL, no toca ningun fichero. Solo "
+                        "fuerza si la alarma no saltaba ya: una averia real "
+                        "nunca sale etiquetada como simulacro.")
     p.add_argument("--solo-vigilante", action="store_true",
                    help="⚠️ SOLO la comprobacion A19, sin reconstruir nada. "
                         "Va en su propio paso del workflow y DESPUES de "
@@ -420,7 +492,8 @@ def main():
         return autotest()
 
     if a.solo_vigilante:
-        return vigilar_al_vigilante(a.repo, a.vigilar_al_vigilante_horas)
+        return vigilar_al_vigilante(a.repo, a.vigilar_al_vigilante_horas,
+                                    simulacro=(a.simulacro == "vigilante_mudo"))
 
     print("\n  REGISTRO DE FALLOS · %d archivo(s)" % len(a.raiz))
     avisos, resultados = 0, []
