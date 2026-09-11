@@ -78,6 +78,12 @@ on:
 # sean dos workflows y no uno.
 permissions:
   contents: write
+  # ⚠️ A19, desde el 11-sep-2026: `registro` pasa a comprobar que el
+  # VIGILANTE haya corrido, y para eso necesita LEER el registro de
+  # ejecuciones y poder ABRIR la incidencia si lleva mudo. Son dos permisos
+  # nuevos y conviene que se vean: hasta hoy este trabajo solo escribía CSV.
+  actions: read
+  issues: write
 
 # ⚠️ Grupo PROPIO. Si compartiera el del archivador se quedaría esperando
 # detrás de una captura completa —25-30 minutos— sin ninguna necesidad.
@@ -167,3 +173,27 @@ jobs:
           # porque se reconstruye, pero ensucia el historial de ejecuciones.
           git pull --rebase --autostash origin main
           git push origin main
+
+      # ⚠⚠ A19 · EN SU PROPIO PASO, Y DESPUES DE GUARDAR. Si formara parte de
+      # la reconstruccion, un fallo de red al preguntar a la API abortaria el
+      # paso —`set -e`— y el registro no llegaria a commitearse. Lo que vigila
+      # al vigilante no puede poner en riesgo lo que este workflow existe para
+      # escribir.
+      #
+      # ⚠️ Y NO lo hace el vigilante consigo mismo: si esta caido, no
+      # pregunta. Este workflow es otro, con otro horario.
+      - name: Comprobar que el vigilante sigue vivo (A19)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          {
+            echo "### ¿Sigue vivo el vigilante?"
+            echo ""
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          python registro.py --solo-vigilante --repo "${{ github.repository }}" 2>&1 \
+            | tee -a "$GITHUB_STEP_SUMMARY"
+
+          echo '```' >> "$GITHUB_STEP_SUMMARY"

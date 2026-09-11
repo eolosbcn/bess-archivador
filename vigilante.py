@@ -33,6 +33,29 @@ nadie volvería a mirarlas.
 
 HISTORIAL
 =========
+v1.06  11-sep-2026. **A19: nadie vigilaba al vigilante.** Si su workflow se
+       paraba —desactivado, con cuota agotada, o fallando— no pasaba nada
+       visible: **devolvia 0 siempre y su silencio se leia como «todo
+       bien»**. Es el mismo fallo mudo que el existe para cazar, dentro de el.
+
+       ⚠⚠ **NO se hace con un latido que el escriba**, que era lo que pedia
+       la ficha, por dos motivos. El primero es que **no puede**: su workflow
+       se declara `contents: read`, y darle escritura para dejar constancia le
+       quitaria la propiedad que lo hace inofensivo —«aunque tuviera un fallo
+       no podria modificar el archivo»—. El segundo pesa mas: un latido es
+       una **firma** que el deja, y aqui hay una **identidad** disponible, el
+       registro de ejecuciones de GitHub, que es la fuente autorizada de si
+       corrio o no. Trampa 10 de la casa.
+
+       ⚠️ **Y quien pregunta no es el.** `alarma_vigilante_mudo` la llama
+       `registro.py`, que es otro workflow con otro horario: un vigilante que
+       se vigila a si mismo **no vigila nada**, porque si esta caido no
+       pregunta. Que los dos caigan a la vez es mucho menos probable que uno.
+
+       ℹ︎ Lo que esto NO cubre, dicho para que nadie lo suponga: si `registro`
+       tambien se para, nadie mira a ninguno de los dos. Cubrirlo del todo
+       exigiria un servicio de fuera, y no lo hay.
+
 v1.05  11-sep-2026. **A17: la alarma 6 no podia dispararse JAMAS, y nadie lo
        noto porque su silencio se leia como «todo bien».** Mediía
        `os.path.getmtime` del sustituto, y `actions/checkout` **reescribe el
@@ -591,6 +614,98 @@ def fecha_declarada_dentro(ruta, columna):
     except (OSError, UnicodeDecodeError, csv.Error):
         return None
     return mejor
+
+
+def consulta_github(camino, token=None):
+    """Un GET a la API de GitHub. Devuelve el JSON.
+
+    ⚠️ Se escribe aparte y NO se reaprovecha el `api()` de `publicar()`, que
+    es casi igual. No es descuido: `publicar()` habla por red y **no lo cubre
+    ninguna prueba** —no se puede sin credencial—, y refactorizarlo para
+    compartir ocho lineas arriesga justo lo unico que hace util al vigilante:
+    poder abrir la incidencia. Duplicar aqui es la opcion barata; tocar alli,
+    la cara.
+    """
+    import urllib.request
+    cabeceras = {"Accept": "application/vnd.github+json",
+                 "User-Agent": "vigilante-bess"}
+    if token:
+        cabeceras["Authorization"] = "Bearer " + token
+    pet = urllib.request.Request("https://api.github.com" + camino,
+                                 headers=cabeceras, method="GET")
+    with urllib.request.urlopen(pet, timeout=30) as r:
+        return json.loads(r.read().decode("utf-8"))
+
+
+def alarma_vigilante_mudo(repo, token=None, flujo="vigilante.yml", horas=6.0,
+                          ahora=None, consultar=None):
+    """¿Ha corrido el vigilante en las ultimas `horas`? (A19)
+
+    ⚠⚠ QUIEN LLAMA A ESTO NO ES EL VIGILANTE, y es la mitad del asunto. La
+    llama `registro.py`, que corre una vez al dia desde OTRO workflow. Un
+    vigilante que se vigila a si mismo no vigila nada: si esta caido, no
+    pregunta, y su silencio vuelve a significar las dos cosas.
+
+    ⚠️ Se mide sobre `updated_at` —cuando la pasada TERMINO— y no sobre
+    `created_at`: una pasada encolada y nunca ejecutada no cuenta como que el
+    vigilante miró.
+
+    `horas` = 6, que es **dos veces su cadencia** de 3 h. ✅ Comprobado el
+    11-sep-2026 sobre la API real: el cron de GitHub entrega con retrasos de
+    minutos, no de horas, asi que 6 h deja margen de sobra y no cae en la
+    trampa 7 —un aviso que salta siempre deja de ser un aviso—.
+
+    ⚠️ **Los fallos de red NO se tragan.** Si la consulta revienta, la
+    excepcion sube: quien llama la enseña y deja la pasada en rojo, que es una
+    señal visible. Tragarsela seria crear el fallo mudo que esto viene a
+    cerrar (trampa 6: ningun `continue` mudo).
+
+    Devuelve una `Incidencia` o `None`.
+    """
+    ahora = ahora or dt.datetime.now(dt.timezone.utc)
+    consultar = consultar or consulta_github
+    datos = consultar("/repos/%s/actions/workflows/%s/runs"
+                      "?per_page=1&status=completed" % (repo, flujo), token)
+    pasadas = datos.get("workflow_runs") or []
+
+    if not pasadas:
+        return Incidencia(
+            "vigilante_mudo:%s" % flujo,
+            "⚠️ El vigilante NO ha corrido NUNCA (`%s`)" % flujo,
+            "La API de GitHub no devuelve ninguna pasada completada de "
+            "`%s`.\n\n⚠️ Mientras eso sea cierto, **el archivo no esta "
+            "vigilado por nadie**, y su silencio no significa que este bien: "
+            "significa que no lo mira nadie." % flujo)
+
+    fin = pasadas[0].get("updated_at") or ""
+    try:
+        cuando = dt.datetime.strptime(fin, "%Y-%m-%dT%H:%M:%SZ").replace(
+            tzinfo=dt.timezone.utc)
+    except ValueError:
+        # ⚠️ Una fecha que no se entiende NO es «esta bien»: es que no se
+        # puede saber, y eso se dice. Nunca se devuelve None por no entender.
+        return Incidencia(
+            "vigilante_mudo:%s" % flujo,
+            "⚠️ No se puede fechar la ultima pasada del vigilante (`%s`)"
+            % flujo,
+            "La API devolvio `updated_at` = `%s`, que no se entiende.\n\n"
+            "⚠️ No poder fechar la ultima pasada es no saber si el archivo "
+            "esta vigilado." % fin)
+
+    edad = (ahora - cuando).total_seconds() / 3600.0
+    if edad <= horas:
+        return None
+    return Incidencia(
+        "vigilante_mudo:%s" % flujo,
+        "⚠️ El vigilante lleva %.0f h sin correr (`%s`)" % (edad, flujo),
+        "Su ultima pasada completada termino el **%s**, hace **%.0f horas**, y "
+        "su cadencia es de 3 h.\n\nCausas tipicas: el workflow desactivado a "
+        "mano, GitHub desactivando los `schedule` por inactividad del "
+        "repositorio, o pasadas que fallan sin que nadie las mire.\n\n"
+        "⚠⚠ Mientras dure, **el archivo no esta vigilado**: las alarmas no se "
+        "ejecutan, y su silencio se lee como «todo bien». Es exactamente el "
+        "fallo mudo que el vigilante existe para cerrar, aplicado a el mismo."
+        % (fin, edad))
 
 
 def alarma_sustituto_muerto(raiz, ahora=None, horas=48.0):
@@ -1644,6 +1759,62 @@ def autotest():
         comprobar_que(len(alarma_sustituto_muerto(arch)) == len(RETIRADAS),
                       "y el del archivador sí las mira, las %d"
                       % len(RETIRADAS))
+
+    print("\n-- v1.06 · A19 · nadie vigila al vigilante -------------------")
+    ah19 = dt.datetime(2026, 9, 11, 12, 0, tzinfo=dt.timezone.utc)
+
+    def api_falsa(fin, inicio=None):
+        """Una respuesta de la API con UNA pasada que terminó en `fin`."""
+        pasada = {"updated_at": fin}
+        if inicio:
+            pasada["created_at"] = inicio
+        return lambda camino, token=None: {
+            "workflow_runs": [pasada] if fin is not None else []}
+
+    comprobar_que(
+        alarma_vigilante_mudo("x/y", ahora=ah19,
+                              consultar=api_falsa("2026-09-11T10:25:00Z"))
+        is None,
+        "una pasada de hace 1,6 h no avisa")
+
+    inc19 = alarma_vigilante_mudo("x/y", ahora=ah19,
+                                  consultar=api_falsa("2026-09-10T12:00:00Z"))
+    comprobar_que(inc19 is not None and "24 h" in inc19.titulo,
+                  "⚠️ 24 h sin correr SÍ avisa, y lo dice con su cifra")
+
+    comprobar_que(
+        alarma_vigilante_mudo("x/y", ahora=ah19, consultar=api_falsa(None))
+        is not None,
+        "⚠️ si no ha corrido NUNCA avisa: 0 pasadas no es «todo bien»")
+
+    comprobar_que(
+        alarma_vigilante_mudo("x/y", ahora=ah19,
+                              consultar=api_falsa("no-es-una-fecha"))
+        is not None,
+        "⚠️ una fecha ilegible avisa: no poder fecharla es no saber")
+
+    # ⚠️ Que mida cuándo TERMINÓ y no cuándo se encoló. Una pasada creada
+    # hace 20 h y terminada hace 1 no significa que el vigilante llevara 20 h
+    # sin mirar; medir `created_at` daría una alarma falsa cada vez que GitHub
+    # encola, que es la trampa 7.
+    comprobar_que(
+        alarma_vigilante_mudo(
+            "x/y", ahora=ah19,
+            consultar=api_falsa("2026-09-11T11:00:00Z",
+                                inicio="2026-09-10T16:00:00Z")) is None,
+        "⚠️ mide `updated_at` (cuándo TERMINÓ), no `created_at`")
+
+    # ⚠️ Y un fallo de red SUBE. Tragarlo crearía el fallo mudo que esto
+    # viene a cerrar: quien pregunta y no puede, no sabe —no está bien—.
+    def api_rota(camino, token=None):
+        raise OSError("sin red")
+    try:
+        alarma_vigilante_mudo("x/y", ahora=ah19, consultar=api_rota)
+        subio = False
+    except OSError:
+        subio = True
+    comprobar_que(subio,
+                  "⚠️ un fallo de red SUBE, no se traga (trampa 6)")
 
     print("\n-- v1.04 · la etiqueta llega a la issue ---------------------")
     inc = Incidencia("x", "titulo", "cuerpo")

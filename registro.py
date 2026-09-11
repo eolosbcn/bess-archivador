@@ -347,16 +347,80 @@ def autotest():
     return 0 if not fallos else 1
 
 
+def vigilar_al_vigilante(repo, horas):
+    """A19 · ¿ha corrido el vigilante? Abre incidencia si lleva mudo.
+
+    ⚠⚠ VIVE AQUÍ Y NO EN `vigilante.py` POR UN MOTIVO DE FONDO: un vigilante
+    que se vigila a sí mismo no vigila nada. Si está caído no pregunta, y su
+    silencio vuelve a significar las dos cosas —que todo va bien, o que no
+    hay nadie mirando—. Esto es otro workflow, con otro horario.
+
+    ℹ︎ Lo que NO cubre, dicho para que nadie lo suponga: si `registro` también
+    se para, nadie mira a ninguno de los dos. Cerrarlo del todo exigiría un
+    servicio de fuera del repositorio, y no lo hay.
+    """
+    if not repo:
+        print("\n  ⚠️ --solo-vigilante sin --repo: no hay a quién preguntar.")
+        return 2
+    token = os.environ.get("GITHUB_TOKEN") or None
+    print("\n  ¿SIGUE VIVO EL VIGILANTE? · %s · umbral %.0f h" % (repo, horas))
+
+    # ⚠️ El fallo de red NO se traga y NO se convierte en «todo bien»: se
+    # dice y la pasada queda en rojo, que es una señal visible. Tragarlo
+    # crearía el fallo mudo que esta comprobación viene a cerrar.
+    try:
+        inc = vigilante.alarma_vigilante_mudo(repo, token, horas=horas)
+    except Exception as e:
+        print("    ERROR al preguntar a la API: %s: %s" % (type(e).__name__, e))
+        print("    ⚠️ NO se sabe si el vigilante ha corrido. Eso no es "
+              "«todo bien».")
+        return 2
+
+    if inc is None:
+        print("    ✅ ha corrido dentro del umbral.")
+        return 0
+
+    # El titulo ya empieza por el aviso: repetirlo aqui lo duplicaba.
+    print("    %s" % inc.titulo)
+    if not token:
+        print("    (sin GITHUB_TOKEN: no se publica, solo se dice)")
+        return 1
+    creadas, omitidas = vigilante.publicar([inc], repo, token,
+                                           etiqueta="vigilante")
+    print("    incidencias: %d creada(s), %d ya abierta(s)"
+          % (len(creadas), len(omitidas)))
+    return 1
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument("--raiz", nargs="+", default=["archivo"],
                    help="carpeta(s) con indice.csv. Se puede repetir: "
                         "--raiz archivo archivo_saih")
+    # ⚠⚠ A19 · `registro` vigila al VIGILANTE, y por eso vive aquí y no allí:
+    # un vigilante que se vigila a sí mismo no vigila nada, porque si está
+    # caído no pregunta. Estos dos son otro workflow y otro horario.
+    p.add_argument("--repo",
+                   help="dueño/repo: si se da, comprueba que el vigilante "
+                        "haya corrido y abre incidencia si lleva mudo (A19)")
+    p.add_argument("--vigilar-al-vigilante-horas", type=float, default=6.0,
+                   help="dos veces su cadencia de 3 h (por defecto 6)")
+    p.add_argument("--solo-vigilante", action="store_true",
+                   help="⚠️ SOLO la comprobacion A19, sin reconstruir nada. "
+                        "Va en su propio paso del workflow y DESPUES de "
+                        "guardar: si un fallo de red al preguntar a la API "
+                        "abortara la reconstruccion, el registro no llegaria "
+                        "a commitearse. Lo que vigila al vigilante no puede "
+                        "poner en riesgo lo que este programa existe para "
+                        "escribir.")
     p.add_argument("--autotest", action="store_true")
     a = p.parse_args()
 
     if a.autotest:
         return autotest()
+
+    if a.solo_vigilante:
+        return vigilar_al_vigilante(a.repo, a.vigilar_al_vigilante_horas)
 
     print("\n  REGISTRO DE FALLOS · %d archivo(s)" % len(a.raiz))
     avisos, resultados = 0, []
