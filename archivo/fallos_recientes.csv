@@ -1957,3 +1957,7 @@ captura,fuente,motivo
 2026-09-12-1450,esios_capacidad_instalada,ausente
 2026-09-12-1750,esios_capacidad_instalada,ausente
 2026-09-12-2050,esios_capacidad_instalada,ausente
+2026-09-12-2127,aemet_prediccion_diaria,ausente
+2026-09-12-2127,aemet_prediccion_horaria,ausente
+2026-09-12-2127,aemet_prediccion_periodos,ausente
+2026-09-12-2127,esios_capacidad_instalada,ausente
