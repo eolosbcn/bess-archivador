@@ -1,40 +1,86 @@
 {
- "ejecucion_utc": "2026-09-12T12:00:02.078755+00:00",
+ "ejecucion_utc": "2026-09-12T18:00:02.039400+00:00",
+ "primera_ejecucion_utc": "2026-09-12T18:00:02.039400+00:00",
+ "pasadas": [
+  {
+   "utc": "2026-09-12T18:00:02.039400+00:00",
+   "confederacion": [
+    "duero",
+    "ebro",
+    "mino_sil"
+   ],
+   "ok": 7,
+   "vacio": 0,
+   "fallo": 0
+  }
+ ],
  "confederacion": [
   "duero",
   "ebro",
   "mino_sil"
  ],
  "peso_cubierto": 77.71,
- "version": "v1.02",
+ "version": "v1.03",
  "fuentes": {
   "saih_duero_situacion_embalses": {
    "estado": "OK",
    "bytes": 47123,
    "comprimido": 9426,
    "elementos": 38,
-   "segundos": 2.8
+   "segundos": 7.51,
+   "de_pasada_utc": "2026-09-12T18:00:02.039400+00:00"
   },
   "saih_ebro_aforos_cuenca": {
    "estado": "OK",
-   "bytes": 87674,
-   "comprimido": 7600,
+   "bytes": 87657,
+   "comprimido": 7633,
    "elementos": 5,
-   "segundos": 0.58
+   "segundos": 0.68,
+   "de_pasada_utc": "2026-09-12T18:00:02.039400+00:00"
   },
   "saih_ebro_volumenes_embalsados": {
    "estado": "OK",
-   "bytes": 93152,
-   "comprimido": 10166,
+   "bytes": 93149,
+   "comprimido": 10162,
    "elementos": 2,
-   "segundos": 0.69
+   "segundos": 0.87,
+   "de_pasada_utc": "2026-09-12T18:00:02.039400+00:00"
   },
   "saih_mino_sil_situacion_embalses": {
    "estado": "OK",
-   "bytes": 52485,
-   "comprimido": 7673,
+   "bytes": 52475,
+   "comprimido": 7670,
    "elementos": 34,
-   "segundos": 1.03
+   "segundos": 0.97,
+   "de_pasada_utc": "2026-09-12T18:00:02.039400+00:00"
+  },
+  "saih_duero_tiempo_real_risr": {
+   "estado": "OK",
+   "bytes": 176667,
+   "comprimido": 33221,
+   "elementos": 440,
+   "segundos": 10.91,
+   "de_pasada_utc": "2026-09-12T18:00:02.039400+00:00"
+  },
+  "saih_mino_sil_resumen_niveles": {
+   "estado": "OK",
+   "bytes": 84460,
+   "comprimido": 8695,
+   "elementos": 76,
+   "segundos": 0.96,
+   "de_pasada_utc": "2026-09-12T18:00:02.039400+00:00"
+  },
+  "saih_ebro_qcent": {
+   "estado": "OK",
+   "bytes": 6120,
+   "comprimido": 6120,
+   "elementos": 5,
+   "estaciones": 6,
+   "senales": 6,
+   "desde": "28/08/2026",
+   "hasta": "12/09/2026",
+   "segundos": 7.57,
+   "de_pasada_utc": "2026-09-12T18:00:02.039400+00:00"
   }
  }
 }
