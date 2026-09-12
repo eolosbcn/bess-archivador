@@ -33,6 +33,70 @@ nadie volvería a mirarlas.
 
 HISTORIAL
 =========
+v1.07  12-sep-2026. **A19 daba por vivo a un vigilante que fallaba en cada
+    pasada**, y con ella entran la captura critica, M34 y el asignado que
+    faltaba. Bloque **B4**.
+
+    ⚠️⚠️ **A19 · «HA CORRIDO» NO ERA «HA TERMINADO BIEN».** La v1.06 pedia
+    `status=completed` y solo miraba `updated_at`, asi que una pasada que
+    termino en `failure` contaba como vigilancia: el vigilante podia llevar
+    dias reventando en cada ejecucion y A19 lo daba por sano. Es el fallo que
+    A19 existe para cerrar —silencio leido como «todo bien»— cometido dentro
+    de A19. Ahora se busca la ultima pasada con `conclusion == "success"`, y
+    si las mas recientes fallaron se dice cuantas.
+
+    ⚠️ **Y nace `vigilante_degradado`**, con clave propia: si la ultima buena
+    sigue dentro de plazo pero las posteriores fallan, se avisa ANTES de que
+    el vigilante se quede mudo del todo.
+
+    ⚠️ **El umbral de A19 pasa de 6 h a 9 h, con su medicion.** ✅ Sobre 47
+    huecos entre pasadas el maximo fue **5,89 h** —a SIETE MINUTOS del umbral
+    que habia— y ✅ **27 de 31 ranuras `schedule` entregadas (87 %)** con
+    retraso maximo de **127 min**. O sea que 6 h no era «el doble de la
+    cadencia», era el borde del ruido normal.
+
+    ⚠️⚠️ **ALARMA 7 · LA CAPTURA DE LAS 11:5x.** Es el horizonte de
+    informacion entero de Casandra —la foto de lo que se sabia al cerrar las
+    ofertas— y perderla no degrada un dia, lo invalida. Hasta hoy no la veia
+    nadie: la alarma 1 mira la antiguedad de la ULTIMA captura, asi que con
+    las siguientes llegando en hora el archivo parece al dia; y el hueco que
+    deja perderla mide **6,00 h exactas** contra un `> 6.0`, o sea que
+    tampoco saltaba por antiguedad, por dos centesimas.
+
+    Se escribe como IDENTIDAD y no como umbral (trampa 10): si un dia tiene
+    capturas DESPUES de la franja y ninguna DENTRO, la de la franja se
+    perdio. ⚠️ La franja **no es simetrica**: las 12:00 son el cierre de
+    ofertas y son un limite DURO; el de abajo es blando, porque una captura a
+    las 11:35 pierde quince minutos de informacion pero sigue valiendo. ✅
+    Calibrada sobre 33 dias del archivo: 25 a las 11:50, 6 a las 11:51, y con
+    la franja abierta a las 11:30 quedan dentro **33 de 33**. Y se autocalibra:
+    un archivo que nunca captura a esa hora —el del SAIH— no dispara nunca.
+
+    **ALARMA 8 · M34 · LOS INDICADORES QUE SE PIERDEN DENTRO DE UN FICHERO.**
+    La unidad de vigilancia era el fichero, y `esios_previsiones` es UN
+    fichero con 114 indicadores dentro: podia llegar puntual, pesar lo normal,
+    cambiar cada dia y traer 26 series menos. ⚠️ El umbral se calibra solo
+    **agrupando por `pedidos`**, porque ✅ sobre 448 capturas `indicadores_ok`
+    va de 94 a 835 —hay capturas ligeras y completas— y una cifra fija no
+    avisaria nunca o avisaria siempre. ✅ Con el corte en el 90 % de la
+    mediana de su grupo, las 448 capturas pasan: **0 falsos positivos**, y el
+    caso de M34 (88 sobre una mediana de 114) da 77 % y se ve.
+
+    ⚠️ **`publicar()` deja de tener `asignar_a=None` por defecto.** El
+    12-sep-2026 la incidencia **#15** —la primera vez que A19 salto de
+    verdad— se abrio SIN ASIGNADO y no le llego a nadie, porque `registro.py`
+    llamaba sin ese argumento. «No asignar» nunca es lo que se quiere en
+    produccion, y un defecto que calla es el mismo fallo esperando al
+    siguiente que llame.
+
+    ❌ **LO QUE ESTA VERSION NO LLEVA, y se dice para que nadie lo de por
+    hecho:** **M35** (degradacion parcial de una familia dentro de una
+    captura) y **N-operacion-11** (las alarmas 4 y 5 se apagan cuando la
+    averia sale de la ventana de 500 capturas, ~62 dias). Los dos siguen
+    abiertos. M35 necesita un umbral por captura calibrado del propio archivo
+    y no cabia sin repetir el trabajo de M34 a otra escala; el de los 62 dias
+    es BAJO y esta identificado «por lectura», sin caso real todavia.
+
 v1.06  11-sep-2026. **A19: nadie vigilaba al vigilante.** Si su workflow se
        paraba —desactivado, con cuota agotada, o fallando— no pasaba nada
        visible: **devolvia 0 siempre y su silencio se leia como «todo
@@ -240,6 +304,7 @@ import gzip
 import hashlib
 import io
 import json
+import glob
 import os
 import sys
 import time
@@ -637,9 +702,9 @@ def consulta_github(camino, token=None):
         return json.loads(r.read().decode("utf-8"))
 
 
-def alarma_vigilante_mudo(repo, token=None, flujo="vigilante.yml", horas=6.0,
+def alarma_vigilante_mudo(repo, token=None, flujo="vigilante.yml", horas=9.0,
                           ahora=None, consultar=None):
-    """¿Ha corrido el vigilante en las ultimas `horas`? (A19)
+    """¿Ha corrido el vigilante CON ÉXITO en las ultimas `horas`? (A19)
 
     ⚠⚠ QUIEN LLAMA A ESTO NO ES EL VIGILANTE, y es la mitad del asunto. La
     llama `registro.py`, que corre una vez al dia desde OTRO workflow. Un
@@ -650,10 +715,26 @@ def alarma_vigilante_mudo(repo, token=None, flujo="vigilante.yml", horas=6.0,
     `created_at`: una pasada encolada y nunca ejecutada no cuenta como que el
     vigilante miró.
 
-    `horas` = 6, que es **dos veces su cadencia** de 3 h. ✅ Comprobado el
-    11-sep-2026 sobre la API real: el cron de GitHub entrega con retrasos de
-    minutos, no de horas, asi que 6 h deja margen de sobra y no cae en la
-    trampa 7 —un aviso que salta siempre deja de ser un aviso—.
+    ⚠️⚠️ **«HA CORRIDO» NO ES «HA TERMINADO»: TIENE QUE HABER TERMINADO
+    BIEN** (v1.07). Hasta la v1.06 se pedia `status=completed` y solo se
+    miraba `updated_at`, asi que **una pasada que termino en `failure` contaba
+    como vigilancia**: el vigilante podia llevar dias fallando en cada
+    ejecucion y A19 lo daba por vivo. Es el mismo fallo que A19 existe para
+    cerrar —silencio leido como «todo bien»— cometido dentro de A19.
+
+    Ahora se piden las ultimas pasadas completadas y se busca la mas reciente
+    con `conclusion == "success"`. Si la ultima termino mal, se dice **cual y
+    cuantas**: «lleva 3 pasadas fallando» y «no ha corrido» son averias
+    distintas y se arreglan distinto.
+
+    `horas` = 9 **desde la v1.07**, y el cambio va con su medicion. ✅ Sobre
+    47 huecos entre pasadas, el maximo observado fue **5,89 h** —a SIETE
+    MINUTOS del umbral de 6 h que habia—, y ✅ **27 de 31 ranuras `schedule`
+    entregadas (87 %)** con retraso maximo de **127 min**. O sea: 6 h no era
+    «el doble de la cadencia», era el borde del ruido normal, y GitHub se
+    salta una ranura de cada ocho. Con 9 h queda margen sobre el peor hueco
+    medido mas el peor retraso, sin tardar un dia en enterarse — y sin caer en
+    la trampa 7, que es un aviso que salta siempre.
 
     ⚠️ **Los fallos de red NO se tragan.** Si la consulta revienta, la
     excepcion sube: quien llama la enseña y deja la pasada en rojo, que es una
@@ -664,8 +745,11 @@ def alarma_vigilante_mudo(repo, token=None, flujo="vigilante.yml", horas=6.0,
     """
     ahora = ahora or dt.datetime.now(dt.timezone.utc)
     consultar = consultar or consulta_github
+    # ⚠️ 10 y no 1: con `per_page=1` solo se ve la ultima, y si esa fallo no
+    # hay forma de saber si la anterior fue bien. Diez pasadas son ~30 h de
+    # cadencia, suficiente para distinguir «una fallo» de «lleva dias».
     datos = consultar("/repos/%s/actions/workflows/%s/runs"
-                      "?per_page=1&status=completed" % (repo, flujo), token)
+                      "?per_page=10&status=completed" % (repo, flujo), token)
     pasadas = datos.get("workflow_runs") or []
 
     if not pasadas:
@@ -677,7 +761,33 @@ def alarma_vigilante_mudo(repo, token=None, flujo="vigilante.yml", horas=6.0,
             "vigilado por nadie**, y su silencio no significa que este bien: "
             "significa que no lo mira nadie." % flujo)
 
-    fin = pasadas[0].get("updated_at") or ""
+    # ⚠️ LA QUE CUENTA ES LA ULTIMA QUE TERMINO BIEN. Una pasada en `failure`
+    # no ha vigilado nada, por muy reciente que sea.
+    buenas = [p for p in pasadas if p.get("conclusion") == "success"]
+    fallidas_seguidas = 0
+    for p in pasadas:
+        if p.get("conclusion") == "success":
+            break
+        fallidas_seguidas += 1
+
+    if not buenas:
+        ultima = pasadas[0].get("conclusion") or "sin conclusion"
+        return Incidencia(
+            "vigilante_mudo:%s" % flujo,
+            "⚠️ Ninguna de las ultimas %d pasadas del vigilante termino bien "
+            "(`%s`)" % (len(pasadas), flujo),
+            "La mas reciente termino en **`%s`**, y en las %d que devuelve la "
+            "API **no hay ni una** con `conclusion = success`.\n\n"
+            "⚠️⚠️ El workflow se esta ejecutando, asi que por fuera parece "
+            "vivo —hay pasadas, y son recientes—, pero **no esta vigilando "
+            "nada**: cada una revienta antes de comprobar las alarmas. Es "
+            "peor que estar parado, porque el calendario de Actions se ve "
+            "verde de actividad.\n\n"
+            "**Que mirar:** el registro de la ultima pasada en la pestaña "
+            "Actions; lo mas tipico es una credencial caducada o un cambio de "
+            "la API de GitHub." % (ultima, len(pasadas)))
+
+    fin = buenas[0].get("updated_at") or ""
     try:
         cuando = dt.datetime.strptime(fin, "%Y-%m-%dT%H:%M:%SZ").replace(
             tzinfo=dt.timezone.utc)
@@ -694,18 +804,191 @@ def alarma_vigilante_mudo(repo, token=None, flujo="vigilante.yml", horas=6.0,
 
     edad = (ahora - cuando).total_seconds() / 3600.0
     if edad <= horas:
+        # ⚠️ Aunque haya una pasada buena dentro del plazo, si las MAS
+        # RECIENTES fallaron hay que decirlo: el vigilante se esta degradando
+        # y el aviso llega antes de que se quede mudo del todo.
+        if fallidas_seguidas:
+            return Incidencia(
+                "vigilante_degradado:%s" % flujo,
+                "⚠️ Las %d ultimas pasadas del vigilante han fallado (`%s`)"
+                % (fallidas_seguidas, flujo),
+                "La ultima que termino BIEN fue el **%s**, hace **%.1f h**, "
+                "asi que todavia esta dentro del plazo de %.0f h y el archivo "
+                "sigue vigilado.\n\n⚠️ Pero las **%d** posteriores han "
+                "terminado en fallo. Si esto sigue, A19 pasara a decir que el "
+                "vigilante esta mudo; esto es el aviso de antes.\n\n"
+                "**Que mirar:** el registro de la ultima pasada en Actions."
+                % (fin, edad, horas, fallidas_seguidas))
         return None
     return Incidencia(
         "vigilante_mudo:%s" % flujo,
-        "⚠️ El vigilante lleva %.0f h sin correr (`%s`)" % (edad, flujo),
-        "Su ultima pasada completada termino el **%s**, hace **%.0f horas**, y "
-        "su cadencia es de 3 h.\n\nCausas tipicas: el workflow desactivado a "
+        "⚠️ El vigilante lleva %.0f h sin vigilar (`%s`)" % (edad, flujo),
+        "Su ultima pasada **con exito** termino el **%s**, hace **%.0f "
+        "horas**, y su cadencia es de 3 h.\n\nCausas tipicas: el workflow "
+        "desactivado a "
         "mano, GitHub desactivando los `schedule` por inactividad del "
         "repositorio, o pasadas que fallan sin que nadie las mire.\n\n"
         "⚠⚠ Mientras dure, **el archivo no esta vigilado**: las alarmas no se "
         "ejecutan, y su silencio se lee como «todo bien». Es exactamente el "
         "fallo mudo que el vigilante existe para cerrar, aplicado a el mismo."
         % (fin, edad))
+
+
+def capturas_por_dia(raiz):
+    """{fecha: [horas]} del índice, como cadenas «HHMM». Función pura."""
+    ruta = os.path.join(raiz, "indice.csv")
+    if not os.path.isfile(ruta):
+        return {}
+    dias = collections.defaultdict(list)
+    with io.open(ruta, encoding="utf-8", newline="") as f:
+        for fila in csv.DictReader(f):
+            fecha = (fila.get("fecha") or "").strip()
+            hora = (fila.get("hora") or "").strip()
+            if fecha and hora.isdigit() and len(hora) == 4:
+                dias[fecha].append(hora)
+    return {d: sorted(h) for d, h in dias.items()}
+
+
+def alarma_captura_critica(raiz, desde="1130", hasta="1200", dias_atras=30):
+    """¿Se ha perdido la captura de las 11:5x? (B4, 12-sep-2026)
+
+    ⚠️⚠️ NO ES UNA CAPTURA MÁS. La de las 11:5x de D−1 es **el horizonte de
+    información entero** de Casandra: es la foto de lo que se sabía al cerrar
+    las ofertas del diario, y la regla Q3 dice que una variable es la versión
+    disponible a esa hora. Perderla no degrada un día, lo **invalida** para
+    entrenar y para medir.
+
+    ⚠️ Y HASTA HOY NO SE VEÍA. La alarma 1 mira la antigüedad de la ÚLTIMA
+    captura, así que perder una intermedia no la despierta: el archivador
+    captura ~14 veces al día, y con las siguientes llegando en hora el archivo
+    parece al día. Peor: el hueco que deja perder la de las 11:5x medía
+    **6,00 h exactas**, y la comparación era `> 6.0` — o sea que ni siquiera
+    por antigüedad saltaba, por dos centésimas.
+
+    ⚠️⚠️ SE ESCRIBE COMO IDENTIDAD Y NO COMO UMBRAL, que es lo que la casa
+    manda preferir (trampa 10): **si un día tiene capturas DESPUÉS de la
+    franja pero ninguna DENTRO, la de la franja se perdió**. No hay nada que
+    calibrar, no depende del reloj de quien ejecuta ni de husos horarios, y un
+    solo contraejemplo la desmiente.
+
+    ⚠️ Y SE AUTOCALIBRA: si el archivo no tiene capturas en esa franja en
+    NINGÚN día, esta alarma no aplica y devuelve `[]` — es lo que la hace
+    inocua sobre el archivo del SAIH, que se captura a las 09:30, 14:00 y
+    20:00 y nunca a las 11:5x. Sin esto saltaría todos los días en el SAIH,
+    que es la trampa 7.
+
+    ⚠️⚠️ LA FRANJA NO ES SIMÉTRICA, Y ESO ES LO QUE HAY QUE ENTENDER PARA NO
+    «ARREGLARLA» MAL. El límite de arriba, las **12:00**, es DURO: es el cierre
+    de ofertas del diario, y una captura posterior ya no dice lo que se sabía
+    al ofertar. El de abajo es blando: una captura a las 11:35 es peor que una
+    a las 11:50 —pierde quince minutos de información— pero **sigue valiendo**,
+    porque es anterior al cierre.
+
+    ✅ Calibrada sobre el archivo real el 12-sep-2026, 33 días: la captura del
+    mediodía cae a las **11:50 en 25 días** y a las **11:51 en 6**; el resto se
+    reparte entre 11:43 (2), 11:45, 11:48, 11:38, 11:32, 11:29, 11:22 y 11:01
+    —los días iniciales, cuando se disparaba a mano—. Con la franja abierta a
+    las 11:30 quedan dentro **33 de 33**; con 11:45 se escapaban 2 días que
+    tenían captura válida, y habrían salido como pérdida sin serlo.
+
+    Devuelve la lista de fechas a las que les falta.
+    """
+    dias = capturas_por_dia(raiz)
+    if not dias:
+        return []
+    en_franja = {d: [h for h in hs if desde <= h < hasta]
+                 for d, hs in dias.items()}
+    # ¿aplica aquí? Si nunca hubo una, este archivo no captura a esa hora.
+    if not any(en_franja.values()):
+        return []
+
+    faltan = []
+    for fecha in sorted(dias)[-dias_atras:]:
+        if en_franja.get(fecha):
+            continue
+        # ⚠️ Solo cuenta como PERDIDA si ese día siguió capturando después: si
+        # no hay ninguna posterior, puede que el día aún no haya llegado a esa
+        # hora, o que el archivo empiece ahí. No se acusa sin prueba.
+        if any(h >= hasta for h in dias[fecha]):
+            faltan.append(fecha)
+    return faltan
+
+
+FRACCION_M34 = 0.90        # ver `alarma_indicadores_perdidos`
+
+
+def alarma_indicadores_perdidos(raiz, fraccion=FRACCION_M34, ultimas=1):
+    """M34 · Un fichero puede traer 26 indicadores menos sin que nada lo note.
+
+    ⚠️⚠️ LA UNIDAD DE VIGILANCIA ERA EL FICHERO, y ése es el hueco. Todas las
+    alarmas de arriba preguntan «¿está el fichero?» y «¿ha cambiado?». Pero
+    `esios_previsiones` es UN fichero que dentro trae CIENTO CATORCE
+    indicadores: puede llegar puntual, pesar lo normal, cambiar cada día — y
+    traer veintiséis series menos. Para el vigilante era una captura perfecta.
+
+    El dato ya estaba escrito y nadie lo miraba: el manifiesto trae
+    `indicadores_ok`, `indicadores_vacios`, `indicadores_fallidos` y
+    `pedidos` en cada captura. Esto es solo mirarlo, que es lo que lo hacía
+    «el caso más barato de cerrar» de la auditoría del 9-sep-2026.
+
+    ⚠️ EL UMBRAL SE CALIBRA SOLO, Y AGRUPANDO POR `pedidos`. Un umbral
+    absoluto no vale: ✅ medido sobre 448 capturas, `indicadores_ok` va de
+    **94 a 835** porque hay dos clases de captura —la ligera pide ~138 y la
+    completa 1.550—, y una cifra fija o no avisaría nunca o avisaría siempre.
+    Agrupando por cuántos se pidieron, cada grupo es estrechísimo:
+
+        pedidos= 138  n=261   ok 113..116  (mediana 114)
+        pedidos= 143  n= 70   ok 113..129  (mediana 115)
+        pedidos= 110  n= 43   ok  94.. 96  (mediana  94)
+        pedidos=1550  n= 21   ok 777..835  (mediana 790)
+
+    ✅ Con el corte en el **90 % de la mediana de su propio grupo**, las 448
+    capturas del archivo pasan: **0 falsos positivos**. Y el caso que M34
+    denuncia —26 indicadores menos sobre 114— da 77 %, muy por debajo del
+    corte, así que se vería. Un umbral que no avisa de nada hoy y sí del caso
+    que lo motivó es justo lo que se busca (trampa 7 por los dos lados).
+
+    Devuelve `[(fuente, ruta, ok, mediana, pedidos)]` de las últimas capturas.
+    """
+    destino = raiz if os.path.isfile(os.path.join(raiz, "indice.csv")) \
+        else os.path.join(raiz, "archivo")
+    patron = os.path.join(destino, "*", "*", "*", "*", "manifiesto.json")
+    ficheros = sorted(glob.glob(patron))
+    if not ficheros:
+        return []
+
+    # (fuente, pedidos) -> [ok]; y la última captura de cada fuente aparte
+    historia = collections.defaultdict(list)
+    recientes = {}
+    for ruta in ficheros:
+        try:
+            with io.open(ruta, encoding="utf-8") as f:
+                fuentes = (json.load(f).get("fuentes") or {})
+        except Exception:
+            # ⚠️ Un manifiesto ilegible no tumba la alarma NI se cuenta como
+            # sano: simplemente no aporta. Lo vigila la alarma de antigüedad.
+            continue
+        for nombre, ficha in fuentes.items():
+            ok = ficha.get("indicadores_ok")
+            ped = ficha.get("pedidos")
+            if not isinstance(ok, int) or not isinstance(ped, int) or not ped:
+                continue
+            historia[(nombre, ped)].append(ok)
+            recientes.setdefault(nombre, []).append((ruta, ok, ped))
+
+    avisos = []
+    for nombre, lista in recientes.items():
+        for ruta, ok, ped in lista[-ultimas:]:
+            valores = sorted(historia[(nombre, ped)])
+            # ⚠️ Con menos de 5 capturas del mismo tamaño no hay mediana que
+            # merezca el nombre: no se avisa, y no se da por bueno tampoco —
+            # simplemente no se puede decir nada todavía.
+            if len(valores) < 5:
+                continue
+            mediana = valores[len(valores) // 2]
+            if ok < fraccion * mediana:
+                avisos.append((nombre, ruta, ok, mediana, ped))
+    return avisos
 
 
 def alarma_sustituto_muerto(raiz, ahora=None, horas=48.0):
@@ -1152,6 +1435,52 @@ def comprobar(raiz, ahora=None, token_aemet=None, simulacro=None,
                "NO SE ESTÁ VIGILANDO" if isinstance(edad, str)
                else "lleva %.0f horas sin verse" % edad)))
 
+    # ---- 8. M34 · indicadores perdidos DENTRO de un fichero (v1.07) ------
+    perdidos = alarma_indicadores_perdidos(raiz)
+    if simulacro == "indicadores" and not perdidos:
+        perdidos = [("__simulacro__", "(ninguna)", 0, 114, 138)]
+    for nombre, ruta, ok, mediana, ped in perdidos:
+        incidencias.append(Incidencia(
+            "indicadores:%s" % nombre,
+            "%s⚠️ `%s` ha traído %d indicadores y lo normal son %d"
+            % (marca("indicadores"), nombre, ok, mediana),
+            "La última captura de `%s` trae **%d** indicadores de los **%d** "
+            "pedidos, y la mediana de las capturas que piden lo mismo es "
+            "**%d**.\n\n⚠️⚠️ El fichero ESTÁ, pesa lo normal y ha cambiado, "
+            "así que ninguna de las otras alarmas lo ve: miran el fichero, y "
+            "esto se pierde **dentro** de él.\n\n"
+            "- Captura: `%s`\n\n"
+            "El umbral no es fijo: es el **%.0f %%** de la mediana de las "
+            "capturas del mismo tamaño, calculada del propio archivo. ✅ Con "
+            "él, las 448 capturas de hoy pasan sin avisar."
+            % (nombre, ok, ped, mediana, ruta, FRACCION_M34 * 100)))
+
+    # ---- 7. la captura de las 11:5x (v1.07) ------------------------------
+    # ⚠️ Va al final y con su propia clave para no pisar a la alarma 1: son
+    # averías distintas —«el archivo está parado» frente a «el archivo está al
+    # día y le falta LA captura que importa»— y se arreglan distinto.
+    perdidas = alarma_captura_critica(raiz)
+    if simulacro == "captura_critica" and not perdidas:
+        perdidas = ["__simulacro__"]
+    if perdidas:
+        incidencias.append(Incidencia(
+            "captura_critica",
+            "%s⚠️ Falta la captura de las 11:5x en %d día(s)"
+            % (marca("captura_critica"), len(perdidas)),
+            "Días sin captura en la franja **11:45-12:00** que sí tienen "
+            "capturas posteriores: %s.\n\n"
+            "⚠️⚠️ **Esa captura es el horizonte de información entero**: es la "
+            "foto de lo que se sabía al cerrar las ofertas del diario, y la "
+            "regla Q3 dice que una variable es la versión disponible a esa "
+            "hora. Un día sin ella no se puede usar para entrenar ni para "
+            "medir, y **no se puede recuperar**: las previsiones que había a "
+            "esa hora ya no las sirve nadie.\n\n"
+            "⚠️ La alarma 1 no lo ve, y no es un descuido suyo: mira la "
+            "antigüedad de la ÚLTIMA captura, así que con las siguientes "
+            "llegando en hora el archivo parece al día. El hueco que deja "
+            "perder ésta mide **6,00 h exactas** y el umbral era `> 6.0`."
+            % ", ".join("`%s`" % d for d in perdidas)))
+
     return incidencias
 
 
@@ -1208,8 +1537,21 @@ def peticion_de_issue(inc, etiqueta, asignar_a=None):
     return peticion
 
 
-def publicar(incidencias, repo, token, etiqueta="vigilante", asignar_a=None):
+def publicar(incidencias, repo, token, etiqueta="vigilante",
+             asignar_a=ASIGNAR_A):
     """Abre una issue por incidencia, si no hay ya una abierta con su clave.
+
+    ⚠️⚠️ EL DEFECTO ES `ASIGNAR_A`, NO `None`, DESDE LA v1.07, y el motivo es
+    un fallo que se vio en producción: el 12-sep-2026 la incidencia **#15**
+    —la primera vez que A19 saltó de verdad— se abrió **sin asignado** y no le
+    llegó a nadie. La causa era que `registro.py` llamaba a esta función sin
+    ese argumento, y el defecto `None` significaba «no asignes».
+
+    «No asignar» **nunca** es lo que se quiere en producción: una issue sin
+    asignado solo la ve quien esté *watching* del repositorio. Con el defecto
+    callado, el fallo estaba esperando a cualquiera que llamase sin acordarse
+    — y llamó. Quien quiera de verdad no asignar, que pase `asignar_a=None`
+    y se le vea escribirlo.
 
     ⚠️ El antiduplicado no es un lujo: sin él, una avería de un día abriría 8
     incidencias idénticas —una por captura— y al tercer día nadie las miraría.
@@ -1763,13 +2105,20 @@ def autotest():
     print("\n-- v1.06 · A19 · nadie vigila al vigilante -------------------")
     ah19 = dt.datetime(2026, 9, 11, 12, 0, tzinfo=dt.timezone.utc)
 
-    def api_falsa(fin, inicio=None):
-        """Una respuesta de la API con UNA pasada que terminó en `fin`."""
-        pasada = {"updated_at": fin}
+    def api_falsa(fin, inicio=None, conclusion="success", antes=()):
+        """Una respuesta de la API con una pasada que terminó en `fin`.
+
+        ⚠️ `conclusion` es EXPLÍCITA desde la v1.07 y por defecto «success»:
+        hasta la v1.06 estas respuestas no llevaban el campo, y el código daba
+        por vigilancia cualquier pasada terminada. `antes` son las pasadas MÁS
+        RECIENTES que ésta (la API las devuelve de nueva a vieja).
+        """
+        pasada = {"updated_at": fin, "conclusion": conclusion}
         if inicio:
             pasada["created_at"] = inicio
         return lambda camino, token=None: {
-            "workflow_runs": [pasada] if fin is not None else []}
+            "workflow_runs": (list(antes) + [pasada]) if fin is not None
+            else []}
 
     comprobar_que(
         alarma_vigilante_mudo("x/y", ahora=ah19,
@@ -1815,6 +2164,182 @@ def autotest():
         subio = True
     comprobar_que(subio,
                   "⚠️ un fallo de red SUBE, no se traga (trampa 6)")
+
+    # ---- v1.07 · «ha corrido» no es «ha terminado bien» -----------------
+    # ⚠️⚠️ LA PRUEBA QUE EXIGE B4, y que FALLA con el código de la v1.06: una
+    # pasada reciente que terminó en `failure` no ha vigilado nada, y la v1.06
+    # la contaba como vigilancia porque solo miraba `updated_at`.
+    inc_f = alarma_vigilante_mudo(
+        "x/y", ahora=ah19,
+        consultar=api_falsa("2026-09-11T11:00:00Z", conclusion="failure"))
+    comprobar_que(inc_f is not None,
+                  "⚠️⚠️ v1.07 · una pasada reciente en `failure` NO cuenta "
+                  "como vigilancia (con la v1.06 esto daba «todo bien»)")
+
+    # y el mensaje tiene que distinguir las dos averías
+    comprobar_que(inc_f is not None and "termino bien" in inc_f.titulo,
+                  "v1.07 · y lo dice por su nombre: ninguna terminó bien")
+
+    # una pasada sin `conclusion` tampoco es un éxito demostrado
+    comprobar_que(
+        alarma_vigilante_mudo(
+            "x/y", ahora=ah19,
+            consultar=api_falsa("2026-09-11T11:00:00Z", conclusion=None))
+        is not None,
+        "⚠️ v1.07 · sin `conclusion` no consta que terminara bien, y lo que "
+        "no consta no se supone")
+
+    # DEGRADACIÓN: la última buena está dentro de plazo, pero las dos
+    # posteriores fallaron. Avisa, y con otra clave para no pisar A19.
+    fallo1 = {"updated_at": "2026-09-11T11:30:00Z", "conclusion": "failure"}
+    fallo2 = {"updated_at": "2026-09-11T11:45:00Z", "conclusion": "failure"}
+    inc_d = alarma_vigilante_mudo(
+        "x/y", ahora=ah19,
+        consultar=api_falsa("2026-09-11T10:25:00Z", antes=[fallo2, fallo1]))
+    comprobar_que(inc_d is not None and inc_d.clave.startswith(
+        "vigilante_degradado"),
+        "⚠️ v1.07 · si las últimas pasadas fallan pero aún hay una buena "
+        "dentro de plazo, avisa ANTES de quedarse mudo")
+    comprobar_que(inc_d is not None and "2 ultimas" in inc_d.titulo,
+                  "v1.07 · y dice cuántas llevan fallando")
+
+    # ⚠️ Y la otra mitad: con todo bien, ni una cosa ni la otra. Sin esto, la
+    # alarma nueva podría saltar siempre y nadie lo notaría (trampa 7).
+    comprobar_que(
+        alarma_vigilante_mudo(
+            "x/y", ahora=ah19,
+            consultar=api_falsa("2026-09-11T10:25:00Z")) is None,
+        "⚠️ v1.07 · con la última pasada buena y reciente, NO avisa")
+
+    # ---- v1.07 · la captura de las 11:5x --------------------------------
+    print("\n-- v1.07 · M34 · indicadores perdidos dentro del fichero ----")
+    with tempfile.TemporaryDirectory() as tmp:
+        # ⚠️⚠️ EL `indice.csv` NO ES DECORADO. `alarma_indicadores_perdidos`
+        # resuelve su destino asi: la raiz si tiene indice.csv dentro, y si no
+        # `raiz/archivo`. Sin este fichero, la prueba apuntaba a
+        # `tmp/archivo/archivo` —que no existe—, el glob no encontraba NINGUN
+        # manifiesto y la alarma devolvia [] siempre. Las tres primeras
+        # comprobaciones pasaban en VERDE SOBRE NADA, y solo se vio porque la
+        # cuarta esperaba un aviso y no llegaba.
+        os.makedirs(os.path.join(tmp, "archivo"), exist_ok=True)
+        with io.open(os.path.join(tmp, "archivo", "indice.csv"), "w",
+                     encoding="utf-8") as f:
+            f.write("fecha,hora,ruta,ok,vacio,fallo\n")
+
+        def manifiesto(dia, hora, ok, pedidos=138, fuente="esios_previsiones"):
+            d = os.path.join(tmp, "archivo", "2026", "09", dia, hora)
+            os.makedirs(d, exist_ok=True)
+            with io.open(os.path.join(d, "manifiesto.json"), "w",
+                         encoding="utf-8") as f:
+                json.dump({"fuentes": {fuente: {
+                    "estado": "OK", "indicadores_ok": ok,
+                    "pedidos": pedidos}}}, f)
+
+        # seis capturas normales: 114 de 138
+        for i, h in enumerate(["0850", "1150", "1450", "1750", "2050", "2350"]):
+            manifiesto("2026-09-10", h, 114)
+        comprobar_que(alarma_indicadores_perdidos(
+            os.path.join(tmp, "archivo")) == [],
+            "v1.07 · M34 · con los indicadores de siempre, no avisa")
+
+        # ⚠️⚠️ LA QUE IMPORTA: el fichero llega, pesa lo normal y cambia, pero
+        # trae 26 indicadores menos. Ninguna otra alarma lo ve.
+        manifiesto("2026-09-11", "0850", 88)
+        avisos = alarma_indicadores_perdidos(os.path.join(tmp, "archivo"))
+        comprobar_que(len(avisos) == 1 and avisos[0][2] == 88,
+                      "⚠️⚠️ v1.07 · M34 · 26 indicadores menos SÍ avisan, "
+                      "aunque el fichero esté, pese lo normal y haya cambiado")
+
+        # ⚠️ Y no se compara con capturas de OTRO tamaño: la completa pide
+        # 1.550 y trae ~790, que con un umbral absoluto sería «se ha caído».
+        manifiesto("2026-09-11", "1150", 790, pedidos=1550)
+        avisos = alarma_indicadores_perdidos(os.path.join(tmp, "archivo"))
+        comprobar_que(all(a[4] != 1550 for a in avisos),
+                      "⚠️ v1.07 · M34 · una captura COMPLETA no se compara con "
+                      "las ligeras: 790 de 1.550 es lo suyo, no una caída")
+
+    with tempfile.TemporaryDirectory() as tmp2:
+        os.makedirs(os.path.join(tmp2, "archivo"), exist_ok=True)
+        with io.open(os.path.join(tmp2, "archivo", "indice.csv"), "w",
+                     encoding="utf-8") as f:
+            f.write("fecha,hora,ruta,ok,vacio,fallo\n")
+
+        def m2(dia, hora, ok):
+            d = os.path.join(tmp2, "archivo", "2026", "09", dia, hora)
+            os.makedirs(d, exist_ok=True)
+            with io.open(os.path.join(d, "manifiesto.json"), "w",
+                         encoding="utf-8") as f:
+                json.dump({"fuentes": {"x": {"indicadores_ok": ok,
+                                             "pedidos": 138}}}, f)
+        # ⚠️ Con pocas capturas NO se opina: tres no hacen una mediana, y
+        # avisar con ellas sería inventarse una normalidad.
+        m2("2026-09-10", "0850", 114)
+        m2("2026-09-10", "1150", 114)
+        m2("2026-09-10", "1450", 10)
+        comprobar_que(alarma_indicadores_perdidos(
+            os.path.join(tmp2, "archivo")) == [],
+            "⚠️ v1.07 · M34 · con menos de 5 capturas del mismo tamaño no se "
+            "opina: no hay mediana que merezca el nombre")
+
+    print("\n-- v1.07 · la captura de las 11:5x --------------------------")
+    with tempfile.TemporaryDirectory() as tmp:
+        cab = ("fecha,hora,ejecucion_madrid,ejecucion_utc,version,modo,"
+               "disparo,ok,vacio,fallo,omitida,parcial,kb_total,ruta,run_id\n")
+
+        def indice(filas):
+            with io.open(os.path.join(tmp, "indice.csv"), "w",
+                         encoding="utf-8") as f:
+                f.write(cab + "".join(
+                    "%s,%s,,,v1,ligero,schedule,1,0,0,0,0,1,r,1\n" % (d, h)
+                    for d, h in filas))
+
+        # día completo: tiene la de las 11:50 -> nada que avisar
+        indice([("2026-09-10", "0850"), ("2026-09-10", "1150"),
+                ("2026-09-10", "1750")])
+        comprobar_que(alarma_captura_critica(tmp) == [],
+                      "v1.07 · con la captura de las 11:50, no avisa")
+
+        # ⚠️ LA QUE IMPORTA: falta la del mediodía y el día siguió capturando.
+        # Es el caso que la alarma 1 NO ve, porque el archivo queda al día.
+        # ⚠️ El indice lleva DIAS BUENOS delante, y no es decorado: sin
+        # ninguno, la alarma concluye —bien— que este archivo no captura a esa
+        # hora y no aplica. La primera version de esta prueba no los tenia y
+        # fallo por eso: el irreal era el caso de prueba, no el codigo.
+        indice([("2026-09-08", "1150"), ("2026-09-09", "1150"),
+                ("2026-09-11", "0850"), ("2026-09-11", "1750")])
+        comprobar_que(alarma_captura_critica(tmp) == ["2026-09-11"],
+                      "⚠️⚠️ v1.07 · si falta la del mediodía y hay capturas "
+                      "POSTERIORES, se avisa (la alarma 1 no lo ve: el "
+                      "archivo queda al día)")
+
+        # ⚠️ Y la otra mitad: sin capturas posteriores NO se acusa. El día
+        # puede no haber llegado a esa hora todavía.
+        indice([("2026-09-10", "1150"), ("2026-09-11", "0850")])
+        comprobar_que(alarma_captura_critica(tmp) == [],
+                      "⚠️ v1.07 · sin capturas posteriores no se acusa: puede "
+                      "que el día aún no haya llegado a esa hora")
+
+        # el límite de arriba es DURO: las 12:01 ya es después del cierre
+        indice([("2026-09-08", "1150"), ("2026-09-09", "1150"),
+                ("2026-09-11", "1201"), ("2026-09-11", "1750")])
+        comprobar_que(alarma_captura_critica(tmp) == ["2026-09-11"],
+                      "⚠️ v1.07 · las 12:01 NO valen: el cierre de ofertas es "
+                      "a las 12:00 y después ya no es lo que se sabía")
+
+        # el de abajo es blando: las 11:35 son peores pero valen
+        indice([("2026-09-10", "1135"), ("2026-09-10", "1750")])
+        comprobar_que(alarma_captura_critica(tmp) == [],
+                      "v1.07 · las 11:35 valen: son anteriores al cierre")
+
+        # ⚠️ AUTOCALIBRADO: un archivo que NUNCA captura a esa hora —el del
+        # SAIH, que va a 09:30, 14:00 y 20:00— no dispara nunca. Sin esto
+        # saltaría todos los días, que es la trampa 7.
+        indice([("2026-09-10", "0930"), ("2026-09-10", "1400"),
+                ("2026-09-10", "2000"), ("2026-09-11", "0930"),
+                ("2026-09-11", "1400")])
+        comprobar_que(alarma_captura_critica(tmp) == [],
+                      "⚠️ v1.07 · un archivo que nunca captura a esa hora (el "
+                      "del SAIH) NO dispara: la alarma se autocalibra")
 
     print("\n-- v1.04 · la etiqueta llega a la issue ---------------------")
     inc = Incidencia("x", "titulo", "cuerpo")

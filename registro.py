@@ -85,6 +85,35 @@ ficheros** dentro de su carpeta, porque son series con vidas distintas y
 mezclarlas haría ilegibles las dos.
 
 HISTORIAL
+v1.03  12-sep-2026. **La incidencia de A19 se ASIGNA, y la tasa de entrega
+    se mide sola** (bloque B4).
+
+    ⚠️⚠️ EL FALLO QUE ESTO CIERRA SE VIO EN PRODUCCIÓN. El 12-sep-2026, la
+    primera pulsación del botón `vigilante_mudo` abrió la incidencia **#15**
+    —A19 vista saltar por primera vez— y salió **SIN ASIGNADO**, así que no le
+    llegó a nadie. La causa era una línea: este programa llamaba a
+    `vigilante.publicar(...)` sin pasar `asignar_a`, cuyo valor por defecto es
+    `None`. El vigilante sí lo pasaba; este no.
+
+    ⚠️ Y no se arregla solo aquí: el defecto de `publicar()` pasa a ser
+    `ASIGNAR_A` en `vigilante.py` v1.07, porque «no asignar» **nunca** es lo
+    que se quiere en producción y un defecto que calla es el mismo fallo
+    esperando al siguiente que llame. Aquí se pasa además de forma explícita,
+    que es lo que se lee al revisar.
+
+    **M28 · LA TASA DE ENTREGA SE MIDE SOLA.** El 42-67 % de entrega del cron
+    de GitHub sostiene toda la arquitectura del disparo y era una cifra de
+    hace un mes que nadie había vuelto a medir. Ahora `tasa_de_entrega()` la
+    saca del propio índice, por tipo de disparo y sobre los últimos 30 días, y
+    `contar()` la imprime en cada pasada diaria.
+
+    ⚠️ SE MIDE SOBRE LOS HUECOS OBSERVADOS, no contra un calendario nominal, y
+    la cifra va marcada como **estimada** porque lo es: sin leer el `cron` de
+    cada `.yml` no se puede saber cuántas ranuras había, así que se toma la
+    **mediana** de los huecos como cadencia y se compara lo observado con lo
+    que cabría en la ventana a ese ritmo. Vale para ver una caída —que es para
+    lo que existe— y no vale para publicarla como porcentaje exacto.
+
 v1.02  11-sep-2026. **A19 gana su BOTÓN DE SIMULACRO**, que es lo que le
        faltaba para poder cerrarse: la alarma estaba desplegada y en verde, pero
        **no se había visto saltar**, y verla de otro modo exigiría parar el
@@ -116,6 +145,9 @@ v1.00  9-sep-2026. Versión inicial. El motor ya estaba en `vigilante.py` v1.03;
 import argparse
 import io
 import os
+import collections
+import csv
+import datetime as dt
 import sys
 
 import vigilante
@@ -218,7 +250,78 @@ def registrar(raiz):
         "fallos": n_fallos,
         "episodios": n_episodios,
         "kb": tam,
+        # M28 · se mide en cada pasada, que es lo que la convierte en una
+        # medicion y no en una cifra de hace un mes.
+        "entrega": tasa_de_entrega(raiz, dias=vigilante.DIAS_VENTANA),
     }
+
+
+def tasa_de_entrega(raiz, dias=30, ahora=None):
+    """M28 · ¿Sigue entregando cada disparo? Del índice, por tipo.
+
+    Devuelve `{disparo: {capturas, dias, mediana_h, maximo_h, estimada}}`.
+
+    ⚠️ `estimada` ES ESTIMADA Y POR ESO SE LLAMA ASÍ. No hay forma de saber
+    cuántas ranuras *debería* haber habido sin leer el `cron` de cada `.yml`,
+    así que se toma la **mediana** de los huecos observados como cadencia y se
+    compara lo que hubo con lo que cabría en la ventana a ese ritmo. Sirve
+    para ver una caída —que es para lo que existe— y no para publicar un
+    porcentaje como si fuera exacto.
+
+    ⚠️ Nace porque el «42-67 % de entrega» que sostiene toda la arquitectura
+    del disparo era una cifra de hace un mes que nadie volvía a medir (M28).
+    Una cifra que no se remide deja de ser una medición y pasa a ser una
+    creencia.
+    """
+    ahora = ahora or dt.datetime.now(dt.timezone.utc)
+    corte = ahora - dt.timedelta(days=dias)
+    ruta = os.path.join(raiz, "indice.csv")
+    if not os.path.isfile(ruta):
+        return {}
+
+    por_tipo = collections.defaultdict(list)
+    with io.open(ruta, encoding="utf-8", newline="") as f:
+        for fila in csv.DictReader(f):
+            crudo = (fila.get("ejecucion_utc") or "").strip()
+            if not crudo:
+                continue          # sin fecha no se puede situar: no se cuenta
+            try:
+                cuando = dt.datetime.fromisoformat(crudo)
+            except ValueError:
+                continue
+            if cuando.tzinfo is None:
+                cuando = cuando.replace(tzinfo=dt.timezone.utc)
+            if cuando < corte:
+                continue
+            # ⚠️ El disparo vacío se cuenta como «(sin declarar)» y NO se
+            # descarta: eran 44 filas de 455 el 12-sep-2026, y descartarlas en
+            # silencio es la clase de omisión que esta casa persigue.
+            por_tipo[(fila.get("disparo") or "").strip()
+                     or "(sin declarar)"].append(cuando)
+
+    salida = {}
+    for tipo, cuandos in por_tipo.items():
+        cuandos.sort()
+        huecos = [(b - a).total_seconds() / 3600.0
+                  for a, b in zip(cuandos, cuandos[1:])]
+        mediana = maximo = None
+        estimada = None
+        if huecos:
+            ord_ = sorted(huecos)
+            mediana = ord_[len(ord_) // 2]
+            maximo = ord_[-1]
+            if mediana > 0:
+                ventana_h = (cuandos[-1] - cuandos[0]).total_seconds() / 3600.0
+                cabrian = ventana_h / mediana + 1
+                estimada = 100.0 * len(cuandos) / cabrian if cabrian else None
+        salida[tipo] = {
+            "capturas": len(cuandos),
+            "dias": len(set(c.date() for c in cuandos)),
+            "mediana_h": mediana,
+            "maximo_h": maximo,
+            "estimada": estimada,
+        }
+    return salida
 
 
 def contar(r, salida=None):
@@ -240,6 +343,23 @@ def contar(r, salida=None):
             "%.1f KB\n" % (r["fallos"], r["kb"]["fallos_recientes.csv"]))
     escribe("    episodios acumulados .... %d  -> episodios.csv "
             "%.1f KB\n" % (r["episodios"], r["kb"]["episodios.csv"]))
+
+    # M28 · la tasa de entrega, medida hoy y no hace un mes.
+    entrega = r.get("entrega") or {}
+    if entrega:
+        escribe("    entrega por disparo (ultimos %d dias, estimada):\n"
+                % vigilante.DIAS_VENTANA)
+        for tipo in sorted(entrega):
+            e = entrega[tipo]
+            if e["mediana_h"] is None:
+                escribe("      %-20s %3d capturas en %2d dias  (1 sola: sin "
+                        "hueco que medir)\n"
+                        % (tipo, e["capturas"], e["dias"]))
+                continue
+            escribe("      %-20s %3d capturas en %2d dias  cadencia %.2f h  "
+                    "peor hueco %.2f h  ~%.0f %%\n"
+                    % (tipo, e["capturas"], e["dias"], e["mediana_h"],
+                       e["maximo_h"], e["estimada"] or 0.0))
 
     if r["kb"]["fallos_recientes.csv"] > TECHO_RECIENTES_KB:
         avisos += 1
@@ -368,15 +488,21 @@ def autotest():
     # ⚠️ Sin red: se inyecta la respuesta de la API. Lo que se prueba no es
     # que hable con GitHub —eso ya se probo contra la API real— sino la regla
     # de cuando se marca y cuando NO.
-    def api(fin):
-        return lambda camino, token=None: {"workflow_runs": [{"updated_at": fin}]}
+    def api(fin, conclusion="success"):
+        """⚠️ `conclusion` explícita desde la v1.03: hasta la v1.02 estas
+        respuestas simuladas no llevaban el campo, y `alarma_vigilante_mudo`
+        daba por vigilancia cualquier pasada TERMINADA, hubiera terminado bien
+        o en fallo. Al arreglarlo (vigilante v1.07), esta prueba dejó de pasar
+        — que es exactamente lo que tenía que ocurrir."""
+        return lambda camino, token=None: {
+            "workflow_runs": [{"updated_at": fin, "conclusion": conclusion}]}
 
     import datetime as _dt
     _ahora = _dt.datetime.now(_dt.timezone.utc)
     recien = (_ahora - _dt.timedelta(hours=1)).strftime("%Y-%m-%dT%H:%M:%SZ")
     antiguo = (_ahora - _dt.timedelta(hours=48)).strftime("%Y-%m-%dT%H:%M:%SZ")
 
-    sano = vigilante.alarma_vigilante_mudo("x/y", None, horas=6.0,
+    sano = vigilante.alarma_vigilante_mudo("x/y", None, horas=9.0,
                                            consultar=api(recien))
     comprobar("5a sin simulacro y con el vigilante vivo, no hay incidencia",
               sano is None)
@@ -388,11 +514,73 @@ def autotest():
 
     # ⚠⚠ LA PRUEBA QUE IMPORTA, y es la leccion de `vigilante.py` v1.02: con
     # el vigilante MUDO DE VERDAD, el simulacro NO debe etiquetar la averia.
-    real = vigilante.alarma_vigilante_mudo("x/y", None, horas=6.0,
+    real = vigilante.alarma_vigilante_mudo("x/y", None, horas=9.0,
                                            consultar=api(antiguo))
     comprobar("5c una averia REAL se detecta con el umbral normal",
               real is not None and "[SIMULACRO]" not in real.titulo,
               "-> %r" % (real.titulo if real else None))
+
+    # ⚠️⚠️ 5d · LA PRUEBA DEL FALLO QUE SE VIO EN PRODUCCIÓN: una pasada
+    # reciente que terminó en `failure` NO es vigilancia. Con el código de la
+    # v1.02 esto devolvía None, o sea «todo bien».
+    fallida = vigilante.alarma_vigilante_mudo("x/y", None, horas=9.0,
+                                              consultar=api(recien, "failure"))
+    comprobar("5d una pasada reciente en `failure` NO cuenta como vigilancia",
+              fallida is not None,
+              "-> %r" % (fallida.titulo if fallida else None))
+
+    # ---- M28 · la tasa de entrega -----------------------------------------
+    import tempfile as _tmp
+    with _tmp.TemporaryDirectory() as tmp:
+        cab = ("fecha,hora,ejecucion_madrid,ejecucion_utc,version,modo,"
+               "disparo,ok,vacio,fallo,omitida,parcial,kb_total,ruta,run_id\n")
+        filas = []
+        base = _dt.datetime(2026, 9, 1, 0, 0, tzinfo=_dt.timezone.utc)
+        # `schedule` cada 3 h durante 5 días, y le faltan 2 ranuras
+        for i in range(40):
+            if i in (7, 19):
+                continue
+            t = base + _dt.timedelta(hours=3 * i)
+            filas.append("2026-09-01,0000,,%s,v1,ligero,schedule,1,0,0,0,0,1,"
+                         "r,1\n" % t.isoformat())
+        # una sola de `push`: no hay hueco que medir
+        filas.append("2026-09-01,0000,,%s,v1,ligero,push,1,0,0,0,0,1,r,1\n"
+                     % base.isoformat())
+        with io.open(os.path.join(tmp, "indice.csv"), "w",
+                     encoding="utf-8") as f:
+            f.write(cab + "".join(filas))
+
+        ahora_t = base + _dt.timedelta(days=5)
+        e = tasa_de_entrega(tmp, dias=30, ahora=ahora_t)
+        comprobar("M28a mide por tipo de disparo",
+                  set(e) == {"schedule", "push"}, "-> %r" % sorted(e))
+        comprobar("M28b cuenta las capturas de cada tipo",
+                  e["schedule"]["capturas"] == 38, "-> %r" % e["schedule"])
+        comprobar("M28c la cadencia sale de los huecos observados (3 h)",
+                  abs(e["schedule"]["mediana_h"] - 3.0) < 0.01)
+        # ⚠️ con 2 ranuras perdidas de 40, el peor hueco es DOBLE
+        comprobar("M28d el peor hueco delata la ranura perdida",
+                  abs(e["schedule"]["maximo_h"] - 6.0) < 0.01)
+        comprobar("M28e la tasa estimada baja de 100 % al perder ranuras",
+                  e["schedule"]["estimada"] is not None
+                  and 90 < e["schedule"]["estimada"] < 100,
+                  "-> %r" % e["schedule"]["estimada"])
+        # ⚠️ Un solo punto no tiene hueco: se dice, NO se inventa una cadencia.
+        comprobar("M28f con una sola captura no se inventa cadencia",
+                  e["push"]["mediana_h"] is None)
+        # ⚠️ Y un índice que no existe no revienta ni miente: devuelve {}.
+        comprobar("M28g sin índice devuelve vacío, no una tasa falsa",
+                  tasa_de_entrega(os.path.join(tmp, "no-existe")) == {})
+
+    # ---- el asignado, que es lo que hace que el aviso llegue --------------
+    # ⚠️ Se comprueba sobre el CÓDIGO, porque publicar() habla por red y no se
+    # puede llamar aquí. Es una comprobación pobre y se dice: lo que garantiza
+    # de verdad es el defecto `ASIGNAR_A` de publicar() en vigilante v1.07.
+    import inspect as _ins
+    fuente = _ins.getsource(vigilar_al_vigilante)
+    comprobar("6a la incidencia de A19 se publica CON asignado (#15 salió "
+              "sin él y no le llegó a nadie)",
+              "asignar_a=vigilante.ASIGNAR_A" in fuente)
 
     print("\n  AUTOTEST · %d comprobaciones · %d fallos"
           % (hechas, len(fallos)))
@@ -452,8 +640,12 @@ def vigilar_al_vigilante(repo, horas, simulacro=False, consultar=None):
     if not token:
         print("    (sin GITHUB_TOKEN: no se publica, solo se dice)")
         return 1
+    # ⚠️ `asignar_a` EXPLÍCITO. Sin él, la incidencia se abre y no le llega a
+    # nadie: pasó el 12-sep-2026 con la #15, la primera vez que A19 saltó de
+    # verdad. Una alarma que nadie recibe no es una alarma.
     creadas, omitidas = vigilante.publicar([inc], repo, token,
-                                           etiqueta="vigilante")
+                                           etiqueta="vigilante",
+                                           asignar_a=vigilante.ASIGNAR_A)
     print("    incidencias: %d creada(s), %d ya abierta(s)"
           % (len(creadas), len(omitidas)))
     return 1

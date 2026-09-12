@@ -49,6 +49,20 @@ el 22,8 % de la hidráulica gestionable de España**, tercero de once y casi
 empatado con el Miño-Sil. Las otras ocho confederaciones tienen sistemas
 distintos y entran una a una.
 
+UN ARTEFACTO CONOCIDO DE NUESTRO DESPLIEGUE (M29, auditoría del 9-sep-2026)
+---------------------------------------------------------------------------
+⚠️ El registro permanente de fallos del SAIH —`episodios.csv` y
+`fallos_recientes.csv` del archivo— es **100 % artefacto nuestro**: sus
+entradas no son caídas del servidor del SAIH, sino de nuestro propio
+despliegue (las pasadas de antes de que existiera el clon, los empujes
+fallidos, las pruebas). Todo se reconstruye del archivo en cada pasada salvo
+`episodios.csv`, que se funde y por eso acumula.
+
+Queda escrito aquí, y no se «limpia», por el mismo motivo por el que no se
+reescribe la historia: esas líneas son ciertas —ocurrieron— y borrarlas haría
+que el archivo dejara de coincidir con lo que pasó. Lo que hay que saber es
+que **no miden la fiabilidad de la fuente**, sino la de nuestro montaje.
+
 CADENCIA: una vez al día. Los volúmenes de embalse son diarios; los aforos son
 quinceminutales, pero para una previsión de precio de D+1 la foto diaria basta,
 y multiplicar por 96 el volumen de datos sin usarlos sería pagar por nada.
@@ -60,6 +74,97 @@ ciego, que es justo lo que Xevi pidió evitar.
 
 HISTORIAL
 =========
+v1.03  12-sep-2026. **Entra el TURBINADO POR CENTRAL del Ebro y la hidrología
+    de las otras dos cuencas** (decisión **D39** de Xevi, bloque B4), el
+    manifiesto pasa a FUNDIRSE en vez de sobrescribirse (**M30**) y se
+    documenta el artefacto de M29.
+
+    ⚠️ LOS AFOROS DEL EBRO YA SE CAPTURABAN desde la v1.00 (`aforos_cuenca`).
+    D39 pedía «QCENT y aforos»: de los dos, lo único nuevo aquí es `QCENT`.
+
+    `QCENT` NO ES UN ENDPOINT, ES UN PROCEDIMIENTO DE TRES LLAMADAS, y por eso
+    no cabe en `CONFEDERACIONES`: hay que preguntar qué estaciones lo tienen,
+    pedir sus señales y descargar un ZIP por rango de fechas. Se captura con
+    `capturar_qcent()`, que deja su ficha en el manifiesto como una fuente más.
+
+    ⚠️ Y SE PIDE UN RANGO DE 15 DÍAS, NO EL DÍA DE HOY. Es la única fuente de
+    este programa que RECUPERA HUECOS: si la máquina pasa días apagada, la
+    pasada siguiente recoge lo que faltaba. Cuesta ~7 KB. Las demás fuentes
+    solo sirven la foto de hoy y lo no capturado se pierde para siempre.
+
+    ✅ Medido el 12-sep-2026 sobre 1 pasada de 7 días: 6 señales en el
+    catálogo, ZIP de 3.723 bytes, un CSV por señal. Con tres avisos que salen
+    del propio dato y que quien lo lea debe conocer:
+      · el día EN CURSO viene incompleto (media sí, mínimo y máximo vacíos);
+      · **una de las 6 está muerta** (Cortijo, `CH06T65QTOTA`: 0 filas en 7
+        días; su serie acabó en 2022), así que vivas son **5**;
+      · ⚠️ **una ni siquiera es QCENT**: `CH49Y68QCAUT` es `QCAUT`, da 0
+        constante y **sirve las fechas DESORDENADAS** (10/09, 07/09, 11/09).
+        El código de tipo NO va dentro del tag, así que nadie puede deducir de
+        un tag lo que mide, ni dar por hecho el orden de las filas.
+
+    LAS OTRAS DOS CUENCAS: ✅ se comprobó —no se supuso— qué ofrecen, y el
+    resultado corrigió lo que este fichero daba por sabido.
+      · **Duero**: `datos-tiempo-real/risr` trae **toda la cuenca en UNA
+        petición**: 176 KB con 290 estaciones dentro del JavaScript —no en el
+        HTML—, en `datosEA` (aforos, con caudal en m3/s), `datosEM` (embalses)
+        y `datosPL` (pluviómetros, con precipitación observada en l/m2).
+        ⚠️ La página tiene 9 tablas y **solo 32 celdas**: contar `<tr>` aquí no
+        mide nada, y por eso el `spec` admite `contar`.
+      · **Miño-Sil**: `/datos/resumen`, 1 tabla de 76 filas con umbrales de
+        aviso. ⚠️ Lo que trae es **NIVEL en metros**, no caudal: se captura
+        porque es hidrología observada, pero no es lo mismo y no se le llama
+        aforo.
+
+    ⚠️ LAS DOS SE ARCHIVAN CRUDAS Y NO SE PARSEAN (decisión de Xevi): es la
+    filosofía del archivador —lo que no se captura hoy no se recupera, y lo
+    que se parsea mal se vuelve a parsear— y hace que el cambio sea ADITIVO
+    PURO: ninguna fuente existente cambia de significado.
+
+    **M30 · EL MANIFIESTO SE FUNDE, NO SE SOBRESCRIBE.** Hasta la v1.02, una
+    pasada fallida degradaba el veredicto del día aunque el dato estuviera
+    guardado: si la de las 09:30 traía todo y la de las 14:00 fallaba, el
+    manifiesto del día decía FALLO **sobre un fichero que estaba en disco**.
+    El disco ya se comportaba como «lo mejor del día» —una pasada que falla
+    hace `continue` ANTES de escribir, así que no pisa el `.gz` bueno—: era el
+    manifiesto el que mentía. Ahora una fuente solo consta como FALLO si
+    NINGUNA pasada del día la trajo, cada ficha dice de qué pasada viene, y el
+    manifiesto lleva el rastro de todas en `pasadas`. ⚠️ Una pasada que falla
+    sobre una fuente ya buena NO se esconde: queda en `ultima_pasada`.
+
+    ⚠️⚠️ **Y EL DÍA QUE SE ESTRENA UNA VERSIÓN, EL MANIFIESTO ANTERIOR NO
+    TIENE `pasadas` — Y ESO NO ES UN DÍA SIN PASADAS.** Lo descubrió la
+    ejecución REAL del 12-sep-2026 a las 20:00, no el autotest ni la prueba en
+    vivo: el manifiesto de ese día quedó diciendo **«1 pasada» cuando hubo
+    TRES**, porque las de 09:30 y 14:00 las había escrito la v1.02. Sin
+    marcarlo, ese día parecería de una sola pasada para siempre, y lo mismo le
+    pasaría a cualquier día en que se estrene una versión futura.
+
+    No se inventa un número: se dice que **hubo pasadas y no se sabe cuántas**,
+    con lo único que sí se sabe —cuántas fuentes había ya—, en
+    `pasadas_previas_sin_registrar` y en la línea de resumen.
+
+    ℹ︎ **Cómo se coló una versión sin desplegar, que es la lección de fondo.**
+    La casa tiene escrito que «lo que la rutina carga POR PATRÓN está en
+    producción al escribirse». Este programa es un caso **más fuerte**: el
+    `.bat` lo carga **por RUTA FIJA** desde el clon de despliegue, que es
+    también el de trabajo, así que **basta guardar el fichero** — ni hace falta
+    subir la versión ni ser el número más alto. Esta v1.03 llevaba capturando
+    en producción desde las 20:00 del 12-sep, horas antes de que nadie la
+    desplegara, y **funcionó**: 7 fuentes, 0 fallos, y el vigilante v1.06 leyó
+    su manifiesto nuevo sin una queja. Salió bien; pero salió bien por suerte,
+    y quien edite este fichero tiene que saber que está tocando producción.
+
+    **M29 · documentado**: ver «UN ARTEFACTO CONOCIDO DE NUESTRO DESPLIEGUE».
+
+    **Y NACE `VERSION`**, con la misma prueba que el archivador estrenó en su
+    v3.14: la versión vivía escrita a mano dentro del manifiesto (`"version":
+    "v1.02"`) y también en este historial, o sea en dos sitios. Hoy, 12-sep, el
+    archivador estuvo TRES DÍAS con esas dos cosas descuadradas —`VERSION` en
+    v3.16 y la cabecera en v3.14— y su autotest en rojo sin que nadie lo
+    ejecutara. Aquí el dato vive en un solo sitio y `--autotest` lo comprueba.
+
+
 v1.02  9-sep-2026. **Entran el DUERO y el MIÑO-SIL**, y con ellos la cobertura
        pasa del **22,76 % al 77,71 %** del volumen embalsado peninsular. El
        Ebro solo, que era todo lo que había, pesa menos que cualquiera de las
@@ -101,9 +206,11 @@ import argparse
 import csv
 import datetime as dt
 import gzip
+import zipfile
 import io
 import json
 import os
+import re
 import ssl
 import sys
 import tempfile
@@ -141,6 +248,19 @@ ESPERA_S = 3.0
 # es una firma con umbrales, es una identidad —está o no está—, que es lo que
 # la trampa 10 de la casa manda preferir. Si el Duero deja de decir «Volumen
 # embalsado», no queremos guardar lo que sea que haya devuelto.
+# ⚠️ LA VERSIÓN VIVE AQUÍ Y EN NINGÚN OTRO SITIO, y `--autotest` comprueba que
+# concuerde con el primer bloque del historial de la cabecera. Hasta la v1.02
+# estaba escrita a mano dentro del manifiesto, o sea en dos sitios que podían
+# descuadrarse — y el mismo 12-sep-2026 se comprobó que al archivador le había
+# pasado exactamente eso durante tres días.
+VERSION = "v1.03"
+
+# ⚠️ `QCENT` va aparte de este diccionario A PROPÓSITO: no es una URL, son tres
+# llamadas encadenadas con parámetros de fecha (ver `capturar_qcent`). Meterlo
+# aquí obligaría a que `capturar()` supiera de casos especiales, y entonces el
+# esquema dejaría de describir lo que hace.
+DIAS_QCENT = 15          # ver el historial: es la única fuente que recupera huecos
+
 CONFEDERACIONES = {
     "ebro": {
         "peso": 22.76,
@@ -168,6 +288,21 @@ CONFEDERACIONES = {
                 "ruta": "/situacion-embalses",
                 "formato": "html",
                 "marca": "Volumen embalsado"},
+            # ✅ D39, 12-sep-2026: TODA la cuenca en una petición. El dato no
+            # está en el HTML sino dentro del JavaScript —`datosEA` aforos con
+            # caudal en m3/s, `datosEM` embalses, `datosPL` pluviómetros con
+            # precipitación observada—, 290 estaciones medidas ese día.
+            #
+            # ⚠️ La marca es la DEFINICIÓN de la variable, no la palabra
+            # «caudal»: «Caudal:» aparece en las etiquetas del panel lateral
+            # aunque no venga ni un dato, así que validaría una página vacía.
+            # Y `contar` existe porque aquí `<tr>` no mide nada: la página
+            # tiene 9 tablas y 32 celdas.
+            "tiempo_real_risr": {
+                "ruta": "/datos-tiempo-real/risr",
+                "formato": "html",
+                "marca": "var datosEA = new Array(",
+                "contar": "station: '"},
         },
     },
     # ⚠️ El Miño-Sil corre «WEBSAIH ws 2022», un producto de terceros, y da
@@ -187,6 +322,14 @@ CONFEDERACIONES = {
                 "ruta": "/index.php?url=/datos/situacionEmbalses",
                 "formato": "html",
                 "marca": "Capacidad Total"},
+            # ✅ D39, 12-sep-2026: 1 tabla de 76 filas, 294 celdas con número.
+            # ⚠️ NO son aforos: es NIVEL en metros con umbrales de aviso
+            # (rojo/naranja/amarillo). Se captura por ser hidrología observada,
+            # y el nombre lo dice para que nadie lo confunda con caudal.
+            "resumen_niveles": {
+                "ruta": "/index.php?url=/datos/resumen",
+                "formato": "html",
+                "marca": "Valor actual (m)"},
         },
     },
     # ❌ TAJO (10,23 %): SU SERVIDOR ESTÁ ROTO, y no es cosa nuestra. Su portal
@@ -328,9 +471,19 @@ def capturar(confederacion, ca, carpeta):
                       % (clave, marca, len(cuerpo)))
                 time.sleep(ESPERA_S)
                 continue
-            # Cuenta de filas: no valida nada por sí sola, pero deja en el
+            # Cuenta de elementos: no valida nada por sí sola, pero deja en el
             # manifiesto una cifra que cambia si la tabla se vacía.
-            elementos = cuerpo.count(b"<tr")
+            #
+            # ⚠️ `<tr>` solo sirve cuando el dato viaja en una tabla. En el
+            # visor del Duero el dato está dentro del JavaScript y la página
+            # tiene 9 tablas con 32 celdas: contar `<tr>` daría siempre lo
+            # mismo, hubiera 290 estaciones o ninguna. Por eso un `spec` puede
+            # declarar qué contar.
+            aguja = spec.get("contar")
+            if aguja:
+                elementos = cuerpo.count(aguja.encode("utf-8"))
+            else:
+                elementos = cuerpo.count(b"<tr")
 
         ruta_f = os.path.join(carpeta, "%s.%s.gz" % (clave, formato))
         with gzip.open(ruta_f, "wb") as f:
@@ -347,6 +500,202 @@ def capturar(confederacion, ca, carpeta):
                  os.path.getsize(ruta_f) / 1024, dur))
         time.sleep(ESPERA_S)
     return fichas
+
+
+def capturar_qcent(ca, carpeta):
+    """El TURBINADO POR CENTRAL del Ebro. Devuelve su ficha, como `capturar`.
+
+    ⚠️ Son TRES llamadas encadenadas y no un endpoint, por eso vive fuera de
+    `CONFEDERACIONES`: hay que preguntar qué estaciones tienen `QCENT`, pedir
+    sus señales, y descargar un ZIP con un CSV por señal.
+
+    ⚠️ EL CATÁLOGO SE PREGUNTA CADA VEZ, no se cablea la lista de señales. Si
+    mañana el Ebro da de alta una central, entra sola; si da una de baja, se
+    ve en `elementos`. Una lista fija habría capturado para siempre las seis
+    de hoy sin que nadie se enterase de un alta.
+
+    ⚠️ Y SE PIDE UN RANGO, NO UN DÍA: es la única fuente de este programa que
+    recupera huecos. Ver `DIAS_QCENT` y el historial de la cabecera.
+    """
+    import requests
+    clave = "saih_ebro_qcent"
+    base = CONFEDERACIONES["ebro"]["base"]
+    hoy = dt.date.today()
+    desde = (hoy - dt.timedelta(days=DIAS_QCENT)).strftime("%d/%m/%Y")
+    hasta = hoy.strftime("%d/%m/%Y")
+    cab = {"User-Agent": "Revenergetica-Casandra/1.0 (archivador hidrologico)"}
+    t0 = time.time()
+
+    def fallo(paso, detalle):
+        """⚠️ El paso que falló va en la ficha: «FALLO» a secas no dice si se
+        cayó el catálogo o la descarga, y son averías distintas."""
+        print("    %-40s ❌ %s: %s" % (clave, paso, detalle))
+        return {clave: {"estado": "FALLO", "paso": paso, "detalle": detalle}}
+
+    try:
+        r = requests.get(base + "/api/datos-historicos/getEstaciones"
+                                "?tipoConsolidado=diario&tiposSenal=QCENT",
+                         timeout=15, verify=ca, headers=cab)
+        if r.status_code != 200:
+            return fallo("getEstaciones", "HTTP %d" % r.status_code)
+        estaciones = json.loads(r.content.decode("utf-8"))
+    except Exception as e:
+        return fallo("getEstaciones", type(e).__name__)
+    time.sleep(ESPERA_S)
+
+    ids = [str(e.get("id", e.get("codigo", ""))) for e in estaciones]
+    ids = [i for i in ids if i]
+    if not ids:
+        # ⚠️ VACIO y no FALLO: el servidor contestó y no había. Confundir «hoy
+        # no hay» con «se rompió» es la trampa 7 de la casa.
+        print("    %-40s ⚠️ el catálogo no da ninguna estación" % clave)
+        return {clave: {"estado": "VACIO", "detalle": "0 estaciones con QCENT"}}
+
+    try:
+        r = requests.get(base + "/api/datos-historicos/getSenales"
+                                "?tipoConsolidado=diario&tiposSenal=QCENT"
+                                "&estaciones=" + ",".join(ids),
+                         timeout=15, verify=ca, headers=cab)
+        if r.status_code != 200:
+            return fallo("getSenales", "HTTP %d" % r.status_code)
+        senales = json.loads(r.content.decode("utf-8"))
+    except Exception as e:
+        return fallo("getSenales", type(e).__name__)
+    time.sleep(ESPERA_S)
+
+    sids = [str(s.get("id")) for s in senales if s.get("id") is not None]
+    if not sids:
+        print("    %-40s ⚠️ estaciones sin señal" % clave)
+        return {clave: {"estado": "VACIO", "detalle": "0 señales",
+                        "estaciones": len(ids)}}
+
+    try:
+        r = requests.get(base + "/api/datos-historicos/obtenerDatosHistoricos"
+                         "?tipoConsolidado=diario&senalesSeleccionadas="
+                         + ",".join(sids) + "&fechaIni=" + desde
+                         + "&fechaFin=" + hasta + "&formato=csv",
+                         timeout=120, verify=ca, headers=cab)
+        if r.status_code != 200:
+            return fallo("obtenerDatosHistoricos", "HTTP %d" % r.status_code)
+    except Exception as e:
+        return fallo("obtenerDatosHistoricos", type(e).__name__)
+    dur = time.time() - t0
+
+    # ⚠️ SE GUARDA SIEMPRE, incluso si no es un ZIP válido, y por el mismo
+    # motivo que el archivador guarda el HTML crudo de SENDECO2 cuando no lo
+    # entiende: el dato del día no se puede volver a pedir, y un cuerpo que
+    # hoy no sabemos abrir se puede reparsear mañana. Lo que cambia es el
+    # ESTADO, no si se guarda.
+    ruta_f = os.path.join(carpeta, "%s.zip" % clave)
+    with io.open(ruta_f, "wb") as f:
+        f.write(r.content)
+
+    try:
+        z = zipfile.ZipFile(io.BytesIO(r.content))
+        nombres = z.namelist()
+    except Exception:
+        print("    %-40s ❌ la respuesta no es un ZIP (%d bytes, guardada)"
+              % (clave, len(r.content)))
+        return {clave: {"estado": "FALLO", "paso": "zip",
+                        "detalle": "la respuesta no es un ZIP",
+                        "bytes": len(r.content)}}
+
+    # ⚠️ Se cuentan los CSV CON DATOS, no los ficheros: el ZIP trae uno por
+    # señal aunque la señal esté muerta. El 12-sep-2026, de 6 señales, una
+    # (`CH06T65QTOTA`, Cortijo) devolvió solo la cabecera — su serie acabó en
+    # 2022 —, así que «6 ficheros» habría dado por vivo lo que no lo está.
+    con_datos = 0
+    for n in nombres:
+        lineas = [x for x in z.read(n).decode("utf-8", "replace").splitlines()
+                  if x.strip()]
+        if len(lineas) > 1:
+            con_datos += 1
+
+    print("    %-40s ✅ %d señales · %d con datos · %5.1f KB · %.1f s"
+          % (clave, len(sids), con_datos, len(r.content) / 1024, dur))
+    return {clave: {
+        "estado": "OK" if con_datos else "VACIO",
+        "bytes": len(r.content),
+        "comprimido": os.path.getsize(ruta_f),
+        "elementos": con_datos,
+        "estaciones": len(ids),
+        "senales": len(sids),
+        "desde": desde,
+        "hasta": hasta,
+        "segundos": round(dur, 2),
+    }}
+
+
+def fundir(anterior, fichas, ahora_iso, confederaciones=()):
+    """M30. El veredicto del día, no el de la última pasada.
+
+    Devuelve `(fuentes, pasadas, confederaciones_del_dia,
+    previas_sin_registrar)`. Una fuente consta como FALLO **solo si
+    ninguna pasada del día la trajo**; si una pasada anterior la trajo bien, se
+    conserva aquélla y la de ahora queda anotada en `ultima_pasada`.
+
+    ⚠️ Es una función PURA y vive fuera de `main()` a propósito: lo que se
+    calcula dentro de un `main` no lo prueba nadie. Su prueba está en
+    `--autotest`.
+
+    ⚠️ Y NO ESCONDE NADA. El caso que preocupa —un servidor que lleva roto
+    desde la mañana y parece bien porque a las 09:30 respondió— se ve en
+    `ultima_pasada`, que dice qué pasó en la más reciente.
+    """
+    anterior = anterior or {}
+    previas = anterior.get("fuentes", {}) or {}
+    fuentes = dict(previas)
+
+    for clave, nueva in fichas.items():
+        vieja = previas.get(clave)
+        if nueva.get("estado") == "OK":
+            fuentes[clave] = dict(nueva, de_pasada_utc=ahora_iso)
+        elif vieja and vieja.get("estado") == "OK":
+            # ⚠️ El dato bueno está en disco: una pasada fallida hace
+            # `continue` ANTES de escribir, así que no ha pisado el `.gz`.
+            # El manifiesto se limita a decir la verdad del disco.
+            fuentes[clave] = dict(vieja, ultima_pasada={
+                "utc": ahora_iso,
+                "estado": nueva.get("estado"),
+                "detalle": nueva.get("detalle")})
+        else:
+            fuentes[clave] = dict(nueva, de_pasada_utc=ahora_iso)
+
+    # ⚠️⚠️ UN MANIFIESTO ANTERIOR SIN `pasadas` NO ES UN DÍA SIN PASADAS.
+    # Lo vio la ejecución real del 12-sep-2026 a las 20:00: el manifiesto del
+    # día quedó diciendo «1 pasada» cuando ese día hubo TRES — las de 09:30 y
+    # 14:00 las escribió la v1.02, que no registraba este campo. Sin esta
+    # marca, ese día parecería de una sola pasada para siempre, y lo mismo le
+    # pasaría a cualquier día en que se estrene una versión.
+    #
+    # No se inventa un número: se dice que hubo pasadas y que no se sabe
+    # cuántas, con lo único que sí se sabe —cuántas fuentes había ya—.
+    previas_sin_registrar = None
+    if anterior and "pasadas" not in anterior and previas:
+        previas_sin_registrar = {
+            "motivo": "el manifiesto del día venía de una versión anterior a "
+                      "la v1.03, que no registraba las pasadas",
+            "fuentes_que_ya_habia": len(previas),
+            "visto_el": ahora_iso,
+        }
+
+    pasadas = list(anterior.get("pasadas", []))
+    pasadas.append({
+        "utc": ahora_iso,
+        "confederacion": sorted(confederaciones),
+        "ok": sum(1 for f in fichas.values() if f.get("estado") == "OK"),
+        "vacio": sum(1 for f in fichas.values() if f.get("estado") == "VACIO"),
+        "fallo": sum(1 for f in fichas.values() if f.get("estado") == "FALLO"),
+    })
+
+    # ⚠️ LAS CUENCAS DEL DÍA, NO LAS DE ESTA PASADA. Si `fuentes` describe el
+    # día, `confederacion` y `peso_cubierto` tienen que describir lo mismo, o
+    # el manifiesto se contradice a sí mismo: con una pasada de solo el Ebro
+    # decía cubrir el 22,76 % mientras sus fuentes traían el 77,71 %. Lo que
+    # hizo cada pasada ya está en `pasadas`.
+    confs = sorted(set(anterior.get("confederacion", []))
+                   | set(confederaciones))
+    return fuentes, pasadas, confs, previas_sin_registrar
 
 
 def anotar_indice(raiz, ruta_rel, fichas, instante):
@@ -440,6 +789,109 @@ def autotest():
         comprobar(any(n.endswith(".json.gz") for n in os.listdir(carpeta)),
                   "y dentro están los ficheros capturados")
 
+    # --- v1.03 · la versión vive en un solo sitio -------------------------
+    # ⚠️ La misma prueba que el archivador estrenó en su v3.14, y que el
+    # 12-sep-2026 demostró servir: llevaba TRES DÍAS en rojo porque las v3.15
+    # y v3.16 subieron la constante sin escribir su bloque de historial.
+    en_cabecera = re.findall(r"^v(\d+\.\d+)", __doc__ or "", re.M)
+    comprobar(bool(en_cabecera), "el historial de la cabecera tiene versiones")
+    if en_cabecera:
+        comprobar("v" + en_cabecera[0] == VERSION,
+                  "⚠️ VERSION (%s) y el primer bloque del historial (v%s) "
+                  "coinciden" % (VERSION, en_cabecera[0]))
+
+    # --- v1.03 · D39: lo nuevo está declarado -----------------------------
+    comprobar("tiempo_real_risr" in CONFEDERACIONES["duero"]["endpoints"],
+              "D39 · el Duero captura la hidrología en tiempo real")
+    comprobar("resumen_niveles" in CONFEDERACIONES["mino_sil"]["endpoints"],
+              "D39 · el Miño-Sil captura el resumen de niveles")
+    comprobar(all("marca" in e for c in CONFEDERACIONES.values()
+                  for e in c["endpoints"].values() if e["formato"] == "html"),
+              "⚠️ todo endpoint HTML declara su marca: un 200 no valida nada")
+    comprobar(CONFEDERACIONES["duero"]["endpoints"]["tiempo_real_risr"]
+              .get("contar") is not None,
+              "⚠️ el visor del Duero declara QUÉ contar: ahí `<tr>` no mide "
+              "nada (9 tablas, 32 celdas, 290 estaciones en el JavaScript)")
+    comprobar(DIAS_QCENT >= 2,
+              "QCENT pide un RANGO: es la única fuente que recupera huecos")
+
+    # --- v1.03 · M30: el manifiesto dice el veredicto del DÍA -------------
+    ayer = "2026-09-12T09:30:00+00:00"
+    ahora_ = "2026-09-12T14:00:00+00:00"
+    primera = {"a": {"estado": "OK", "bytes": 10},
+               "b": {"estado": "FALLO", "detalle": "HTTP 500"}}
+    fuentes1, pasadas1, confs1, _ = fundir(None, primera, ayer, ["ebro"])
+    comprobar(fuentes1["a"]["estado"] == "OK" and len(pasadas1) == 1,
+              "M30 · la primera pasada del día se escribe tal cual")
+
+    man1 = {"fuentes": fuentes1, "pasadas": pasadas1}
+    segunda = {"a": {"estado": "FALLO", "detalle": "timeout"},
+               "b": {"estado": "OK", "bytes": 20}}
+    man1["confederacion"] = confs1
+    fuentes2, pasadas2, confs2, _ = fundir(man1, segunda, ahora_, ["duero"])
+
+    # ⚠️ ÉSTA ES LA PRUEBA QUE JUSTIFICA M30, y falla con el código de la
+    # v1.02: una pasada fallida degradaba el veredicto del día aunque el
+    # fichero bueno siguiera en disco.
+    comprobar(fuentes2["a"]["estado"] == "OK",
+              "⚠️ M30 · una pasada fallida NO degrada una fuente que otra "
+              "pasada del día ya trajo (con la v1.02 esto daba FALLO)")
+    comprobar(fuentes2["a"].get("de_pasada_utc") == ayer,
+              "M30 · y se dice DE QUÉ PASADA viene el dato que vale")
+    comprobar(fuentes2["b"]["estado"] == "OK",
+              "M30 · una fuente que se recupera pasa a OK")
+    comprobar(len(pasadas2) == 2 and pasadas2[1]["fallo"] == 1,
+              "M30 · el rastro de todas las pasadas se conserva")
+
+    # ⚠️ Y LA OTRA MITAD: que fundir NO ESCONDA el fallo de ahora. Sin esto,
+    # un servidor roto desde la mañana parecería sano toda la tarde.
+    comprobar(fuentes2["a"].get("ultima_pasada", {}).get("estado") == "FALLO",
+              "⚠️ M30 · el fallo de la última pasada queda VISIBLE en la "
+              "ficha: fundir no es esconder")
+    comprobar(fuentes2["a"].get("ultima_pasada", {}).get("detalle")
+              == "timeout",
+              "M30 · con su detalle, no solo el estado")
+
+    # una fuente que nadie ha traído en todo el día sigue siendo FALLO
+    fuentes3, _, _, _ = fundir({"fuentes": fuentes2, "pasadas": pasadas2},
+                            {"c": {"estado": "FALLO", "detalle": "HTTP 503"}},
+                            ahora_)
+    comprobar(fuentes3["c"]["estado"] == "FALLO",
+              "⚠️ M30 · lo que NINGUNA pasada trajo sigue constando FALLO")
+
+    # ⚠️⚠️ Y el defecto que encontró la EJECUCIÓN REAL del 12-sep a las 20:00,
+    # que ni el autotest ni la prueba en vivo habían visto: el día que se
+    # estrena una versión, el manifiesto anterior no tiene `pasadas`, y decir
+    # «1 pasada» de un día que tuvo tres es falso.
+    viejo_v102 = {"fuentes": {"a": {"estado": "OK"}, "b": {"estado": "OK"}},
+                  "confederacion": ["ebro"]}          # sin `pasadas`
+    f4, p4, c4, previas4 = fundir(viejo_v102, {"a": {"estado": "OK"}},
+                                  ahora_, ["ebro"])
+    comprobar(previas4 is not None,
+              "⚠️⚠️ M30 · un manifiesto anterior SIN `pasadas` no es un día "
+              "sin pasadas: se marca (lo vio la ejecución real, no el autotest)")
+    comprobar(previas4 and previas4["fuentes_que_ya_habia"] == 2,
+              "M30 · y se dice lo único que se sabe: cuántas fuentes había ya")
+    comprobar(len(p4) == 1,
+              "M30 · no se inventa un número de pasadas que no se sabe")
+
+    # ⚠️ Y la otra mitad: en un día normal NO se marca nada. Sin esto, la
+    # marca saldría siempre y dejaría de significar algo (trampa 7).
+    _, _, _, previas5 = fundir({"fuentes": f4, "pasadas": p4},
+                               {"a": {"estado": "OK"}}, ahora_, ["ebro"])
+    comprobar(previas5 is None,
+              "⚠️ M30 · en una pasada normal NO se marca: la marca solo vale "
+              "si aparece cuando toca")
+
+    # ⚠️ El defecto que encontró la prueba EN VIVO y no el autotest: tras una
+    # pasada parcial, el manifiesto decía cubrir el 22,76 % con fuentes del
+    # 77,71 % dentro. Si `fuentes` es del día, `confederacion` también.
+    comprobar(confs2 == ["duero", "ebro"],
+              "⚠️ M30 · `confederacion` acumula las cuencas del DÍA: una "
+              "pasada parcial no puede hacer que el manifiesto se contradiga")
+    comprobar(pasadas2[1].get("confederacion") == ["duero"],
+              "M30 · y lo que pidió cada pasada queda en `pasadas`")
+
     print("")
     print("  %d de %d comprobaciones pasan" % (hechas[0] - len(fallos),
                                                hechas[0]))
@@ -499,13 +951,41 @@ def main():
     for conf in a.confederacion:
         fichas.update(capturar(conf, ca, carpeta))
 
+    # ⚠️ El turbinado va aparte porque no es un endpoint (ver `capturar_qcent`),
+    # y solo si se ha pedido el Ebro: es suyo. ✅ Comprobado el 12-sep-2026:
+    # ninguna de las otras dos cuencas publica turbinado por central.
+    if "ebro" in a.confederacion:
+        fichas.update(capturar_qcent(ca, carpeta))
+
+    # M30 · el manifiesto del día se FUNDE con el que ya hubiera.
+    ruta_m = os.path.join(carpeta, "manifiesto.json")
+    anterior = None
+    if os.path.isfile(ruta_m):
+        try:
+            with io.open(ruta_m, encoding="utf-8") as f:
+                anterior = json.load(f)
+        except Exception as e:
+            # ⚠️ Un manifiesto ilegible NO tumba la captura ni se sobrescribe
+            # en silencio: se avisa y se sigue como si fuera la primera pasada.
+            # El dato ya está en disco, que es lo que no se puede perder.
+            print("  ⚠️ el manifiesto del día no se puede leer (%s): se "
+                  "escribe uno nuevo" % type(e).__name__)
+
+    fuentes, pasadas, confs, previas = fundir(
+        anterior, fichas, ahora.isoformat(), a.confederacion)
+    peso_dia = sum(CONFEDERACIONES[c]["peso"] for c in confs)
+
     manifiesto = {"ejecucion_utc": ahora.isoformat(),
-                  "confederacion": a.confederacion,
-                  "peso_cubierto": round(peso, 2),
-                  "version": "v1.02",
-                  "fuentes": fichas}
-    with io.open(os.path.join(carpeta, "manifiesto.json"), "w",
-                 encoding="utf-8") as f:
+                  "primera_ejecucion_utc": (anterior or {}).get(
+                      "primera_ejecucion_utc", ahora.isoformat()),
+                  "pasadas": pasadas,
+                  "confederacion": confs,
+                  "peso_cubierto": round(peso_dia, 2),
+                  "version": VERSION,
+                  "fuentes": fuentes}
+    if previas:
+        manifiesto["pasadas_previas_sin_registrar"] = previas
+    with io.open(ruta_m, "w", encoding="utf-8") as f:
         json.dump(manifiesto, f, ensure_ascii=False, indent=1)
 
     # ⚠️⚠️ Y EL MISMO CONTENIDO EN LA RAÍZ, COMO `ultimo.json`. No es un
@@ -525,9 +1005,28 @@ def main():
                  encoding="utf-8") as f:
         json.dump(dict(manifiesto, ruta=rel), f, ensure_ascii=False, indent=1)
 
-    ok, vacio, fallo = anotar_indice(a.raiz, rel, fichas, ahora)
+    # ⚠️ Al índice va lo FUNDIDO, no la pasada suelta: el vigilante lee esto
+    # para contestar «¿tenemos el dato del día?», y la respuesta correcta es la
+    # del día. Lo que dio cada pasada queda en `pasadas` del manifiesto.
+    ok, vacio, fallo = anotar_indice(a.raiz, rel, fuentes, ahora)
     print("")
-    print("  %d OK · %d vacías · %d fallos" % (ok, vacio, fallo))
+    # ⚠️ DOS LÍNEAS Y NO UNA: la de arriba lista lo que ha hecho ESTA pasada y
+    # el recuento es del DÍA. Con una sola línea, una pasada de 3 capturas
+    # terminaba diciendo «7 OK» y parecía que había capturado siete.
+    print("  esta pasada: %d OK · %d vacías · %d fallos"
+          % (sum(1 for f in fichas.values() if f.get("estado") == "OK"),
+             sum(1 for f in fichas.values() if f.get("estado") == "VACIO"),
+             sum(1 for f in fichas.values() if f.get("estado") == "FALLO")))
+    # ⚠️ «%d pasada(s)» a secas MIENTE el día que se estrena una versión:
+    # las anteriores existieron y no están contadas. Se dice.
+    cuantas = "%d" % len(pasadas)
+    if previas:
+        cuantas = "%d registrada(s), y antes hubo más sin registrar" % len(pasadas)
+    print("  el día     : %d OK · %d vacías · %d fallos · %s · "
+          "%.2f %% de cobertura" % (ok, vacio, fallo, cuantas, peso_dia))
+    if previas:
+        print("     ⚠️ %s (ya había %d fuentes)"
+              % (previas["motivo"], previas["fuentes_que_ya_habia"]))
     # ⚠️ Devuelve 0 aunque haya fallos: quien avisa es el vigilante leyendo el
     # índice, no un workflow en rojo. Un workflow que se pone rojo cada vez que
     # una fuente falla llena de correos y acaba silenciado.

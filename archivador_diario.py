@@ -19,6 +19,120 @@ con:
 Ninguna de las dos cosas se puede arreglar mirando atrás. Sí se pueden
 arreglar hacia delante.
  
+QUÉ CAMBIA EN LA v3.17
+----------------------
+Se retira un **✅ FALSO que llevaba tres días desplegado** (hallazgo A5 de la
+auditoría del 9-sep-2026), y con él la constante `VERSION` sube a v3.17.
+
+La docstring de `capturar_sendeco2()` afirmaba, con ✅ y con muestra —«medido
+sobre 17.539 horas»—, que el término del CO2 «cuadra» con la cuña de
++39,66 EUR/MWh. Esa comprobación **se retractó el mismo día en que se
+escribió**, el 9-sep a las 17:13 (commit `856a113`), y la retractación no
+llegó hasta aquí: es la trampa 9 de la casa —las correcciones se propagan a
+todos los sitios donde vive la afirmación— en su forma más pura, porque el ✅
+con muestra pasa cualquier filtro de calidad y porque vivía dentro del
+programa que se despliega. El texto nuevo está en la propia función.
+
+⚠️ **Y con esta versión, el `--autotest` del archivador vuelve a estar en
+verde.** Llevaba en rojo desde la v3.15: las v3.15 y v3.16 subieron la
+constante `VERSION` sin escribir su bloque de historial, que es exactamente lo
+que la prueba de la v3.14 se creó para impedir. Nadie la ejecutó al entregar
+esas dos versiones. Sus bloques se han reconstruido desde los mensajes de sus
+commits —`0b2a80b` y `0ecd915`—, que era el único sitio donde vivía el porqué
+de aquellos cambios.
+
+❌ **LO QUE ESTA VERSIÓN NO LLEVA, y se dice para que nadie lo dé por hecho:**
+**D10a** (capturar la radiación observada de AEMET) y la mitad de **D39** que
+toca a este programa (la precipitación observada de AEMET, declarada como dato
+ex post con su fecha de publicación). Las dos siguen abiertas, y son el mismo
+trabajo: un producto climatológico de AEMET que se publica con retraso —✅ 4
+días, medido sobre 838 estaciones— y que por tanto **sirve para entrenar y no
+para ofertar**. La señalización que exige Xevi ya tiene instrumento:
+`casandra_variables_v1_01` conoce la versión `observacion` y la prohíbe para
+entrenar salvo `reproducir_ancla=True`; lo que falta es dónde vive la **fecha
+de publicación**, que hoy no tiene sitio en el manifiesto.
+
+ⓘ Y un dato que puede cambiar la prioridad de esa captura: desde
+`saih_captura.py` v1.03 se archiva el visor del Duero, que trae
+**precipitación observada horaria** (`datosPL`) **sin retraso de
+publicación**. No es la misma variable que la de AEMET —cobertura de cuenca
+frente a las 838 estaciones nacionales— pero sí está disponible a las 11:5x y
+cumpliría la regla Q3 sin trampa.
+
+QUÉ CAMBIA EN LA v3.16
+----------------------
+Entra el precio del DERECHO DE EMISIÓN, que era la mitad que faltaba del coste
+marginal. Criterio de dominio de Xevi, 9-sep-2026: «en horas marginales el
+precio del gas y las emisiones es determinante en el precio. Lo más importante.»
+
+⚠️ Bloque escrito el 12-sep-2026, al entregar la v3.17: la v3.16 se entregó
+SIN él, y por eso el autotest llevaba tres días en rojo. Ver el bloque de la
+v3.17. El detalle completo está en el mensaje del commit `0ecd915`.
+
+Capturábamos el gas y NO el CO2. ⚠️ En los 2.584 indicadores de e·sios no hay
+precio del derecho: solo «CO2 evitable» por sectores, que es una CANTIDAD. Sin
+ese dato, la cuña que separa el coste del combustible del precio final es un
+RESIDUO que mezcla CO2, escasez, rampas e importaciones, sin forma de saber
+cuánto pesa cada cosa.
+
+✅ Y EL NÚMERO CIERRA EL CÍRCULO. Medido sobre 17.539 horas, la cuña en horas
+de renovable muy baja es +39,66 EUR/MWh. Con el EUA a 84,78 EUR/t y ~0,4 tCO2
+por MWh eléctrico, solo el CO2 son 33,91 — dejando 5,75 para OPEX y margen,
+que es el orden de magnitud correcto para un ciclo combinado.
+
+FUENTE: SENDECO2, la bolsa española de CO2. HTML plano, sin token, responde en
+0,96 s. Se guardan las CUATRO cifras que publica —cierre y medias de 5, 30 y
+365 sesiones— por decisión de Xevi: las medias son gratis, dan la tendencia sin
+que tengamos que construirla, y protegen de que un cierre suelto sea atípico.
+195 bytes por captura.
+
+⚠️ QUÉ ES Y QUÉ NO ES ESTE PRECIO:
+  · ✅ ES EUROPEO: EUA = European Union Allowance, el derecho del régimen de la
+    UE, el que entrega una central española.
+  · ⚠️ NO es el futuro de ICE, que es con lo que de verdad se cubre una
+    central. La diferencia es de acarreo. Para estimar la cuña sobra; para
+    valorar una cobertura real, no.
+  · ⓘ El CER sale a 0,00 y no es un fallo: son créditos Kioto, muertos desde
+    hace años. Se guarda igual por si revive.
+
+⚠️ VALIDACIÓN POR MARCA, no por código HTTP: la respuesta es HTML y un 200 no
+garantiza nada —una página de error también es HTML válido—. Se exige que
+aparezca «Ultimo cierre (» y que se lean las OCHO cifras. Si no, se guarda el
+HTML CRUDO y se registra FALLO: el dato del día no se pierde y se puede
+reparsear mañana.
+
+QUÉ CAMBIA EN LA v3.15
+----------------------
+Se guarda también la CURVA FORWARD del gas, que hasta hoy se tiraba.
+
+⚠️ Bloque escrito el 12-sep-2026, al entregar la v3.17, por el mismo motivo
+que el de la v3.16. El detalle completo, en el mensaje del commit `0b2a80b`.
+
+El libro anual de MIBGAS que YA nos descargamos cada 3 horas trae 32 productos
+y se guardaban 6: una línea de filtro —`str.startswith("GDAES")`— tiraba la
+curva a plazo entera. ✅ Medido sobre el libro de 2026, 5.437 filas: ahí están
+los meses `GMES_M+2..M+6`, los trimestres `GQES_Q+1..Q+4`, los años
+`GYES_Y+1/Y+2`, las estaciones `GSES_W/S` y el resto de mes `GBoMES`. No hay
+que descargar nada nuevo: ya estaba dentro.
+
+⚠️ DOS FICHEROS, Y `mibgas_gdaes` NO SE TOCA. Ensanchar el filtro habría
+cambiado el significado de un fichero que ya consume `casandra_lab_*` para leer
+el precio del gas, y su nombre pasaría a mentir. Con `mibgas_curva` aparte el
+cambio es ADITIVO PURO: nada de lo que existe cambia, y el vigilante ve
+aparecer una fuente más, que es lo normal.
+
+✅ COMPROBADO, y es la verificación que importa: la v3.15 produce un
+`mibgas_gdaes` con las MISMAS 49 filas, 18 columnas y 4 productos que la
+captura de las 11:51 de ese día — 0 filas exclusivas de cada lado y sin una
+sola diferencia de texto. `mibgas_curva` añade 307 filas y 24 productos,
+5,2 KB comprimidos.
+
+⚠️ Si algún día no hay curva se registra VACIO y NO se falla: los productos a
+plazo no cotizan todos los días, y confundir «hoy no cotizó» con «la captura se
+rompió» sería un aviso falso recurrente — la trampa 7 de la casa.
+
+Decisión de Xevi, 9-sep-2026: fichero nuevo en vez de ensanchar el filtro.
+
 QUÉ CAMBIA EN LA v3.14
 ----------------------
 La v3.13 se declaraba a sí misma «v3.12», y estuvo TRES DÍAS archivando con
@@ -356,7 +470,7 @@ import pandas as pd
 # diciendo «v3.12» con el código de la v3.13 dentro. `--autotest` comprueba
 # ahora que esta constante concuerde con la cabecera y con el nombre del
 # fichero. Al subir versión se toca AQUÍ, y la prueba avisa si falta algo.
-VERSION = "v3.16"
+VERSION = "v3.17"
 
 TZ_MADRID = ZoneInfo("Europe/Madrid")
 CARPETA_RAIZ = "archivo"
@@ -1922,10 +2036,34 @@ def capturar_sendeco2(carpeta, hoy):
     del precio final es un RESIDUO que mezcla CO2, escasez, rampas e
     importaciones, y no se puede saber cuánto pesa cada cosa.
 
-    ✅ Y el número cuadra: medido sobre 17.539 horas, la cuña en horas de
-    renovable muy baja es de **+39,66 €/MWh**; con el EUA a 84,78 €/t y ~0,4
-    tCO2 por MWh eléctrico, solo el CO2 son **~33,9**, dejando ~5,8 para OPEX y
-    margen — el orden de magnitud correcto para un ciclo combinado.
+    ⚠️⚠️ AQUÍ VIVÍA UN ✅ FALSO, Y SE RETIRA EN LA v3.17 (hallazgo A5). Decía:
+    «✅ Y el número cuadra: medido sobre 17.539 horas, la cuña en horas de
+    renovable muy baja es de +39,66 €/MWh; con el EUA a 84,78 €/t y ~0,4 tCO2
+    por MWh eléctrico, solo el CO2 son ~33,9, dejando ~5,8 para OPEX y margen».
+
+    ❌ **Esa comprobación se retractó el mismo día en que se escribió** —el
+    9-sep-2026 a las 17:13, commit `856a113`— porque no era una comprobación:
+    comparaba una **media de dos años** con el precio del EUA de **un solo
+    día**. La retractación entró en `conocimiento_mercado` §2.ter.4 y **no se
+    propagó hasta aquí**, así que el archivador de producción siguió tres días
+    afirmándolo, con ✅ y con muestra, en la docstring de la función que
+    captura el dato — que es justo donde lo lee quien va a usarlo.
+
+    LO QUE DE VERDAD SE SABE, rehecha la prueba sobre **691 sesiones** de
+    SENDECO2 (rango 59,87-90,05 €/t):
+
+      · La cuña de **+39,66 €/MWh** es un **RESIDUO MEDIDO**, y nada más. No
+        es el término del CO2: mezcla CO2, escasez, rampas e importaciones.
+      · ❌ El término del CO2 **NO es separable con estos datos**. El
+        coeficiente sale **1,355** o **2,539** según la especificación, cuando
+        el valor físico está en **0,35-0,40**; no cae con la renovable y está
+        colineal con el calendario.
+      · El factor **~0,4 tCO2/MWh** es **valor de manual y supuesto
+        declarado**, no una medición de esta casa.
+
+    ⚠️ Que el término no sea separable NO quita valor a capturar el dato: sin
+    él la cuña no se puede ni empezar a descomponer. Lo que se retira es la
+    afirmación de que ya estaba descompuesta.
 
     QUÉ SE GUARDA, Y POR QUÉ LAS CUATRO CIFRAS
     ===========================================
