@@ -175,6 +175,8 @@ retraso del cron quede registrado en vez de disimulado:
 | `entsoe_A44_precio_es.csv` | Precio day-ahead de España vía ENTSO-E |
 | `entsoe_A72_reserva_hidraulica.csv` | Reserva hidráulica (lectura semanal) |
 | `aemet_prediccion_diaria.csv` | **Predicción** de temperatura a 7 días, 6 ciudades |
+| `aemet_radiacion_observada.csv.gz` | **Observación** (ex post, 1 día de retraso): radiación GL/DF/DT/IR/UVB horaria de 35 estaciones; el crudo de AEMET tal cual, una vez al día (v3.18) |
+| `aemet_climatologico_diario.csv.gz` | **Observación** (ex post, 3-4 días de retraso): el climatológico diario de ~820 estaciones (`prec`, `tmed`, `tmax`, `tmin`, `sol`…), ventana de 5 días, una vez al día (v3.18) |
 | `mibgas_gdaes.csv` | Precio del gas, producto GDAES |
 
 Las ventanas son cortas a propósito: unos días, no el histórico completo. Se
