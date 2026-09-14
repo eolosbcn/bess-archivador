@@ -33,6 +33,57 @@ nadie volvería a mirarlas.
 
 HISTORIAL
 =========
+v1.08  13-sep-2026. **Lo que B4 dejó, y lo que la revisión del plan encontró**
+    (bloque **B32** del plan `20260913-C` de Casandra, decisión D54 de Xevi).
+
+    ⚠️⚠️ **LOS SIMULACROS DE LAS ALARMAS 7 Y 8 NO SE PODÍAN LANZAR.** La v1.07
+    escribió el código de `captura_critica` e `indicadores` dentro de
+    `comprobar()`, pero `--simulacro` conservó los seis `choices` de antes y el
+    desplegable del workflow también: **dos alarmas que nunca se vieron saltar**,
+    la trampa 8 de la casa dentro del arreglo que la aplicaba. Ahora la lista
+    de simulacros es UNA constante (`SIMULACROS`), la usa `argparse`, la copia el
+    `vigilante.yml`, y el autotest comprueba que cada nombre tiene su rama en
+    `comprobar()`: un ensayo que no se puede lanzar no es un ensayo.
+
+    **N-operacion-11 · las alarmas 4 y 5 se apagaban al salir la avería de la
+    ventana.** La 4 exige que la fuente haya aparecido DENTRO de las
+    `CAPTURAS_A_LEER` capturas, y una fuente desaparecida hace más de ~62 días
+    deja de estar en `info`: la alarma se apaga justo cuando la avería se hace
+    vieja. Entra `alarma_desaparecido_larga`: la MEMORIA LARGA lista los
+    ficheros de TODAS las capturas del índice (solo `listdir`, sin huellas:
+    barato) y avisa de cualquiera que existió, no está en `RETIRADAS` y no
+    aparece en la ventana entera. Solo actúa cuando el índice es más largo que
+    la ventana: ✅ medido el 13-sep, el índice tiene 466 capturas y la ventana
+    500, así que hoy la ventana contiene el archivo entero y la memoria larga
+    no puede dar nada; se llena hacia el 17-18-sep. La 5 tenía el hueco
+    simétrico: una fuente sin UN solo cambio en toda la ventana tiene intervalo
+    de cambio infinito, `umbral_de` devuelve None y no se mira nunca. Entra
+    `CONGELADO_SIN_CAMBIO = 200`: presente ≥ 200 capturas sin cambiar es aviso.
+    ✅ Calibrado el 13-sep sobre 466 capturas: el intervalo de cambio más largo
+    es el del A72 (51,8 capturas; umbral 155), así que ninguna fuente real se
+    acerca; hoy 0 fuentes con intervalo infinito.
+
+    **M35 · la degradación PARCIAL de una familia** (alarma 9,
+    `alarma_degradacion_parcial`): la alarma 2 solo ve una familia MUDA entera;
+    una familia con parte de sus fuentes caídas durante horas no la veía nadie.
+    Se lee el manifiesto de las últimas `M35_VENTANA = 24` capturas y se avisa
+    si la familia lleva ≥ `M35_RACHA = 4` capturas seguidas parcial, o
+    ≥ `M35_MINIMO_EN_VENTANA = 5` parciales en esas 24. ✅ Calibrado el 13-sep
+    sobre las 466 capturas, con todos los manifiestos (no el último de cada
+    día, que escondía la mitad): la racha más larga fue 3 (entsoe) y el máximo
+    en 24 seguidas 3 (aemet y entsoe) → **0 falsos positivos** sobre el archivo
+    real, y el caso que motiva la alarma —una fuente de una familia caída medio
+    día— se vería a las 4 capturas. ⚠️ La avería que MÁS pasa no la caza M35 y
+    se dice: la captura de las 11:5x llega PARCIAL por 429 de AEMET (✅ 12 de 466
+    capturas, 7 de ellas la 11:5x, 3 de los últimos 7 días), siempre en rachas
+    de 1; eso lo arregla el archivador v3.18 con el reintento diferido dentro
+    de la misma pasada, y M35 lo vería si se volviera persistente.
+
+    Y dos precisiones: `CAPTURAS_A_LEER` decía «28 ms por captura»; ✅ medido el
+    13-sep en la máquina de Xevi sobre 466 capturas, **121 ms** (56,5 s), así
+    que las 500 son ~60 s, dentro del `timeout-minutes: 5`. Y nace el simulacro
+    `desaparecido_largo` para poder pulsar la memoria larga.
+
 v1.07  12-sep-2026. **A19 daba por vivo a un vigilante que fallaba en cada
     pasada**, y con ella entran la captura critica, M34 y el asignado que
     faltaba. Bloque **B4**.
@@ -350,8 +401,9 @@ MINIMO_FUENTES_POR_FAMILIA = 2
 ASIGNAR_A = os.environ.get("VIGILANTE_ASIGNAR_A", "eolosbcn")
 
 # --- alarmas 4 y 5 y registro de fallos (v1.03) -----------------------------
-CAPTURAS_A_LEER = 500      # ⚠️ tope del barrido. Medido: 28 ms por captura, o
-#                            sea 14 s con 500. Sin tope, en un año habría
+CAPTURAS_A_LEER = 500      # ⚠️ tope del barrido. Medido el 7-sep: 28 ms por
+#                            captura; ✅ el 13-sep en la máquina de Xevi, 121 ms
+#                            sobre 466 (56,5 s), o sea ~60 s con 500. Sin tope, en un año habría
 #                            ~5.256 capturas y el barrido tardaría 147 s cada
 #                            tres horas. 500 son ~35 días, de sobra para medir
 #                            cadencias y detectar desapariciones.
@@ -370,6 +422,24 @@ MINIMO_PRESENCIAS = 1
 FACTOR_ALARMA = 3.0        # se avisa a 3× el intervalo normal de la fuente
 MINIMO_CAPTURAS_ALARMA = 8  # suelo: nunca avisar antes de 8 capturas
 TOLERANCIA_CIERRE = 2      # aciertos seguidos para cerrar un episodio
+
+# --- v1.08 · N-operacion-11, M35 y los simulacros -----------------------------
+# Alarma 5 sin cambio alguno: presente estas capturas seguidas con la MISMA
+# huella es aviso aunque su intervalo de cambio sea infinito. ✅ 13-sep, 466
+# capturas: el intervalo de cambio más largo es 51,8 (A72, umbral 155).
+CONGELADO_SIN_CAMBIO = 200
+# M35: una familia PARCIALMENTE caída (ni sana ni muda entera). ✅ 13-sep, sobre
+# las 466 capturas y todos los manifiestos: racha máxima 3, máximo 3 en 24
+# seguidas. Con 4 y 5, 0 falsos positivos hoy.
+M35_VENTANA = 24
+M35_RACHA = 4
+M35_MINIMO_EN_VENTANA = 5
+ESTADOS_DEGRADADOS = ("FALLO", "VACIO", "PARCIAL")   # OMITIDA no es avería
+# ⚠️ UNA lista, y la usan argparse, el autotest y —copiada— vigilante.yml. La
+# v1.07 tenía dos alarmas cuyo simulacro no estaba aquí y nunca se vio saltar.
+SIMULACROS = ("antiguedad", "fuente_muda", "caducidad", "desaparecido",
+              "congelado", "sustituto", "captura_critica", "indicadores",
+              "degradacion", "desaparecido_largo")
 EXTENSIONES = (".csv", ".csv.gz", ".json", ".gz")
 
 # ⚠️ FUENTES RETIRADAS A PROPÓSITO — no son averías, y sin esta tabla la
@@ -641,10 +711,21 @@ def alarma_desaparecido(capturas, info):
 
 
 def alarma_congelado(capturas, info):
-    """Presente, pero con el mismo contenido > 3× su intervalo de cambio."""
+    """Presente, pero con el mismo contenido > 3× su intervalo de cambio.
+
+    v1.08 · N-operacion-11: una fuente que NUNCA cambió dentro de la ventana
+    tiene intervalo de cambio infinito, `umbral_de` devuelve None y hasta hoy
+    no se miraba jamás. Ahora, presente ≥ CONGELADO_SIN_CAMBIO capturas sin un
+    solo cambio es aviso.
+    """
     avisos = []
     for k, (n, _, ic) in sorted(info.items()):
         if n < MINIMO_PRESENCIAS:
+            continue
+        if ic == float("inf"):
+            if n >= CONGELADO_SIN_CAMBIO:
+                desde = next(e for e, d in capturas if d.get(k) is not None)
+                avisos.append((k, n, desde))
             continue
         u = umbral_de(ic)
         if u is None or u >= len(capturas):
@@ -652,6 +733,107 @@ def alarma_congelado(capturas, info):
         ult = [d.get(k) for _, d in capturas[-u:]]
         if all(h is not None for h in ult) and len(set(ult)) == 1:
             avisos.append((k, u, capturas[-u][0]))
+    return avisos
+
+
+def fuentes_de_fichero_historicas(raiz):
+    """{clave canónica: última etiqueta de captura en que apareció}, sobre TODAS
+    las capturas del índice y sin calcular huellas (solo `listdir`): es la
+    MEMORIA LARGA de la alarma 4 (v1.08, N-operacion-11). Devuelve también
+    cuántas filas tiene el índice, para saber si es más largo que la ventana.
+    """
+    idx = os.path.join(raiz, "indice.csv")
+    if not os.path.isfile(idx):
+        idx = os.path.join(raiz, "archivo", "indice.csv")
+    if not os.path.isfile(idx):
+        return {}, 0
+    base = os.path.dirname(os.path.dirname(idx))
+    with io.open(idx, encoding="utf-8", newline="") as f:
+        filas = list(csv.DictReader(f))
+    ultima = {}
+    for fila in filas:
+        carpeta = os.path.join(base, fila.get("ruta", ""))
+        if not os.path.isdir(carpeta):
+            continue
+        etiqueta = "%s-%s" % (fila.get("fecha"), fila.get("hora"))
+        for n in os.listdir(carpeta):
+            if n.endswith(EXTENSIONES) and n != "manifiesto.json":
+                ultima[canonico(n)] = etiqueta
+    return ultima, len(filas)
+
+
+def alarma_desaparecido_larga(raiz, capturas, info):
+    """Fuentes que existieron y llevan MÁS que la ventana entera sin aparecer.
+
+    La alarma 4 solo ve lo que está en `info`, y `info` sale de la ventana: una
+    fuente ausente desde antes de la ventana no está en ninguna parte. Aquí se
+    compara la memoria larga con la ventana. Solo actúa cuando el índice es
+    más largo que la ventana; si no, la alarma 4 ya lo ve todo. Devuelve
+    [(clave, capturas de la ventana, última etiqueta en que se vio)].
+    """
+    if not capturas:
+        return []
+    historicas, total = fuentes_de_fichero_historicas(raiz)
+    if total <= len(capturas):
+        return []
+    en_ventana = {k for _, d in capturas for k, h in d.items() if h is not None}
+    avisos = []
+    for k, ultima in sorted(historicas.items()):
+        if k in RETIRADAS or k in en_ventana:
+            continue
+        avisos.append((k, len(capturas), ultima))
+    return avisos
+
+
+def alarma_degradacion_parcial(raiz, ventana=M35_VENTANA, racha_minima=M35_RACHA,
+                               minimo_en_ventana=M35_MINIMO_EN_VENTANA):
+    """M35 · una familia con PARTE de sus fuentes caídas, de forma persistente.
+
+    La alarma 2 salta cuando una familia entera calla; esto es lo de en medio:
+    ni sana ni muda. Se leen los manifiestos de las últimas `ventana` capturas
+    del índice y, por familia, se cuenta en cuántas está parcial (alguna fuente
+    en ESTADOS_DEGRADADOS y no todas). Aviso si la racha final es ≥
+    `racha_minima` o si hay ≥ `minimo_en_ventana` parciales en la ventana.
+    ✅ Calibrado el 13-sep-2026 sobre 466 capturas: racha máxima 3 y máximo 3
+    en 24 seguidas; con 4 y 5, 0 falsos positivos. Devuelve
+    [(familia, racha, parciales en la ventana, capturas leídas, fuentes caídas
+    en la última parcial, su etiqueta)].
+    """
+    idx = os.path.join(raiz, "indice.csv")
+    if not os.path.isfile(idx):
+        idx = os.path.join(raiz, "archivo", "indice.csv")
+    if not os.path.isfile(idx):
+        return []
+    base = os.path.dirname(os.path.dirname(idx))
+    with io.open(idx, encoding="utf-8", newline="") as f:
+        filas = list(csv.DictReader(f))[-ventana:]
+    por_familia = collections.defaultdict(list)
+    for fila in filas:
+        rm = os.path.join(base, fila.get("ruta", ""), "manifiesto.json")
+        try:
+            with io.open(rm, encoding="utf-8") as f:
+                fuentes = (json.load(f).get("fuentes") or {})
+        except Exception:
+            continue           # un manifiesto ilegible no aporta; lo vigila la 1
+        etiqueta = "%s-%s" % (fila.get("fecha"), fila.get("hora"))
+        fams = collections.defaultdict(dict)
+        for k, v in fuentes.items():
+            fams[familia_de(k)][k] = (v or {}).get("estado")
+        for fam, d in fams.items():
+            malas = sorted(k for k, e in d.items() if e in ESTADOS_DEGRADADOS)
+            por_familia[fam].append((etiqueta, malas, len(d)))
+    avisos = []
+    for fam, serie in sorted(por_familia.items()):
+        parciales = [(e, m, tot) for e, m, tot in serie if 0 < len(m) < tot]
+        racha = 0
+        for e, m, tot in reversed(serie):
+            if 0 < len(m) < tot:
+                racha += 1
+            else:
+                break
+        if racha >= racha_minima or len(parciales) >= minimo_en_ventana:
+            e, m, tot = parciales[-1]
+            avisos.append((fam, racha, len(parciales), len(serie), m, e))
     return avisos
 
 
@@ -1385,6 +1567,24 @@ def comprobar(raiz, ahora=None, token_aemet=None, simulacro=None,
                 "normalmente, calculado del propio archivo."
                 % (k, u, desde, FACTOR_ALARMA)))
 
+        # ---- 4.bis · la memoria larga (v1.08, N-operacion-11) -------------
+        largas = alarma_desaparecido_larga(raiz, capturas, info)
+        if simulacro == "desaparecido_largo":
+            largas = list(largas) + [("__simulacro__", len(capturas), capturas[0][0])]
+        for k, n_ventana, ultima in largas:
+            es_sintetica = (k == "__simulacro__")
+            incidencias.append(Incidencia(
+                "desaparecido_largo:%s" % k,
+                "%s⚠️ La fuente `%s` lleva más de %d capturas sin aparecer"
+                % ("[SIMULACRO] " if es_sintetica else "", k, n_ventana),
+                "`%s` existió en el archivo (última vez: `%s`) y **no aparece en "
+                "ninguna de las %d capturas de la ventana**. La alarma 4 no la "
+                "ve: solo mira fuentes que hayan aparecido dentro de la ventana, "
+                "y esta avería es más vieja que la ventana entera.\n\n⚠️ Si es "
+                "una retirada a propósito, va en `RETIRADAS` con su sustituto; "
+                "si no, el dato se está perdiendo desde `%s`."
+                % (k, ultima, n_ventana, ultima)))
+
         # ⚠️ Mismo criterio que arriba: sintética con clave propia.
         cong = alarma_congelado(capturas, info)
         if simulacro == "congelado":
@@ -1434,6 +1634,30 @@ def comprobar(raiz, ahora=None, token_aemet=None, simulacro=None,
                else "existe pero no declara ninguna fecha legible, o sea que "
                "NO SE ESTÁ VIGILANDO" if isinstance(edad, str)
                else "lleva %.0f horas sin verse" % edad)))
+
+    # ---- 9. M35 · degradación PARCIAL de una familia, persistente (v1.08) --
+    degradadas = alarma_degradacion_parcial(raiz)
+    if simulacro == "degradacion" and not degradadas:
+        degradadas = [("__simulacro__", M35_RACHA, M35_MINIMO_EN_VENTANA,
+                       M35_VENTANA, ["(ninguna)"], "(ninguna)")]
+    for fam, racha, cuantas, de, caidas, etiqueta in degradadas:
+        incidencias.append(Incidencia(
+            "degradacion:%s" % fam,
+            "%s⚠️ La familia `%s` tiene parte de sus fuentes caídas de forma "
+            "persistente (%d seguidas; %d de las últimas %d)"
+            % (marca("degradacion"), fam, racha, cuantas, de),
+            "La familia `%s` no está muda —eso lo vería la alarma 2— pero lleva "
+            "**%d capturas seguidas** con alguna fuente en FALLO, VACIO o "
+            "PARCIAL, y **%d de las últimas %d** en ese estado.\n\n"
+            "- Última captura parcial: `%s`\n- Fuentes caídas en ella: %s\n\n"
+            "Umbrales calibrados sobre el archivo real (13-sep-2026, 466 "
+            "capturas): racha ≥ %d o ≥ %d en %d; la racha máxima observada era "
+            "3 y el máximo en 24 seguidas 3, así que hoy no salta en falso. "
+            "⚠️ La captura de las 11:5x PARCIAL por 429 de AEMET (rachas de 1) "
+            "no la caza esta alarma: la arregla el archivador v3.18 con el "
+            "reintento diferido."
+            % (fam, racha, cuantas, de, etiqueta, ", ".join("`%s`" % c for c in caidas),
+               M35_RACHA, M35_MINIMO_EN_VENTANA, M35_VENTANA)))
 
     # ---- 8. M34 · indicadores perdidos DENTRO de un fichero (v1.07) ------
     perdidos = alarma_indicadores_perdidos(raiz)
@@ -2341,6 +2565,98 @@ def autotest():
                       "⚠️ v1.07 · un archivo que nunca captura a esa hora (el "
                       "del SAIH) NO dispara: la alarma se autocalibra")
 
+    print("\n-- v1.08 · los simulacros existen de verdad -------------------")
+    import inspect as _inspect
+    fuente_comprobar = _inspect.getsource(comprobar)
+    for nombre in SIMULACROS:
+        comprobar_que(('simulacro == "%s"' % nombre) in fuente_comprobar,
+                      "el simulacro `%s` tiene su rama en comprobar()" % nombre)
+    comprobar_que({"captura_critica", "indicadores", "degradacion",
+                   "desaparecido_largo"} <= set(SIMULACROS),
+                  "⚠️ v1.08 · las alarmas 7, 8, 9 y la memoria larga se pueden PULSAR")
+
+    print("\n-- v1.08 · alarma 4 con memoria larga (N-operacion-11) -------")
+    with tempfile.TemporaryDirectory() as tmp6:
+        def _cap(fecha, hora, ficheros):
+            carpeta = os.path.join(tmp6, "x", fecha, hora)
+            os.makedirs(carpeta)
+            for n in ficheros:
+                with io.open(os.path.join(carpeta, n), "w", encoding="utf-8") as g:
+                    g.write("dato\n")
+            return "%s/x/%s/%s" % (os.path.basename(tmp6), fecha, hora)
+        rutas = [_cap("2026-08-01", "1000", ["a.csv", "b.csv", "esios_catalogo_previsiones.csv"]),
+                 _cap("2026-08-02", "1000", ["a.csv"]),
+                 _cap("2026-08-03", "1000", ["a.csv"])]
+        with io.open(os.path.join(tmp6, "indice.csv"), "w", encoding="utf-8", newline="") as f:
+            f.write("fecha,hora,ejecucion_utc,ok,vacio,fallo,kb_total,ruta\n")
+            ahora6 = dt.datetime.now(dt.timezone.utc).isoformat()
+            for r in rutas:
+                f.write("%s,%s,%s,1,0,0,1.0,%s\n" % (r.split("/")[2], r.split("/")[3], ahora6, r))
+        caps2 = leer_capturas(tmp6, limite=2)[0]
+        info2 = intervalos(caps2)
+        largas = alarma_desaparecido_larga(tmp6, caps2, info2)
+        comprobar_que([l[0] for l in largas] == ["b"],
+                      "una fuente vista solo ANTES de la ventana sale por la memoria larga")
+        comprobar_que(largas and largas[0][2] == "2026-08-01-1000",
+                      "y dice cuándo se vio por última vez")
+        comprobar_que(all(l[0] != "esios_catalogo_previsiones" for l in largas),
+                      "una RETIRADA declarada no sale")
+        caps3 = leer_capturas(tmp6, limite=3)[0]
+        comprobar_que(alarma_desaparecido_larga(tmp6, caps3, intervalos(caps3)) == [],
+                      "si la ventana contiene el archivo entero, la memoria larga calla "
+                      "(la alarma 4 ya lo ve)")
+        claves6 = {i.clave for i in comprobar(tmp6, simulacro="desaparecido_largo")}
+        comprobar_que("desaparecido_largo:__simulacro__" in claves6,
+                      "el simulacro `desaparecido_largo` fabrica su incidencia sintética")
+
+    print("\n-- v1.08 · alarma 5 sin ningún cambio ------------------------")
+    quietas = [("e%03d" % i, {"k": "misma"}) for i in range(CONGELADO_SIN_CAMBIO)]
+    comprobar_que(alarma_congelado(quietas, intervalos(quietas)) == [("k", CONGELADO_SIN_CAMBIO, "e000")],
+                  "presente %d capturas con la misma huella y sin un cambio: avisa" % CONGELADO_SIN_CAMBIO)
+    pocas = quietas[:CONGELADO_SIN_CAMBIO - 1]
+    comprobar_que(alarma_congelado(pocas, intervalos(pocas)) == [],
+                  "con una menos, todavía no (el intervalo infinito antes no se miraba nunca)")
+
+    print("\n-- v1.08 · M35, degradación parcial de una familia -----------")
+    with tempfile.TemporaryDirectory() as tmp7:
+        def _man(fecha, hora, fuentes):
+            carpeta = os.path.join(tmp7, "x", fecha, hora)
+            os.makedirs(carpeta)
+            with io.open(os.path.join(carpeta, "manifiesto.json"), "w", encoding="utf-8") as g:
+                json.dump({"fuentes": {k: {"estado": e} for k, e in fuentes.items()}}, g)
+            return "%s/x/%s/%s" % (os.path.basename(tmp7), fecha, hora)
+        filas7 = []
+        for i in range(6):
+            estado_b = "FALLO" if i >= 1 else "OK"          # 5 seguidas parcial
+            filas7.append(_man("2026-09-1%d" % i, "1000",
+                               {"x_a": "OK", "x_b": estado_b, "y_a": "OK", "y_b": "OK"}))
+        with io.open(os.path.join(tmp7, "indice.csv"), "w", encoding="utf-8", newline="") as f:
+            f.write("fecha,hora,ruta\n")
+            for r in filas7:
+                f.write("%s,%s,%s\n" % (r.split("/")[2], r.split("/")[3], r))
+        deg = alarma_degradacion_parcial(tmp7)
+        comprobar_que([d[0] for d in deg] == ["x"] and deg[0][1] == 5 and deg[0][4] == ["x_b"],
+                      "5 capturas seguidas con x_b caída y x_a viva: la familia x sale, la y no")
+        comprobar_que(alarma_degradacion_parcial(tmp7, racha_minima=6, minimo_en_ventana=6) == [],
+                      "con los umbrales por encima de la racha, calla")
+    with tempfile.TemporaryDirectory() as tmp8:
+        carpeta = os.path.join(tmp8, "x", "2026-09-10", "1000")
+        os.makedirs(carpeta)
+        with io.open(os.path.join(carpeta, "manifiesto.json"), "w", encoding="utf-8") as g:
+            json.dump({"fuentes": {"x_a": {"estado": "FALLO"}, "x_b": {"estado": "FALLO"}}}, g)
+        with io.open(os.path.join(tmp8, "indice.csv"), "w", encoding="utf-8", newline="") as f:
+            f.write("fecha,hora,ruta\n2026-09-10,1000,%s/x/2026-09-10/1000\n" % os.path.basename(tmp8))
+        comprobar_que(alarma_degradacion_parcial(tmp8, racha_minima=1, minimo_en_ventana=1) == [],
+                      "una familia MUDA entera no es parcial: eso es la alarma 2")
+    with tempfile.TemporaryDirectory() as tmp9:
+        with io.open(os.path.join(tmp9, "indice.csv"), "w", encoding="utf-8", newline="") as f:
+            ahora_iso = dt.datetime.now(dt.timezone.utc).isoformat()
+            f.write("fecha,hora,ejecucion_utc,ok,vacio,fallo,kb_total,ruta\n")
+            f.write("2026-09-13,0930,%s,2,0,0,17.3,x/2026-09-13\n" % ahora_iso)
+        claves9 = {i.clave for i in comprobar(tmp9, simulacro="degradacion")}
+        comprobar_que("degradacion:__simulacro__" in claves9,
+                      "el simulacro `degradacion` fabrica su incidencia sintética")
+
     print("\n-- v1.04 · la etiqueta llega a la issue ---------------------")
     inc = Incidencia("x", "titulo", "cuerpo")
     comprobar_que(peticion_de_issue(inc, "vigilante-saih")["labels"]
@@ -2380,8 +2696,7 @@ def main():
                         "que vale para el archivador; el SAIH se captura 3 "
                         "veces al día y necesita más" % UMBRAL_HORAS)
     p.add_argument("--simulacro",
-                   choices=["antiguedad", "fuente_muda", "caducidad",
-                            "desaparecido", "congelado", "sustituto"],
+                   choices=list(SIMULACROS),   # v1.08: UNA lista (ver cabecera)
                    help="fuerza una condición SIN tocar ningún fichero, para "
                         "comprobar que la alarma suena (prueba de disparo)")
     p.add_argument("--publicar", action="store_true",

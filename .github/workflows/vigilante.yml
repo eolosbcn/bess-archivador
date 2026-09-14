@@ -109,6 +109,12 @@ on:
           # pero aqui no estaba: **un ensayo que no se puede lanzar desde
           # donde se lanzan los demas no es un ensayo**.
           - "sustituto"
+          # v1.08 (B32, 13-sep-2026): los cuatro que faltaban. Las alarmas 7 y
+          # 8 tenian su codigo desde la v1.07 y no se podian pulsar desde aqui.
+          - "captura_critica"
+          - "indicadores"
+          - "degradacion"
+          - "desaparecido_largo"
 
   # Al tocar el propio vigilante, para que se pruebe solo al desplegarlo.
   # ⚠️ Estas rutas son las SUYAS. No incluyen `archivador_diario.py`: si lo

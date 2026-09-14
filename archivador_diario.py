@@ -19,6 +19,75 @@ con:
 Ninguna de las dos cosas se puede arreglar mirando atrás. Sí se pueden
 arreglar hacia delante.
  
+QUÉ CAMBIA EN LA v3.18
+----------------------
+Bloque **B32** del plan de Casandra (`20260913-C`, decisión D54 de Xevi), en un
+solo despliegue con el vigilante v1.08. Cuatro cosas, y la primera no estaba
+en la ficha original: la trajo la revisión del plan del 13-sep-2026.
+
+  1. **La captura de las 11:5x llegaba PARCIAL por 429 de AEMET un día de cada
+     tres, y nadie lo veía.** ✅ Medido el 13-sep sobre las 466 capturas del
+     índice: 12 traen alguna fuente PARCIAL, **7 de ellas la de las 11:5x** y 3
+     de los últimos 7 días; la de ese día trajo 6 de 8 ciudades (Sevilla y
+     A Coruña con HTTP 429). Esa captura es el horizonte de información entero
+     de Casandra, y la temperatura que entra al previsor es la media de las
+     ciudades que llegaron. ⚠️ Y el remedio obvio —reintentar más— era
+     peligroso: ✅ sobre 28 capturas de la franja 11:30-12:00 con commit
+     localizado, la mediana entre el arranque y la publicación es **323 s** y el
+     máximo **675 s**, publicada a las **12:04:20** el 13-sep, treinta y cinco
+     segundos antes de que la rutina de Casandra la leyera (12:04:55 hasta el
+     14-sep-2026; desde entonces lee a las 12:09:55, y por eso el límite del
+     reintento es 12:02:00). Lo que la
+     alarga son justo las esperas tras el 429 (20 y 40 s por ciudad y producto).
+     Por eso el arreglo tiene dos mitades acotadas en tiempo, y las dos solo en
+     la FRANJA CRÍTICA (arranque entre las 11:30 y las 12:00 locales):
+       · las pausas tras un 429 bajan de 20·intento a **5·intento** segundos
+         (`PAUSA_429_CRITICA`), lo que recorta el peor caso de hoy en ~3 min;
+       · tras las ocho ciudades, si alguna cayó y aún no son las 12:02:00, se
+         espera **30 s** y se reintenta **una vez** solo esas ciudades (si aún no son las 12:02:00)
+         (`reintento_diferido_aemet`); el manifiesto anota `reintento_diferido`
+         con lo recuperado, o «sin reintento: sin margen». ✅ El `elaborado` de
+         AEMET cambia varias veces al día (09:0x, 12:2x, 14:4x el 13-sep), así
+         que una captura posterior NO recupera la predicción de las 11:5x: el
+         reintento tiene que ser dentro de la misma pasada.
+     Fuera de la franja no cambia nada: las pausas siguen siendo las de siempre.
+  2. **D10a · la radiación observada de AEMET**, `aemet_radiacion_observada.csv.gz`:
+     el crudo del endpoint `/api/red/especial/radiacion` tal cual lo sirve
+     (CSV con `;`, dos líneas de cabecera, la segunda es la FECHA DEL DATO),
+     comprimido. ⚠️ No se puede leer con `_aemet_json()`: el cuerpo no es JSON
+     y ese lector lo habría anotado como FALLO para siempre
+     (`analisis\\aemet_observado_20260912\\`). Lector propio, `_aemet_crudo()`.
+     ✅ Sondeado el 12-sep sobre 1 captura: 35 estaciones, resolución horaria de
+     5 a 20 h, GL/DF/DT/IR/UVB, **1 día de retraso**; 20.948 bytes en claro.
+  3. **La mitad de D39 que toca a este programa · el climatológico diario de
+     AEMET** (`prec`, `tmed`, `tmax`, `tmin`, `sol`… por estación),
+     `aemet_climatologico_diario.csv.gz`: se pide cada día la ventana
+     D−5 → D−1 (`DIAS_CLIMATOLOGICO`), porque el retraso de publicación VARÍA
+     (✅ 4 días medidos sobre 838 estaciones el 7-sep, 3 días el 12-sep) y porque
+     los días recientes traen menos estaciones que los viejos (✅ 833 el 31-ago
+     frente a 816 el 9-sep, el 12-sep): guardar la ventana entera cada día es
+     lo que permite medir si un día «se completa» después de publicarse, sin
+     tener que decidirlo antes de saberlo. El manifiesto anota
+     `estaciones_por_dia` y `con_prec_por_dia` por eso.
+     ⚠️ Las dos observaciones se declaran `"version": "observacion"` en el
+     manifiesto, con `fecha_dato` (leída DENTRO del fichero, nunca supuesta),
+     `fecha_captura` y `retraso_dias`. Es dato EX POST: sirve para entrenar y
+     explicar, NUNCA para ofertar, y la barrera de Casandra
+     (`casandra_variables`) ya rechaza esa versión para entrenar sin salvedad.
+  4. **Las dos se piden UNA vez al día** (`HORAS_MINIMAS_OBSERVADO = 20`), con
+     el mismo mecanismo de disco que AEMET (`horas_desde_ultima_ok`, que
+     generaliza a `horas_desde_ultima_aemet`): el endpoint de radiación sirve
+     el mismo día todo el día, y archivarlo en las ~9 pasadas diarias serían
+     nueve copias idénticas (~16 MB/año frente a ~1,8 con una).
+
+Coste declarado antes de desplegar, y medido en la pasada de prueba de la
+sesión (ver el mensaje del commit y `analisis\\b32_20260913\\`).
+
+⚠️ LO QUE ESTA VERSIÓN NO LLEVA: la política de DEDUPLICADO del climatológico
+(qué versión de un día se considera definitiva) es de quien lo consuma, no del
+archivador, que guarda cada foto; y el histórico de radiación anterior al
+despliegue no existe (el endpoint solo sirve un día).
+
 QUÉ CAMBIA EN LA v3.17
 ----------------------
 Se retira un **✅ FALSO que llevaba tres días desplegado** (hallazgo A5 de la
@@ -470,7 +539,7 @@ import pandas as pd
 # diciendo «v3.12» con el código de la v3.13 dentro. `--autotest` comprueba
 # ahora que esta constante concuerde con la cabecera y con el nombre del
 # fichero. Al subir versión se toca AQUÍ, y la prueba avisa si falta algo.
-VERSION = "v3.17"
+VERSION = "v3.18"
 
 TZ_MADRID = ZoneInfo("Europe/Madrid")
 CARPETA_RAIZ = "archivo"
@@ -667,6 +736,21 @@ AVISO_PRESUPUESTO = 0.85
 # horario, y además reintenta en la siguiente captura cuando una falla, en vez
 # de esperar al siguiente múltiplo.
 HORAS_MINIMAS_ENTRE_AEMET = 2.5
+
+# --- v3.18 · la franja crítica y las dos observaciones de AEMET --------------
+# La captura que Casandra lee a las 12:09:55 (desde el 14-sep-2026; antes
+# 12:04:55) es la que arranca entre estas dos
+# horas locales. ✅ Sobre 28 capturas de la franja con commit localizado (13-sep),
+# la mediana hasta publicarse es 323 s y el máximo 675 s (publicada a las
+# 12:04:20): las pausas tras un 429 de AEMET son lo que la alarga.
+FRANJA_CRITICA = ("11:30:00", "12:00:00")
+PAUSA_429 = 20            # segundos × intento tras un 429 (antes, escondida en _aemet_json)
+PAUSA_429_CRITICA = 5     # en la franja crítica: 5, 10 en vez de 20, 40
+REINTENTO_DIFERIDO_S = 30 # espera antes del segundo intento de las ciudades caídas
+LIMITE_LOCAL_REINTENTO = "12:02:00"   # más tarde no se reintenta: la rutina lee a las 12:09:55
+HORAS_MINIMAS_OBSERVADO = 20.0        # radiación y climatológico: una vez al día
+DIAS_CLIMATOLOGICO = 5    # ventana D-5..D-1: el retraso varía (3-4 días) y los
+#                           días recientes traen menos estaciones; la ventana lo mide
  
 # Ocho municipios. Los seis primeros son las grandes áreas de consumo; los dos
 # últimos se añadieron en la v3.8:
@@ -805,15 +889,18 @@ def ya_hay_captura_completa_hoy(hoy):
     return False
  
  
-def horas_desde_ultima_aemet(ahora_madrid):
+def horas_desde_ultima_ok(nombre_fuente, ahora_madrid):
     """
-    Horas transcurridas desde la última captura de AEMET que salió OK, o None
-    si no hay ninguna. Se mira el disco, no el reloj, por el motivo explicado
-    en HORAS_MINIMAS_ENTRE_AEMET.
- 
-    Se recorren hoy y ayer: una captura de madrugada tiene su última AEMET
-    buena en la carpeta del día anterior, y sin mirar ayer se pediría dos veces
-    seguidas en el cambio de día.
+    Horas transcurridas desde la última captura en que `nombre_fuente` salió
+    OK, o None si no hay ninguna. Se mira el disco, no el reloj, por el motivo
+    explicado en HORAS_MINIMAS_ENTRE_AEMET. v3.18: generaliza a cualquier
+    fuente lo que hasta la v3.17 solo hacía `horas_desde_ultima_aemet`, porque
+    la radiación y el climatológico observados se piden una vez al día con el
+    mismo mecanismo.
+
+    Se recorren hoy y ayer: una captura de madrugada tiene su última buena en la
+    carpeta del día anterior, y sin mirar ayer se pediría dos veces seguidas en
+    el cambio de día.
     """
     ultima = None
     for dia in (ahora_madrid.date(), ahora_madrid.date() - dt.timedelta(days=1)):
@@ -827,7 +914,7 @@ def horas_desde_ultima_aemet(ahora_madrid):
             try:
                 with open(ruta, encoding="utf-8") as f:
                     m = json.load(f)
-                fuente = m.get("fuentes", {}).get("aemet_prediccion_diaria", {})
+                fuente = m.get("fuentes", {}).get(nombre_fuente, {})
                 if fuente.get("estado") != "OK":
                     continue
                 cuando = dt.datetime.fromisoformat(m["ejecucion_madrid"])
@@ -838,6 +925,11 @@ def horas_desde_ultima_aemet(ahora_madrid):
     if ultima is None:
         return None
     return (ahora_madrid - ultima).total_seconds() / 3600
+
+
+def horas_desde_ultima_aemet(ahora_madrid):
+    """La predicción de AEMET: el nombre de siempre, sobre la función general."""
+    return horas_desde_ultima_ok("aemet_prediccion_diaria", ahora_madrid)
  
  
 def descubrir_previsiones(modo):
@@ -1601,7 +1693,7 @@ def capturar_entsoe(carpeta, hoy):
 # AEMET — la predicción, que es lo irrecuperable
 # ============================================================================
  
-def _aemet_json(ruta):
+def _aemet_json(ruta, pausa=None):
     """
     Una lectura de AEMET son SIEMPRE dos peticiones: la primera devuelve un
     JSON con la URL del dato real, y la segunda trae el dato. Devuelve
@@ -1624,7 +1716,9 @@ def _aemet_json(ruta):
             # evidente (Aprendizaje_API_AEMET_y_Otros §4.6).
             if r.status_code == 429:
                 error = "HTTP 429"
-                time.sleep(20 * intento)
+                # v3.18: la pausa es una constante a la vista, y en la franja
+                # crítica se acorta (ver PAUSA_429_CRITICA en la cabecera).
+                time.sleep((PAUSA_429 if pausa is None else pausa) * intento)
                 continue
             if r.status_code != 200:
                 return None, f"HTTP {r.status_code}"
@@ -1639,11 +1733,56 @@ def _aemet_json(ruta):
             return json.loads(texto), None
         except Exception as e:
             error = f"{type(e).__name__}: {e}"
-            time.sleep(10 * intento)
+            time.sleep((10 if pausa is None else min(10, pausa)) * intento)
             continue
     return None, error
- 
- 
+
+
+def _aemet_crudo(ruta, pausa=None):
+    """
+    v3.18. Las dos peticiones de AEMET, pero devolviendo el CUERPO TAL CUAL
+    (bytes), sin `json.loads()`. Es la diferencia con `_aemet_json()` y el
+    motivo de que la radiación pareciera rota: su endpoint sirve CSV en texto
+    plano, y el lector JSON lo anotaba como `JSONDecodeError` —o sea FALLO—
+    para siempre (`analisis\\aemet_observado_20260912\\`, 12-sep-2026).
+    Devuelve (bytes, error). Misma disciplina de reintentos que `_aemet_json`.
+    """
+    error = "sin intentos"
+    for intento in range(1, 4):
+        try:
+            r = requests.get(f"{AEMET_BASE}{ruta}",
+                             params={"api_key": AEMET_TOKEN}, timeout=90)
+            if r.status_code == 429:
+                error = "HTTP 429"
+                time.sleep((PAUSA_429 if pausa is None else pausa) * intento)
+                continue
+            if r.status_code != 200:
+                return None, f"HTTP {r.status_code} en el paso 1"
+            j = r.json()
+            if j.get("estado") != 200 or not j.get("datos"):
+                return None, f"estado={j.get('estado')}"
+            r2 = requests.get(j["datos"], timeout=90)
+            if r2.status_code != 200:
+                return None, f"HTTP {r2.status_code} en el paso 2"
+            return r2.content, None
+        except Exception as e:
+            error = f"{type(e).__name__}: {e}"
+            time.sleep((10 if pausa is None else min(10, pausa)) * intento)
+            continue
+    return None, error
+
+
+def en_franja_critica(ahora_madrid, franja=FRANJA_CRITICA):
+    """¿Arrancó esta pasada en la franja de la captura que Casandra lee?"""
+    hhmmss = ahora_madrid.strftime("%H:%M:%S")
+    return franja[0] <= hhmmss < franja[1]
+
+
+def hay_margen_para_reintentar(ahora_local, limite=LIMITE_LOCAL_REINTENTO):
+    """Solo se reintenta si aún no son las 12:02:00 locales."""
+    return ahora_local.strftime("%H:%M:%S") < limite
+
+
 def _val(x):
     """Los valores vienen unas veces sueltos y otras dentro de una lista."""
     if isinstance(x, list):
@@ -1671,7 +1810,7 @@ def _periodo_dia(lista, periodo="00-24"):
  
  
 def _aemet_una_ciudad(codigo, ciudad, diarias, horarias, periodos,
-                      fallos_d, fallos_h):
+                      fallos_d, fallos_h, pausa=None):
     """
     Los dos productos de UNA ciudad. Extraído a función en la v3.10 para poder
     envolver cada ciudad en su propio try: antes, una respuesta con forma
@@ -1680,7 +1819,7 @@ def _aemet_una_ciudad(codigo, ciudad, diarias, horarias, periodos,
     """
     # ---- Producto DIARIO: 7 días, resumen por día y por tramos ----------
     datos, error = _aemet_json(
-        f"/api/prediccion/especifica/municipio/diaria/{codigo}")
+        f"/api/prediccion/especifica/municipio/diaria/{codigo}", pausa=pausa)
     if not datos:
         fallos_d.append(f"{ciudad}: {error}")
     else:
@@ -1731,7 +1870,7 @@ def _aemet_una_ciudad(codigo, ciudad, diarias, horarias, periodos,
     # resolución horaria, que es la del mercado. El producto diario da
     # máximos y mínimos, que no sirven para repartir por horas.
     datos, error = _aemet_json(
-        f"/api/prediccion/especifica/municipio/horaria/{codigo}")
+        f"/api/prediccion/especifica/municipio/horaria/{codigo}", pausa=pausa)
     if not datos:
         fallos_h.append(f"{ciudad}: {error}")
     else:
@@ -1816,6 +1955,13 @@ def capturar_aemet(carpeta, ahora_madrid):
  
     diarias, periodos, horarias = [], [], []
     fallos_d, fallos_h = [], []
+    # v3.18: en la franja crítica las pausas tras un 429 se acortan.
+    critica = en_franja_critica(ahora_madrid)
+    pausa = PAUSA_429_CRITICA if critica else None
+    if critica:
+        print(f"  ⚠ Franja crítica (arranque {ahora_madrid:%H:%M:%S}): pausas de "
+              f"{PAUSA_429_CRITICA}·intento s tras un 429, y reintento diferido "
+              f"si alguna ciudad cae y hay margen.")
  
     for codigo, ciudad in MUNICIPIOS_AEMET.items():
         # Cada ciudad, aislada. Ocho ciudades × dos productos son dieciséis
@@ -1823,11 +1969,31 @@ def capturar_aemet(carpeta, ahora_madrid):
         # falle no puede costarnos las cinco que ya están en memoria.
         try:
             _aemet_una_ciudad(codigo, ciudad, diarias, horarias, periodos,
-                              fallos_d, fallos_h)
+                              fallos_d, fallos_h, pausa=pausa)
         except Exception as e:
             fallos_d.append(f"{ciudad}: {type(e).__name__}: {e}")
             fallos_h.append(f"{ciudad}: {type(e).__name__}: {e}")
- 
+
+    # --- v3.18 · el reintento diferido, solo en la franja crítica y con margen
+    nota_reintento = "no hizo falta"
+    fallidas = ciudades_fallidas(fallos_d, fallos_h)
+    if fallidas:
+        nota_reintento = "sin reintento: fuera de la franja crítica"
+        if critica:
+            ahora_local = dt.datetime.now(TZ_MADRID)
+            if hay_margen_para_reintentar(ahora_local):
+                print(f"  ⚠ {len(fallidas)} ciudad(es) caída(s): {', '.join(fallidas)}. "
+                      f"Reintento diferido en {REINTENTO_DIFERIDO_S} s.")
+                recuperadas = reintento_diferido_aemet(
+                    fallidas, diarias, horarias, periodos, fallos_d, fallos_h,
+                    pausa=pausa)
+                nota_reintento = (f"recuperadas {len(recuperadas)} de {len(fallidas)}: "
+                                  f"{', '.join(recuperadas) or 'ninguna'}")
+            else:
+                nota_reintento = (f"sin reintento: eran las {ahora_local:%H:%M:%S}, "
+                                  f"sin margen antes de las 12:09:55")
+        print(f"  reintento diferido: {nota_reintento}")
+
     # --- Registro, fuente por fuente -----------------------------------------
     if diarias:
         df = pd.DataFrame(diarias)
@@ -1838,7 +2004,10 @@ def capturar_aemet(carpeta, ahora_madrid):
                   + (f" · fallan {'; '.join(fallos_d)}" if fallos_d else ""),
                   filas=len(df),
                   extra={"elaborado": sorted(set(df["elaborado"].dropna())),
-                         "ciudades": sorted(df["ciudad"].unique())})
+                         "ciudades": sorted(df["ciudad"].unique()),
+                         "franja_critica": critica,
+                         "ciudades_caidas": ciudades_fallidas(fallos_d, fallos_h),
+                         "reintento_diferido": nota_reintento})
     else:
         registrar("aemet_prediccion_diaria", "FALLO",
                   "ninguna ciudad devolvió datos: " + "; ".join(fallos_d))
@@ -1864,6 +2033,202 @@ def capturar_aemet(carpeta, ahora_madrid):
                   filas=len(dp))
  
  
+# ----------------------------------------------------------------------------
+# v3.18 · el reintento diferido de la franja crítica (funciones puras aparte,
+# para que el autotest las ejercite sin red)
+# ----------------------------------------------------------------------------
+
+def ciudades_fallidas(fallos_d, fallos_h):
+    """Las ciudades con algún producto caído, a partir de los textos de fallo
+    («sevilla: HTTP 429»)."""
+    return sorted({f.split(":", 1)[0].strip() for f in list(fallos_d) + list(fallos_h)})
+
+
+def _sin_ciudad(filas, ciudad):
+    return [r for r in filas if r.get("ciudad") != ciudad]
+
+
+def reintento_diferido_aemet(fallidas, diarias, horarias, periodos, fallos_d,
+                             fallos_h, pausa=None, espera=REINTENTO_DIFERIDO_S,
+                             una_ciudad=None, dormir=time.sleep):
+    """
+    Segundo intento, UNA vez, solo de las ciudades caídas. Espera `espera`
+    segundos antes (AEMET devuelve 429 en ráfagas cortas). Si una ciudad vuelve
+    entera —los dos productos—, sus filas SUSTITUYEN a las que hubiera y sus
+    fallos se retiran; si sigue caída, se queda lo que había y el fallo también.
+    Modifica las listas en sitio y devuelve las ciudades recuperadas.
+
+    `una_ciudad` y `dormir` se inyectan para el autotest; en producción son
+    `_aemet_una_ciudad` y `time.sleep`.
+    """
+    una_ciudad = una_ciudad or _aemet_una_ciudad
+    dormir(espera)
+    recuperadas = []
+    for codigo, ciudad in MUNICIPIOS_AEMET.items():
+        if ciudad not in fallidas:
+            continue
+        d2, h2, p2, fd2, fh2 = [], [], [], [], []
+        try:
+            una_ciudad(codigo, ciudad, d2, h2, p2, fd2, fh2, pausa=pausa)
+        except Exception as e:
+            fd2.append(f"{ciudad}: {type(e).__name__}: {e}")
+            fh2.append(f"{ciudad}: {type(e).__name__}: {e}")
+        if fd2 or fh2:
+            continue
+        diarias[:] = _sin_ciudad(diarias, ciudad) + d2
+        horarias[:] = _sin_ciudad(horarias, ciudad) + h2
+        periodos[:] = _sin_ciudad(periodos, ciudad) + p2
+        fallos_d[:] = [f for f in fallos_d if not f.startswith(ciudad + ":")]
+        fallos_h[:] = [f for f in fallos_h if not f.startswith(ciudad + ":")]
+        recuperadas.append(ciudad)
+    return recuperadas
+
+
+# ============================================================================
+# AEMET — OBSERVACIÓN (v3.18): radiación y climatológico diario. Dato EX POST.
+# ============================================================================
+
+def leer_radiacion(cuerpo):
+    """
+    Lee el crudo de `/api/red/especial/radiacion` SIN transformarlo: solo lo
+    que hace falta para el manifiesto. La fecha del dato va DENTRO del fichero
+    (segunda línea, «dd-mm-yy»): es una identidad, nunca se adivina.
+    Devuelve dict con fecha_dato (date o None), estaciones, magnitudes,
+    codificacion. Función pura: el autotest la ejercita.
+    """
+    texto = cuerpo.decode("utf-8", errors="replace")
+    codificacion = "utf-8"
+    if "\ufffd" in texto:
+        texto = cuerpo.decode("latin-1")
+        codificacion = "latin-1"
+    lineas = [l for l in texto.splitlines() if l.strip()]
+    fecha = None
+    if len(lineas) > 1:
+        try:
+            fecha = dt.datetime.strptime(lineas[1].strip().strip('"'), "%d-%m-%y").date()
+        except ValueError:
+            fecha = None
+    magnitudes = set()
+    estaciones = 0
+    if len(lineas) > 3:
+        cab = [x.strip('"') for x in lineas[2].split(";")]
+        posiciones = [i for i, x in enumerate(cab) if x == "Tipo"]
+        for fila in lineas[3:]:
+            campos = [x.strip('"') for x in fila.split(";")]
+            estaciones += 1
+            for i in posiciones:
+                if i < len(campos) and campos[i]:
+                    magnitudes.add(campos[i])
+    return {"fecha_dato": fecha, "estaciones": estaciones,
+            "magnitudes": sorted(magnitudes), "codificacion": codificacion}
+
+
+def ventana_climatologico(ini, fin):
+    """La ruta del climatológico diario para [ini, fin]. Función pura."""
+    return ("/api/valores/climatologicos/diarios/datos"
+            f"/fechaini/{ini.isoformat()}T00:00:00UTC"
+            f"/fechafin/{fin.isoformat()}T23:59:59UTC/todasestaciones")
+
+
+def _capturar_radiacion(carpeta, ahora_madrid):
+    nombre = "aemet_radiacion_observada"
+    cuerpo, error = _aemet_crudo("/api/red/especial/radiacion")
+    if cuerpo is None:
+        registrar(nombre, "FALLO", error)
+        return
+    info = leer_radiacion(cuerpo)
+    if info["fecha_dato"] is None:
+        # ⚠️ Un fichero sin la fecha dentro no se guarda como bueno: sin ella
+        # no se sabe de qué día es, y eso es lo único que lo hace utilizable.
+        registrar(nombre, "FALLO",
+                  f"la segunda línea no es una fecha dd-mm-yy ({len(cuerpo)} bytes): "
+                  "el formato del producto ha cambiado")
+        return
+    with gzip.open(os.path.join(carpeta, f"{nombre}.csv.gz"), "wb") as g:
+        g.write(cuerpo)
+    retraso = (ahora_madrid.date() - info["fecha_dato"]).days
+    registrar(nombre, "OK",
+              f"{info['estaciones']} estaciones · dato del {info['fecha_dato'].isoformat()} · "
+              f"publicado con {retraso} día(s) de retraso · {len(cuerpo)} bytes en claro",
+              filas=info["estaciones"],
+              extra={"version": "observacion",
+                     "fecha_dato": info["fecha_dato"].isoformat(),
+                     "fecha_captura": ahora_madrid.date().isoformat(),
+                     "retraso_dias": retraso,
+                     "magnitudes": info["magnitudes"],
+                     "codificacion": info["codificacion"],
+                     "bytes_en_claro": len(cuerpo)})
+
+
+def _capturar_climatologico(carpeta, ahora_madrid):
+    nombre = "aemet_climatologico_diario"
+    fin = ahora_madrid.date() - dt.timedelta(days=1)
+    ini = fin - dt.timedelta(days=DIAS_CLIMATOLOGICO - 1)
+    cuerpo, error = _aemet_crudo(ventana_climatologico(ini, fin))
+    if cuerpo is None:
+        registrar(nombre, "FALLO", error)
+        return
+    texto = cuerpo.decode("utf-8", errors="replace")
+    if "\ufffd" in texto:
+        texto = cuerpo.decode("latin-1")
+    datos = json.loads(texto)
+    if not isinstance(datos, list) or not datos:
+        registrar(nombre, "VACIO", f"respondió y no había datos para {ini}..{fin}: "
+                  f"{str(datos)[:120]}")
+        return
+    # dtype=str: los valores vienen como texto con coma decimal («12,3») y se
+    # guardan TAL CUAL. Convertirlos aquí sería transformar el dato archivado.
+    df = pd.DataFrame(datos, dtype=str)
+    guardar(df, carpeta, nombre)
+    por_dia = df.groupby("fecha").size().to_dict() if "fecha" in df.columns else {}
+    con_prec = {}
+    if "prec" in df.columns and "fecha" in df.columns:
+        con = df[df["prec"].notna() & (df["prec"].astype(str).str.strip() != "")]
+        con_prec = con.groupby("fecha").size().to_dict()
+    fecha_max = max(por_dia) if por_dia else None
+    retraso = ((ahora_madrid.date() - dt.date.fromisoformat(fecha_max)).days
+               if fecha_max else None)
+    estaciones = df["indicativo"].nunique() if "indicativo" in df.columns else None
+    registrar(nombre, "OK",
+              f"{len(df)} registros · {len(por_dia)} días "
+              f"({min(por_dia) if por_dia else '?'}..{fecha_max or '?'}) · "
+              f"{estaciones} estaciones · el más reciente publicado con {retraso} día(s)",
+              filas=len(df),
+              extra={"version": "observacion",
+                     "ventana_dias": DIAS_CLIMATOLOGICO,
+                     "fecha_dato_min": min(por_dia) if por_dia else None,
+                     "fecha_dato_max": fecha_max,
+                     "fecha_captura": ahora_madrid.date().isoformat(),
+                     "retraso_dias": retraso,
+                     "estaciones": estaciones,
+                     "estaciones_por_dia": {k: int(v) for k, v in por_dia.items()},
+                     "con_prec_por_dia": {k: int(v) for k, v in con_prec.items()},
+                     "columnas": list(df.columns)})
+
+
+def capturar_aemet_observado(carpeta, ahora_madrid):
+    titulo("AEMET — OBSERVACIÓN: radiación y climatológico diario (D10a, D39)")
+    print("  Dato EX POST, publicado con 1 y 3-4 días de retraso: sirve para")
+    print("  entrenar y explicar, NUNCA para ofertar. Se declara `observacion`.")
+    if not AEMET_TOKEN:
+        registrar("aemet_radiacion_observada", "FALLO", "falta AEMET_TOKEN")
+        registrar("aemet_climatologico_diario", "FALLO", "falta AEMET_TOKEN")
+        return
+    for nombre, funcion in (("aemet_radiacion_observada", _capturar_radiacion),
+                            ("aemet_climatologico_diario", _capturar_climatologico)):
+        desde = horas_desde_ultima_ok(nombre, ahora_madrid)
+        if desde is not None and desde < HORAS_MINIMAS_OBSERVADO:
+            registrar(nombre, "OMITIDA",
+                      f"la última buena fue hace {desde:.1f} h "
+                      f"(mínimo {HORAS_MINIMAS_OBSERVADO:.0f} h: una vez al día)")
+            continue
+        # Cada una en su propio try: que falle una no puede costar la otra.
+        try:
+            funcion(carpeta, ahora_madrid)
+        except Exception as e:
+            registrar(nombre, "FALLO", f"excepción: {type(e).__name__}: {e}")
+
+
 # ============================================================================
 # MIBGAS
 # ============================================================================
@@ -2361,6 +2726,8 @@ def ejecutar():
     for nombre, funcion, args in (
         ("ENTSO-E", capturar_entsoe, (carpeta, hoy)),
         ("AEMET", capturar_aemet, (carpeta, ahora_madrid)),
+        # v3.18: las dos observaciones, detrás de la predicción y una vez al día.
+        ("AEMET observado", capturar_aemet_observado, (carpeta, ahora_madrid)),
         ("MIBGAS", capturar_mibgas, (carpeta, hoy)),
         # ⚠️ Detras de MIBGAS a proposito: las dos son el coste marginal
         # del ciclo combinado, y quien lea el manifiesto las vera juntas.
@@ -2510,6 +2877,67 @@ def autotest():
     else:
         print("  [·] el fichero no lleva versión en el nombre (es la copia "
               "desplegada): esa comprobación se omite")
+
+    # ⚠️ v3.18: las funciones puras de B32, sin red.
+    print()
+    print("v3.18 — la franja crítica, el reintento diferido y las observaciones")
+    madrid = ZoneInfo("Europe/Madrid")
+    def ok(cond, nombre):
+        nonlocal fallos
+        fallos += not cond
+        print(f"  [{'✓' if cond else '✗'}] {nombre}")
+    ok(en_franja_critica(dt.datetime(2026, 9, 13, 11, 53, 5, tzinfo=madrid)),
+       "las 11:53:05 están en la franja crítica")
+    ok(not en_franja_critica(dt.datetime(2026, 9, 13, 12, 0, 0, tzinfo=madrid)),
+       "las 12:00:00 ya no (el cierre de ofertas es un límite duro)")
+    ok(not en_franja_critica(dt.datetime(2026, 9, 13, 8, 50, 0, tzinfo=madrid)),
+       "las 08:50 no")
+    ok(hay_margen_para_reintentar(dt.datetime(2026, 9, 13, 11, 58, 0, tzinfo=madrid)),
+       "a las 11:58:00 hay margen para reintentar")
+    ok(not hay_margen_para_reintentar(dt.datetime(2026, 9, 13, 12, 2, 1, tzinfo=madrid)),
+       "a las 12:02:01 ya no")
+    ok(ciudades_fallidas(["sevilla: HTTP 429"], ["a_coruna: HTTP 429", "sevilla: HTTP 429"])
+       == ["a_coruna", "sevilla"], "ciudades_fallidas junta los dos productos sin repetir")
+
+    # el reintento: una ciudad vuelve entera, la otra sigue caída
+    diarias = [{"ciudad": "madrid", "x": 1}]
+    horarias = [{"ciudad": "madrid", "x": 1}]
+    periodos = [{"ciudad": "madrid", "x": 1}]
+    fallos_d = ["sevilla: HTTP 429", "a_coruna: HTTP 429"]
+    fallos_h = ["sevilla: HTTP 429"]
+    def falsa_una_ciudad(codigo, ciudad, d, h, p, fd, fh, pausa=None):
+        if ciudad == "sevilla":
+            d.append({"ciudad": "sevilla", "x": 2}); h.append({"ciudad": "sevilla", "x": 2})
+            p.append({"ciudad": "sevilla", "x": 2})
+        else:
+            fd.append(f"{ciudad}: HTTP 429"); fh.append(f"{ciudad}: HTTP 429")
+    dormido = []
+    rec = reintento_diferido_aemet(["sevilla", "a_coruna"], diarias, horarias, periodos,
+                                   fallos_d, fallos_h, pausa=5, espera=30,
+                                   una_ciudad=falsa_una_ciudad, dormir=dormido.append)
+    ok(rec == ["sevilla"], "recupera la ciudad que vuelve y no la que sigue caída")
+    ok(dormido == [30], "espera los segundos declarados antes de reintentar (una sola vez)")
+    ok([r["ciudad"] for r in diarias] == ["madrid", "sevilla"] and len(horarias) == 2
+       and len(periodos) == 2, "las filas de la recuperada se añaden sin tocar las demás")
+    ok(fallos_d == ["a_coruna: HTTP 429"] and fallos_h == [],
+       "los fallos de la recuperada se retiran; los de la caída se quedan")
+
+    # la radiación, sobre un crudo sintético con la forma del real
+    crudo = ('"RADIACION SOLAR"\n"11-09-26"\n'
+             '"Estación";"Indicativo";"Tipo";"5";"6";"SUMA";"Tipo";"5";"6";"SUMA"\n'
+             '"A Coruña";"1387";"GL";"0";"2";"2219";"DF";"0";"1";"200"\n'
+             '"Madrid";"3195";"GL";"1";"3";"2400";"DF";"0";"2";"210"\n').encode("utf-8")
+    info = leer_radiacion(crudo)
+    ok(info["fecha_dato"] == dt.date(2026, 9, 11), "la fecha del dato se lee DENTRO del fichero")
+    ok(info["estaciones"] == 2 and info["magnitudes"] == ["DF", "GL"],
+       "cuenta estaciones y magnitudes sin transformar nada")
+    ok(leer_radiacion(b'"RADIACION"\n"sin fecha"\n')["fecha_dato"] is None,
+       "sin fecha legible devuelve None (y la captura lo registra como FALLO)")
+    ok(ventana_climatologico(dt.date(2026, 9, 8), dt.date(2026, 9, 12))
+       == "/api/valores/climatologicos/diarios/datos/fechaini/2026-09-08T00:00:00UTC"
+          "/fechafin/2026-09-12T23:59:59UTC/todasestaciones",
+       "la ventana del climatológico se construye con las fechas pedidas")
+    ok(DIAS_CLIMATOLOGICO >= 4, "la ventana cubre al menos el retraso de publicación medido (3-4 días)")
 
     print()
     print("AUTOTEST: TODO CORRECTO" if not fallos
