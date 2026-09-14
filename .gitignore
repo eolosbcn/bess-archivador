@@ -1,0 +1,10 @@
+# .gitignore del archivador BESS
+#
+# __pycache__/ : la cache de bytecode que crea Python al ejecutar los
+# autotests (archivador_diario.py --autotest, vigilante.py --autotest) en un
+# clon local. No es codigo ni archivo. Sin esta linea, `git status` del clon
+# de despliegue nunca queda vacio y la comprobacion de "nada sin commitear"
+# deja de ser literal. Los workflows no la generan en el repositorio: solo
+# hacen `git add archivo/`.
+# Origen: plan de Casandra 20260914-A, paso 0 (heredado del traspaso C).
+__pycache__/
