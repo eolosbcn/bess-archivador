@@ -35,14 +35,16 @@ en la ficha original: la trajo la revisión del plan del 13-sep-2026.
      peligroso: ✅ sobre 28 capturas de la franja 11:30-12:00 con commit
      localizado, la mediana entre el arranque y la publicación es **323 s** y el
      máximo **675 s**, publicada a las **12:04:20** el 13-sep, treinta y cinco
-     segundos antes de que la rutina de Casandra la lea (12:04:55). Lo que la
+     segundos antes de que la rutina de Casandra la leyera (12:04:55 hasta el
+     14-sep-2026; desde entonces lee a las 12:09:55, y por eso el límite del
+     reintento es 12:02:00). Lo que la
      alarga son justo las esperas tras el 429 (20 y 40 s por ciudad y producto).
      Por eso el arreglo tiene dos mitades acotadas en tiempo, y las dos solo en
      la FRANJA CRÍTICA (arranque entre las 11:30 y las 12:00 locales):
        · las pausas tras un 429 bajan de 20·intento a **5·intento** segundos
          (`PAUSA_429_CRITICA`), lo que recorta el peor caso de hoy en ~3 min;
-       · tras las ocho ciudades, si alguna cayó y aún no son las 11:59:30, se
-         espera **30 s** y se reintenta **una vez** solo esas ciudades
+       · tras las ocho ciudades, si alguna cayó y aún no son las 12:02:00, se
+         espera **30 s** y se reintenta **una vez** solo esas ciudades (si aún no son las 12:02:00)
          (`reintento_diferido_aemet`); el manifiesto anota `reintento_diferido`
          con lo recuperado, o «sin reintento: sin margen». ✅ El `elaborado` de
          AEMET cambia varias veces al día (09:0x, 12:2x, 14:4x el 13-sep), así
@@ -736,7 +738,8 @@ AVISO_PRESUPUESTO = 0.85
 HORAS_MINIMAS_ENTRE_AEMET = 2.5
 
 # --- v3.18 · la franja crítica y las dos observaciones de AEMET --------------
-# La captura que Casandra lee a las 12:04:55 es la que arranca entre estas dos
+# La captura que Casandra lee a las 12:09:55 (desde el 14-sep-2026; antes
+# 12:04:55) es la que arranca entre estas dos
 # horas locales. ✅ Sobre 28 capturas de la franja con commit localizado (13-sep),
 # la mediana hasta publicarse es 323 s y el máximo 675 s (publicada a las
 # 12:04:20): las pausas tras un 429 de AEMET son lo que la alarga.
@@ -744,7 +747,7 @@ FRANJA_CRITICA = ("11:30:00", "12:00:00")
 PAUSA_429 = 20            # segundos × intento tras un 429 (antes, escondida en _aemet_json)
 PAUSA_429_CRITICA = 5     # en la franja crítica: 5, 10 en vez de 20, 40
 REINTENTO_DIFERIDO_S = 30 # espera antes del segundo intento de las ciudades caídas
-LIMITE_LOCAL_REINTENTO = "11:59:30"   # más tarde no se reintenta: no queda margen
+LIMITE_LOCAL_REINTENTO = "12:02:00"   # más tarde no se reintenta: la rutina lee a las 12:09:55
 HORAS_MINIMAS_OBSERVADO = 20.0        # radiación y climatológico: una vez al día
 DIAS_CLIMATOLOGICO = 5    # ventana D-5..D-1: el retraso varía (3-4 días) y los
 #                           días recientes traen menos estaciones; la ventana lo mide
@@ -1776,7 +1779,7 @@ def en_franja_critica(ahora_madrid, franja=FRANJA_CRITICA):
 
 
 def hay_margen_para_reintentar(ahora_local, limite=LIMITE_LOCAL_REINTENTO):
-    """Solo se reintenta si aún no son las 11:59:30 locales."""
+    """Solo se reintenta si aún no son las 12:02:00 locales."""
     return ahora_local.strftime("%H:%M:%S") < limite
 
 
@@ -1988,7 +1991,7 @@ def capturar_aemet(carpeta, ahora_madrid):
                                   f"{', '.join(recuperadas) or 'ninguna'}")
             else:
                 nota_reintento = (f"sin reintento: eran las {ahora_local:%H:%M:%S}, "
-                                  f"sin margen antes de las 12:04:55")
+                                  f"sin margen antes de las 12:09:55")
         print(f"  reintento diferido: {nota_reintento}")
 
     # --- Registro, fuente por fuente -----------------------------------------
@@ -2891,8 +2894,8 @@ def autotest():
        "las 08:50 no")
     ok(hay_margen_para_reintentar(dt.datetime(2026, 9, 13, 11, 58, 0, tzinfo=madrid)),
        "a las 11:58:00 hay margen para reintentar")
-    ok(not hay_margen_para_reintentar(dt.datetime(2026, 9, 13, 11, 59, 31, tzinfo=madrid)),
-       "a las 11:59:31 ya no")
+    ok(not hay_margen_para_reintentar(dt.datetime(2026, 9, 13, 12, 2, 1, tzinfo=madrid)),
+       "a las 12:02:01 ya no")
     ok(ciudades_fallidas(["sevilla: HTTP 429"], ["a_coruna: HTTP 429", "sevilla: HTTP 429"])
        == ["a_coruna", "sevilla"], "ciudades_fallidas junta los dos productos sin repetir")
 
