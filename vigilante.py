@@ -33,6 +33,20 @@ nadie volvería a mirarlas.
 
 HISTORIAL
 =========
+v1.09  18-sep-2026. **El umbral de A19 pasa a una CONSTANTE, porque el de la
+    v1.07 no llegó nunca a producción.** La v1.07 subió `horas` de 6 a 9 como
+    DEFECTO de `alarma_vigilante_mudo`, con su medición. Pero a esa función no
+    la llama el vigilante: la llama `registro.py`, que le pasaba su propio
+    defecto de 6 h, y `registro.yml` no le da otro. ✅ Medido el 18-sep-2026
+    sobre 7 días (del 12 al 18-sep): A19 saltó los 7, con el vigilante parado
+    entre 6,04 y 7,67 h; con 9 h no habría saltado ninguno. La reconstrucción
+    reproduce lo que pasó en 7 de 7 días, que es su control
+    (`Casandra\analisis\a19_20260918\`). La #18 iba y venía cada día, que es la
+    trampa 7: un aviso que salta siempre deja de ser un aviso.
+
+    Ahora el umbral es `HORAS_VIGILANTE_MUDO`, vive solo aquí y `registro.py`
+    v1.04 lo lee. Lo que hace el vigilante no cambia: él no llama a A19.
+
 v1.08  13-sep-2026. **Lo que B4 dejó, y lo que la revisión del plan encontró**
     (bloque **B32** del plan `20260913-C` de Casandra, decisión D54 de Xevi).
 
@@ -399,6 +413,16 @@ MINIMO_FUENTES_POR_FAMILIA = 2
 # Asignar la incidencia notifica al asignado SIEMPRE, sin depender del
 # *watching*, y llega como aviso a la app de GitHub del móvil.
 ASIGNAR_A = os.environ.get("VIGILANTE_ASIGNAR_A", "eolosbcn")
+
+# ⚠️ A19 · HORAS SIN UNA PASADA BUENA DEL VIGILANTE ANTES DE AVISAR (v1.09).
+# ---------------------------------------------------------------------------
+# Vive AQUÍ y en ningún otro sitio. La v1.07 subió el umbral de 6 a 9 h con su
+# medición (ver `alarma_vigilante_mudo`), pero como DEFECTO de la función, y a
+# la función no la llama el vigilante: la llama `registro.py`, que le pasaba
+# su propio defecto de 6 h. El cambio no llegó nunca a la comprobación que
+# corre. Desde la v1.09 `registro.py` lee esta constante en vez de tener la
+# suya: un número que vive en dos sitios acaba valiendo dos cosas.
+HORAS_VIGILANTE_MUDO = 9.0
 
 # --- alarmas 4 y 5 y registro de fallos (v1.03) -----------------------------
 CAPTURAS_A_LEER = 500      # ⚠️ tope del barrido. Medido el 7-sep: 28 ms por
@@ -884,8 +908,9 @@ def consulta_github(camino, token=None):
         return json.loads(r.read().decode("utf-8"))
 
 
-def alarma_vigilante_mudo(repo, token=None, flujo="vigilante.yml", horas=9.0,
-                          ahora=None, consultar=None):
+def alarma_vigilante_mudo(repo, token=None, flujo="vigilante.yml",
+                          horas=HORAS_VIGILANTE_MUDO, ahora=None,
+                          consultar=None):
     """¿Ha corrido el vigilante CON ÉXITO en las ultimas `horas`? (A19)
 
     ⚠⚠ QUIEN LLAMA A ESTO NO ES EL VIGILANTE, y es la mitad del asunto. La
@@ -917,6 +942,11 @@ def alarma_vigilante_mudo(repo, token=None, flujo="vigilante.yml", horas=9.0,
     salta una ranura de cada ocho. Con 9 h queda margen sobre el peor hueco
     medido mas el peor retraso, sin tardar un dia en enterarse — y sin caer en
     la trampa 7, que es un aviso que salta siempre.
+
+    ⚠️⚠️ **Y ESAS 9 h NO LLEGARON A PRODUCCIÓN HASTA LA v1.09.** `registro.py`,
+    que es quien llama, pasaba `horas=6.0` desde su propia línea de órdenes, así
+    que el defecto de aquí no se usaba nunca. Hoy el umbral es la constante
+    `HORAS_VIGILANTE_MUDO`, y `registro.py` v1.04 la lee.
 
     ⚠️ **Los fallos de red NO se tragan.** Si la consulta revienta, la
     excepcion sube: quien llama la enseña y deja la pasada en rojo, que es una
