@@ -85,6 +85,30 @@ ficheros** dentro de su carpeta, porque son series con vidas distintas y
 mezclarlas haría ilegibles las dos.
 
 HISTORIAL
+v1.04  18-sep-2026. **El umbral de A19 que corría era 6 h, no las 9 h que
+    decidió `vigilante.py` v1.07.** Este programa le pasaba a
+    `alarma_vigilante_mudo` su propio defecto (`--vigilar-al-vigilante-horas`,
+    6.0) y `registro.yml` no le da otro, así que el cambio del vigilante no
+    llegó nunca a la comprobación real. Y el autotest lo tapaba: probaba con
+    9 h escritas a mano, verde con un número que no corría (la trampa 1 de la
+    casa).
+
+    ✅ Medido el 18-sep-2026 sobre 7 días (del 12 al 18-sep): A19 saltó los 7,
+    con el vigilante parado entre 6,04 y 7,67 h —GitHub entregó 34 de sus 58
+    ranuras del 11 al 18-sep—; con 9 h no habría saltado ninguno. La #18 iba y
+    venía cada día: un aviso que salta siempre deja de ser un aviso (trampa 7),
+    y una avería real habría sido un comentario más dentro de ella.
+
+    Ahora el defecto sale de `vigilante.HORAS_VIGILANTE_MUDO` (v1.09), y la
+    línea de órdenes se construye en `argumentos()` para que el autotest mire
+    el defecto que usa producción: 7a, que es el del vigilante; 7b, que el
+    peor hueco medido (7,7 h) no avisa; 7c, que 9,5 h sí. ✅ Comprobado sobre 2
+    casos que 7a y 7b FALLAN con el defecto de la v1.03.
+
+    ⚠️ Es la segunda vez que este programa y el vigilante no se ponen de
+    acuerdo en un defecto. En la v1.03 fue `asignar_a`, que aquí faltaba; esta
+    vez sobraba: el número de aquí tapaba el de allí.
+
 v1.03  12-sep-2026. **La incidencia de A19 se ASIGNA, y la tasa de entrega
     se mide sola** (bloque B4).
 
@@ -502,7 +526,11 @@ def autotest():
     recien = (_ahora - _dt.timedelta(hours=1)).strftime("%Y-%m-%dT%H:%M:%SZ")
     antiguo = (_ahora - _dt.timedelta(hours=48)).strftime("%Y-%m-%dT%H:%M:%SZ")
 
-    sano = vigilante.alarma_vigilante_mudo("x/y", None, horas=9.0,
+    # ⚠️ Con el umbral de PRODUCCIÓN, el defecto de la línea de órdenes, y no
+    # con uno escrito a mano (v1.04): hasta la v1.03 aquí ponía 9.0 y lo que
+    # corría eran 6.
+    umbral = argumentos().parse_args([]).vigilar_al_vigilante_horas
+    sano = vigilante.alarma_vigilante_mudo("x/y", None, horas=umbral,
                                            consultar=api(recien))
     comprobar("5a sin simulacro y con el vigilante vivo, no hay incidencia",
               sano is None)
@@ -514,7 +542,7 @@ def autotest():
 
     # ⚠⚠ LA PRUEBA QUE IMPORTA, y es la leccion de `vigilante.py` v1.02: con
     # el vigilante MUDO DE VERDAD, el simulacro NO debe etiquetar la averia.
-    real = vigilante.alarma_vigilante_mudo("x/y", None, horas=9.0,
+    real = vigilante.alarma_vigilante_mudo("x/y", None, horas=umbral,
                                            consultar=api(antiguo))
     comprobar("5c una averia REAL se detecta con el umbral normal",
               real is not None and "[SIMULACRO]" not in real.titulo,
@@ -523,7 +551,7 @@ def autotest():
     # ⚠️⚠️ 5d · LA PRUEBA DEL FALLO QUE SE VIO EN PRODUCCIÓN: una pasada
     # reciente que terminó en `failure` NO es vigilancia. Con el código de la
     # v1.02 esto devolvía None, o sea «todo bien».
-    fallida = vigilante.alarma_vigilante_mudo("x/y", None, horas=9.0,
+    fallida = vigilante.alarma_vigilante_mudo("x/y", None, horas=umbral,
                                               consultar=api(recien, "failure"))
     comprobar("5d una pasada reciente en `failure` NO cuenta como vigilancia",
               fallida is not None,
@@ -581,6 +609,27 @@ def autotest():
     comprobar("6a la incidencia de A19 se publica CON asignado (#15 salió "
               "sin él y no le llegó a nadie)",
               "asignar_a=vigilante.ASIGNAR_A" in fuente)
+
+    # ═══ v1.04 · el umbral de A19 que se prueba es el que corre ═══════════
+    # ⚠⚠ La #18 saltaba cada día porque producción usaba el defecto de aquí
+    # (6 h) y las pruebas, 9 h escritas a mano. Estas tres miran el defecto
+    # REAL de la línea de órdenes, con el peor caso medido y uno por encima.
+    comprobar("7a el umbral de A19 es el de vigilante.py, no uno propio",
+              umbral == vigilante.HORAS_VIGILANTE_MUDO,
+              "-> %r frente a %r" % (umbral, vigilante.HORAS_VIGILANTE_MUDO))
+
+    def hace(horas):
+        return (_ahora - _dt.timedelta(hours=horas)).strftime(
+            "%Y-%m-%dT%H:%M:%SZ")
+
+    comprobar("7b un vigilante parado 7,7 h NO avisa: es el peor hueco medido "
+              "del 13 al 18-sep, y con 6 h la #18 saltaba cada día",
+              vigilante.alarma_vigilante_mudo(
+                  "x/y", None, horas=umbral, consultar=api(hace(7.7))) is None)
+    comprobar("7c un vigilante parado 9,5 h SÍ avisa: la alarma sigue viva",
+              vigilante.alarma_vigilante_mudo(
+                  "x/y", None, horas=umbral,
+                  consultar=api(hace(9.5))) is not None)
 
     print("\n  AUTOTEST · %d comprobaciones · %d fallos"
           % (hechas, len(fallos)))
@@ -651,7 +700,14 @@ def vigilar_al_vigilante(repo, horas, simulacro=False, consultar=None):
     return 1
 
 
-def main():
+def argumentos():
+    """La línea de órdenes, APARTE de `main()` desde la v1.04.
+
+    ⚠️ Para que el autotest lea los DEFECTOS con los que corre producción. El
+    umbral de A19 que se aplicaba era el de aquí —6 h— y no el del vigilante,
+    y ninguna prueba lo miraba: el autotest llamaba a la función con 9 h
+    escritas a mano, o sea que probaba un número que no corría.
+    """
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument("--raiz", nargs="+", default=["archivo"],
                    help="carpeta(s) con indice.csv. Se puede repetir: "
@@ -662,8 +718,13 @@ def main():
     p.add_argument("--repo",
                    help="dueño/repo: si se da, comprueba que el vigilante "
                         "haya corrido y abre incidencia si lleva mudo (A19)")
-    p.add_argument("--vigilar-al-vigilante-horas", type=float, default=6.0,
-                   help="dos veces su cadencia de 3 h (por defecto 6)")
+    # ⚠️ El defecto NO se escribe aquí (v1.04): sale de `vigilante.py`, que es
+    # donde está medido. Aquí decía 6.0, y era eso lo que corría.
+    p.add_argument("--vigilar-al-vigilante-horas", type=float,
+                   default=vigilante.HORAS_VIGILANTE_MUDO,
+                   help="horas sin una pasada buena del vigilante antes de "
+                        "avisar (por defecto %(default)s, la constante "
+                        "HORAS_VIGILANTE_MUDO de vigilante.py)")
     p.add_argument("--simulacro", default="no",
                    help="⚠️ `vigilante_mudo` fuerza la alarma A19 para verla "
                         "saltar. BAJA EL UMBRAL, no toca ningun fichero. Solo "
@@ -678,7 +739,11 @@ def main():
                         "poner en riesgo lo que este programa existe para "
                         "escribir.")
     p.add_argument("--autotest", action="store_true")
-    a = p.parse_args()
+    return p
+
+
+def main():
+    a = argumentos().parse_args()
 
     if a.autotest:
         return autotest()
