@@ -1,9 +1,20 @@
 {
- "ejecucion_utc": "2026-09-24T07:30:02.579894+00:00",
+ "ejecucion_utc": "2026-09-24T12:00:02.241721+00:00",
  "primera_ejecucion_utc": "2026-09-24T07:30:02.579894+00:00",
  "pasadas": [
   {
    "utc": "2026-09-24T07:30:02.579894+00:00",
+   "confederacion": [
+    "duero",
+    "ebro",
+    "mino_sil"
+   ],
+   "ok": 7,
+   "vacio": 0,
+   "fallo": 0
+  },
+  {
+   "utc": "2026-09-24T12:00:02.241721+00:00",
    "confederacion": [
     "duero",
     "ebro",
@@ -24,51 +35,51 @@
  "fuentes": {
   "saih_duero_situacion_embalses": {
    "estado": "OK",
-   "bytes": 47118,
-   "comprimido": 9398,
+   "bytes": 47107,
+   "comprimido": 9406,
    "elementos": 38,
-   "segundos": 0.9,
-   "de_pasada_utc": "2026-09-24T07:30:02.579894+00:00"
+   "segundos": 1.62,
+   "de_pasada_utc": "2026-09-24T12:00:02.241721+00:00"
   },
   "saih_duero_tiempo_real_risr": {
    "estado": "OK",
-   "bytes": 176606,
-   "comprimido": 33319,
+   "bytes": 176672,
+   "comprimido": 33222,
    "elementos": 440,
-   "segundos": 2.86,
-   "de_pasada_utc": "2026-09-24T07:30:02.579894+00:00"
+   "segundos": 3.08,
+   "de_pasada_utc": "2026-09-24T12:00:02.241721+00:00"
   },
   "saih_ebro_aforos_cuenca": {
    "estado": "OK",
-   "bytes": 87668,
-   "comprimido": 7695,
+   "bytes": 87675,
+   "comprimido": 7703,
    "elementos": 5,
-   "segundos": 0.6,
-   "de_pasada_utc": "2026-09-24T07:30:02.579894+00:00"
+   "segundos": 0.57,
+   "de_pasada_utc": "2026-09-24T12:00:02.241721+00:00"
   },
   "saih_ebro_volumenes_embalsados": {
    "estado": "OK",
-   "bytes": 93087,
-   "comprimido": 10002,
+   "bytes": 93094,
+   "comprimido": 9968,
    "elementos": 2,
-   "segundos": 0.84,
-   "de_pasada_utc": "2026-09-24T07:30:02.579894+00:00"
+   "segundos": 0.72,
+   "de_pasada_utc": "2026-09-24T12:00:02.241721+00:00"
   },
   "saih_mino_sil_resumen_niveles": {
    "estado": "OK",
-   "bytes": 84706,
-   "comprimido": 8682,
+   "bytes": 84469,
+   "comprimido": 8689,
    "elementos": 76,
-   "segundos": 4.12,
-   "de_pasada_utc": "2026-09-24T07:30:02.579894+00:00"
+   "segundos": 1.09,
+   "de_pasada_utc": "2026-09-24T12:00:02.241721+00:00"
   },
   "saih_mino_sil_situacion_embalses": {
    "estado": "OK",
    "bytes": 52478,
-   "comprimido": 7673,
+   "comprimido": 7670,
    "elementos": 34,
-   "segundos": 2.87,
-   "de_pasada_utc": "2026-09-24T07:30:02.579894+00:00"
+   "segundos": 1.1,
+   "de_pasada_utc": "2026-09-24T12:00:02.241721+00:00"
   },
   "saih_ebro_qcent": {
    "estado": "OK",
@@ -79,8 +90,8 @@
    "senales": 6,
    "desde": "09/09/2026",
    "hasta": "24/09/2026",
-   "segundos": 7.62,
-   "de_pasada_utc": "2026-09-24T07:30:02.579894+00:00"
+   "segundos": 7.56,
+   "de_pasada_utc": "2026-09-24T12:00:02.241721+00:00"
   }
  }
 }
