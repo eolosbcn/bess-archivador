@@ -1,0 +1,57 @@
+ciudad,municipio,fecha_prevista,elaborado,tmax,tmin,hr_max,hr_min,sens_max,sens_min,uv_max,viento_velocidad,viento_direccion,racha_max,estado_cielo,estado_cielo_desc,prob_precipitacion
+madrid,28079,2026-10-01,2026-10-01T14:11:08,28,15,85,45,27,16,5.0,0,,,,,0
+madrid,28079,2026-10-02,2026-10-01T14:11:08,24,17,100,65,24,16,5.0,10,NE,,23,Intervalos nubosos con lluvia,100
+madrid,28079,2026-10-03,2026-10-01T14:11:08,23,16,100,60,23,16,5.0,5,SE,,25,Muy nuboso con lluvia,95
+madrid,28079,2026-10-04,2026-10-01T14:11:08,23,15,100,70,23,15,5.0,5,E,,25,Muy nuboso con lluvia,95
+madrid,28079,2026-10-05,2026-10-01T14:11:08,24,15,100,70,24,15,5.0,0,C,,24,Nuboso con lluvia,90
+madrid,28079,2026-10-06,2026-10-01T14:11:08,21,14,100,70,21,14,,10,S,,23,Intervalos nubosos con lluvia,95
+madrid,28079,2026-10-07,2026-10-01T14:11:08,20,14,95,75,20,14,,10,SO,,23,Intervalos nubosos con lluvia,95
+barcelona,08019,2026-10-01,2026-10-01T14:11:08,26,21,90,60,27,21,5.0,0,,,,,0
+barcelona,08019,2026-10-02,2026-10-01T14:11:08,27,21,75,55,28,21,5.0,10,NE,,25,Muy nuboso con lluvia,95
+barcelona,08019,2026-10-03,2026-10-01T14:11:08,25,20,85,70,25,20,5.0,10,E,,25,Muy nuboso con lluvia,100
+barcelona,08019,2026-10-04,2026-10-01T14:11:08,25,20,85,70,25,20,4.0,10,E,,23,Intervalos nubosos con lluvia,100
+barcelona,08019,2026-10-05,2026-10-01T14:11:08,26,19,95,65,26,19,4.0,10,E,,23,Intervalos nubosos con lluvia,75
+barcelona,08019,2026-10-06,2026-10-01T14:11:08,27,18,95,65,27,18,,10,S,,45,Muy nuboso con lluvia escasa,70
+barcelona,08019,2026-10-07,2026-10-01T14:11:08,26,19,90,60,26,19,,15,SO,,24,Nuboso con lluvia,90
+valencia,46250,2026-10-01,2026-10-01T14:11:08,28,20,100,70,27,20,5.0,0,,,,,0
+valencia,46250,2026-10-02,2026-10-01T14:11:08,24,19,100,75,24,19,5.0,10,NE,,26,Cubierto con lluvia,100
+valencia,46250,2026-10-03,2026-10-01T14:11:08,25,18,100,75,25,18,5.0,10,NE,,23,Intervalos nubosos con lluvia,100
+valencia,46250,2026-10-04,2026-10-01T14:11:08,25,18,95,75,25,18,5.0,10,NE,,23,Intervalos nubosos con lluvia,95
+valencia,46250,2026-10-05,2026-10-01T14:11:08,25,18,100,70,25,18,5.0,5,E,,24,Nuboso con lluvia,85
+valencia,46250,2026-10-06,2026-10-01T14:11:08,25,18,100,70,25,18,,0,C,,43,Intervalos nubosos con lluvia escasa,55
+valencia,46250,2026-10-07,2026-10-01T14:11:08,29,18,100,50,29,18,,15,O,,23,Intervalos nubosos con lluvia,80
+sevilla,41091,2026-10-01,2026-10-01T14:11:08,33,18,75,35,33,20,5.0,0,,,,,0
+sevilla,41091,2026-10-02,2026-10-01T14:11:08,34,19,85,35,34,19,5.0,5,S,,43,Intervalos nubosos con lluvia escasa,80
+sevilla,41091,2026-10-03,2026-10-01T14:11:08,34,21,90,35,34,21,5.0,10,E,,43,Intervalos nubosos con lluvia escasa,70
+sevilla,41091,2026-10-04,2026-10-01T14:11:08,32,20,80,35,32,20,5.0,0,C,,13,Intervalos nubosos,25
+sevilla,41091,2026-10-05,2026-10-01T14:11:08,34,20,85,40,34,20,5.0,5,NE,,15,Muy nuboso,45
+sevilla,41091,2026-10-06,2026-10-01T14:11:08,30,19,90,40,30,19,,15,SO,,44,Nuboso con lluvia escasa,75
+sevilla,41091,2026-10-07,2026-10-01T14:11:08,29,18,100,40,29,18,,10,O,,43,Intervalos nubosos con lluvia escasa,65
+bilbao,48020,2026-10-01,2026-10-01T14:11:08,19,14,95,75,19,14,4.0,0,,,,,0
+bilbao,48020,2026-10-02,2026-10-01T14:11:08,24,13,95,70,24,13,4.0,10,E,,13,Intervalos nubosos,35
+bilbao,48020,2026-10-03,2026-10-01T14:11:08,24,15,95,70,24,15,4.0,5,NE,,45,Muy nuboso con lluvia escasa,85
+bilbao,48020,2026-10-04,2026-10-01T14:11:08,24,16,100,75,24,16,4.0,5,NE,,25,Muy nuboso con lluvia,95
+bilbao,48020,2026-10-05,2026-10-01T14:11:08,29,16,100,60,29,16,4.0,5,S,,44,Nuboso con lluvia escasa,55
+bilbao,48020,2026-10-06,2026-10-01T14:11:08,30,16,80,50,30,16,,15,S,,23,Intervalos nubosos con lluvia,90
+bilbao,48020,2026-10-07,2026-10-01T14:11:08,24,15,95,70,24,15,,15,NO,,25,Muy nuboso con lluvia,100
+zaragoza,50297,2026-10-01,2026-10-01T14:11:08,27,17,80,40,27,17,5.0,0,,,,,0
+zaragoza,50297,2026-10-02,2026-10-01T14:11:08,23,15,100,65,23,15,5.0,0,C,,26,Cubierto con lluvia,95
+zaragoza,50297,2026-10-03,2026-10-01T14:11:08,26,17,100,55,26,17,5.0,5,S,,24,Nuboso con lluvia,95
+zaragoza,50297,2026-10-04,2026-10-01T14:11:08,26,18,100,55,26,18,4.0,5,SE,,24,Nuboso con lluvia,90
+zaragoza,50297,2026-10-05,2026-10-01T14:11:08,26,17,100,55,26,17,4.0,15,SE,,25,Muy nuboso con lluvia,65
+zaragoza,50297,2026-10-06,2026-10-01T14:11:08,27,17,100,55,27,17,,10,SE,,23,Intervalos nubosos con lluvia,90
+zaragoza,50297,2026-10-07,2026-10-01T14:11:08,26,15,90,50,26,15,,0,C,,23,Intervalos nubosos con lluvia,80
+a_coruna,15030,2026-10-01,2026-10-01T14:11:08,21,12,90,60,21,12,4.0,0,,,,,0
+a_coruna,15030,2026-10-02,2026-10-01T14:11:08,23,14,85,60,23,14,4.0,0,C,,17,Nubes altas,0
+a_coruna,15030,2026-10-03,2026-10-01T14:11:08,25,17,90,60,25,17,4.0,15,NE,,12,Poco nuboso,0
+a_coruna,15030,2026-10-04,2026-10-01T14:11:08,25,18,90,60,25,18,4.0,15,E,,13,Intervalos nubosos,15
+a_coruna,15030,2026-10-05,2026-10-01T14:11:08,27,17,95,70,27,17,4.0,5,SE,,23,Intervalos nubosos con lluvia,65
+a_coruna,15030,2026-10-06,2026-10-01T14:11:08,23,17,95,65,23,17,,15,SO,,25,Muy nuboso con lluvia,100
+a_coruna,15030,2026-10-07,2026-10-01T14:11:08,21,16,100,70,21,16,,15,N,,24,Nuboso con lluvia,90
+mataro,08121,2026-10-01,2026-10-01T14:11:08,27,20,85,60,27,20,5.0,0,,,,,0
+mataro,08121,2026-10-02,2026-10-01T14:11:08,28,20,80,55,28,20,5.0,5,NE,,25,Muy nuboso con lluvia,90
+mataro,08121,2026-10-03,2026-10-01T14:11:08,25,20,85,75,25,20,5.0,10,E,,23,Intervalos nubosos con lluvia,100
+mataro,08121,2026-10-04,2026-10-01T14:11:08,25,20,85,70,25,20,4.0,10,E,,23,Intervalos nubosos con lluvia,100
+mataro,08121,2026-10-05,2026-10-01T14:11:08,26,19,90,70,26,19,4.0,10,E,,23,Intervalos nubosos con lluvia,70
+mataro,08121,2026-10-06,2026-10-01T14:11:08,27,18,95,65,27,18,,10,SO,,44,Nuboso con lluvia escasa,70
+mataro,08121,2026-10-07,2026-10-01T14:11:08,26,18,90,65,26,18,,20,SO,40,23,Intervalos nubosos con lluvia,95
