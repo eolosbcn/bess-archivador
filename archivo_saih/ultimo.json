@@ -1,5 +1,5 @@
 {
- "ejecucion_utc": "2026-10-08T12:00:01.769101+00:00",
+ "ejecucion_utc": "2026-10-08T18:00:01.743601+00:00",
  "primera_ejecucion_utc": "2026-10-08T07:30:01.927815+00:00",
  "pasadas": [
   {
@@ -23,6 +23,17 @@
    "ok": 4,
    "vacio": 0,
    "fallo": 3
+  },
+  {
+   "utc": "2026-10-08T18:00:01.743601+00:00",
+   "confederacion": [
+    "duero",
+    "ebro",
+    "mino_sil"
+   ],
+   "ok": 4,
+   "vacio": 0,
+   "fallo": 3
   }
  ],
  "confederacion": [
@@ -38,48 +49,48 @@
    "bytes": 47033,
    "comprimido": 9357,
    "elementos": 38,
-   "segundos": 2.53,
-   "de_pasada_utc": "2026-10-08T12:00:01.769101+00:00"
+   "segundos": 2.13,
+   "de_pasada_utc": "2026-10-08T18:00:01.743601+00:00"
   },
   "saih_duero_tiempo_real_risr": {
    "estado": "OK",
-   "bytes": 176876,
-   "comprimido": 33196,
+   "bytes": 176824,
+   "comprimido": 33170,
    "elementos": 441,
-   "segundos": 3.29,
-   "de_pasada_utc": "2026-10-08T12:00:01.769101+00:00"
+   "segundos": 1.6,
+   "de_pasada_utc": "2026-10-08T18:00:01.743601+00:00"
   },
   "saih_ebro_aforos_cuenca": {
    "estado": "FALLO",
    "detalle": "SSLError",
-   "de_pasada_utc": "2026-10-08T12:00:01.769101+00:00"
+   "de_pasada_utc": "2026-10-08T18:00:01.743601+00:00"
   },
   "saih_ebro_volumenes_embalsados": {
    "estado": "FALLO",
    "detalle": "SSLError",
-   "de_pasada_utc": "2026-10-08T12:00:01.769101+00:00"
+   "de_pasada_utc": "2026-10-08T18:00:01.743601+00:00"
   },
   "saih_mino_sil_resumen_niveles": {
    "estado": "OK",
-   "bytes": 84470,
-   "comprimido": 8699,
+   "bytes": 84676,
+   "comprimido": 8715,
    "elementos": 76,
-   "segundos": 4.09,
-   "de_pasada_utc": "2026-10-08T12:00:01.769101+00:00"
+   "segundos": 1.12,
+   "de_pasada_utc": "2026-10-08T18:00:01.743601+00:00"
   },
   "saih_mino_sil_situacion_embalses": {
    "estado": "OK",
-   "bytes": 52472,
-   "comprimido": 7645,
+   "bytes": 52475,
+   "comprimido": 7665,
    "elementos": 34,
    "segundos": 0.93,
-   "de_pasada_utc": "2026-10-08T12:00:01.769101+00:00"
+   "de_pasada_utc": "2026-10-08T18:00:01.743601+00:00"
   },
   "saih_ebro_qcent": {
    "estado": "FALLO",
    "paso": "getEstaciones",
    "detalle": "SSLError",
-   "de_pasada_utc": "2026-10-08T12:00:01.769101+00:00"
+   "de_pasada_utc": "2026-10-08T18:00:01.743601+00:00"
   }
  },
  "ruta": "archivo_saih/2026/10/2026-10-08"
