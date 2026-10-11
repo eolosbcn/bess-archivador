@@ -1,5 +1,5 @@
 {
-  "ruta": "archivo/2026/10/2026-10-11/0850",
+  "ruta": "archivo/2026/10/2026-10-11/1150",
   "fuentes": {
     "esios_600_precio_spot": {
       "estado": "OK",
@@ -19,22 +19,22 @@
       "estado": "OK",
       "detalle": "2026-10-02 a 2026-10-20",
       "filas": 1728,
-      "values_updated_at": "2026-10-11T08:39:52.000+02:00",
-      "hash": "6020e220edc95b3a"
+      "values_updated_at": "2026-10-11T11:39:32.000+02:00",
+      "hash": "475d2787eafbe19c"
     },
     "esios_542_prev_solar_fv": {
       "estado": "OK",
       "detalle": "2026-10-02 a 2026-10-20",
       "filas": 1728,
-      "values_updated_at": "2026-10-11T08:41:25.000+02:00",
-      "hash": "579cd191f61ff3f3"
+      "values_updated_at": "2026-10-11T11:41:08.000+02:00",
+      "hash": "c8bad1f0706181b5"
     },
     "esios_543_prev_solar_termica": {
       "estado": "OK",
       "detalle": "2026-10-02 a 2026-10-20",
       "filas": 1728,
-      "values_updated_at": "2026-10-11T08:41:25.000+02:00",
-      "hash": "9aa4cfe0aabff7ac"
+      "values_updated_at": "2026-10-11T11:41:04.000+02:00",
+      "hash": "32505c89a1b76741"
     },
     "esios_catalogo": {
       "estado": "OK",
@@ -70,27 +70,27 @@
     },
     "esios_seguimiento_programas": {
       "estado": "OK",
-      "detalle": "19 indicadores (19 con datos), 14907 filas acumuladas · P48 FV hasta 2026-10-11T23:00 (publicado 2026-10-11T08:39:26)",
+      "detalle": "19 indicadores (19 con datos), 14926 filas acumuladas · P48 FV hasta 2026-10-11T22:45 (publicado 2026-10-11T11:42:58)",
       "filas": 19
     },
     "esios_previsiones": {
       "estado": "OK",
-      "detalle": "113 con datos, 28 vacíos, 2 fallidos (153 KB, 104s)",
-      "filas": 26201,
+      "detalle": "113 con datos, 28 vacíos, 2 fallidos (155 KB, 96s)",
+      "filas": 26512,
       "indicadores_ok": 113,
       "indicadores_vacios": 28,
       "indicadores_fallidos": 2,
-      "kb_comprimido": 152.7,
-      "segundos": 104,
+      "kb_comprimido": 154.9,
+      "segundos": 96,
       "cortado_en": null,
-      "fraccion_presupuesto": 0.062,
+      "fraccion_presupuesto": 0.057,
       "pedidos": 143
     },
     "entsoe_A65_prev_demanda_es": {
       "estado": "OK",
       "detalle": "hasta 2026-10-12 21:45:00+00:00",
       "filas": 952,
-      "hash": "6862f27e165ec794"
+      "hash": "ca00edcfc6dbb20f"
     },
     "entsoe_A69_prev_renovable_es": {
       "estado": "OK",
@@ -117,10 +117,10 @@
     },
     "aemet_prediccion_diaria": {
       "estado": "OK",
-      "detalle": "8 de 8 ciudades, hasta 2026-10-16",
+      "detalle": "8 de 8 ciudades, hasta 2026-10-17",
       "filas": 56,
       "elaborado": [
-        "2026-10-11T06:13:13"
+        "2026-10-11T09:23:07"
       ],
       "ciudades": [
         "a_coruna",
@@ -132,16 +132,16 @@
         "valencia",
         "zaragoza"
       ],
-      "franja_critica": false,
+      "franja_critica": true,
       "ciudades_caidas": [],
       "reintento_diferido": "no hizo falta"
     },
     "aemet_prediccion_horaria": {
       "estado": "OK",
-      "detalle": "8 ciudades, 384 horas, hasta 2026-10-12",
+      "detalle": "8 ciudades, 384 horas, hasta 2026-10-13",
       "filas": 384,
       "elaborado": [
-        "2026-10-11T06:13:13"
+        "2026-10-11T09:23:07"
       ]
     },
     "aemet_prediccion_periodos": {
@@ -151,23 +151,23 @@
     },
     "aemet_radiacion_observada": {
       "estado": "OMITIDA",
-      "detalle": "la última buena fue hace 15.0 h (mínimo 20 h: una vez al día)",
+      "detalle": "la última buena fue hace 18.0 h (mínimo 20 h: una vez al día)",
       "filas": null
     },
     "aemet_climatologico_diario": {
       "estado": "OMITIDA",
-      "detalle": "la última buena fue hace 15.0 h (mínimo 20 h: una vez al día)",
+      "detalle": "la última buena fue hace 18.0 h (mínimo 20 h: una vez al día)",
       "filas": null
     },
     "mibgas_gdaes": {
       "estado": "OK",
-      "detalle": "hasta 2026-10-10",
-      "filas": 46
+      "detalle": "hasta 2026-10-11",
+      "filas": 49
     },
     "mibgas_curva": {
       "estado": "OK",
-      "detalle": "23 productos, hasta 2026-10-10",
-      "filas": 251
+      "detalle": "23 productos, hasta 2026-10-11",
+      "filas": 256
     },
     "sendeco2_eua": {
       "estado": "OK",
@@ -176,12 +176,12 @@
     }
   },
   "version": "v3.18",
-  "ejecucion_madrid": "2026-10-11T08:50:52+02:00",
-  "ejecucion_utc": "2026-10-11T06:50:52+00:00",
+  "ejecucion_madrid": "2026-10-11T11:50:47+02:00",
+  "ejecucion_utc": "2026-10-11T09:50:47+00:00",
   "fecha": "2026-10-11",
   "dia_objetivo": "2026-10-12",
   "disparo": "workflow_dispatch",
-  "run_id": "38119364662",
+  "run_id": "38129798847",
   "modo": "ligero",
   "resumen": {
     "ok": 20,
@@ -189,6 +189,6 @@
     "fallo": 0,
     "omitida": 2,
     "parcial": 0,
-    "kb_total": 349.8
+    "kb_total": 352.1
   }
 }
