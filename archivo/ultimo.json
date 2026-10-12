@@ -1,5 +1,5 @@
 {
-  "ruta": "archivo/2026/10/2026-10-12/2050",
+  "ruta": "archivo/2026/10/2026-10-12/2350",
   "fuentes": {
     "esios_600_precio_spot": {
       "estado": "OK",
@@ -17,24 +17,24 @@
     },
     "esios_541_prev_eolica": {
       "estado": "OK",
-      "detalle": "2026-10-03 a 2026-10-21",
-      "filas": 1728,
-      "values_updated_at": "2026-10-12T20:40:03.000+02:00",
-      "hash": "75ff3b49371e653b"
+      "detalle": "2026-10-03 a 2026-10-22",
+      "filas": 1820,
+      "values_updated_at": "2026-10-12T23:40:00.000+02:00",
+      "hash": "ffa0e60615c8281b"
     },
     "esios_542_prev_solar_fv": {
       "estado": "OK",
       "detalle": "2026-10-03 a 2026-10-21",
       "filas": 1728,
-      "values_updated_at": "2026-10-12T20:41:12.000+02:00",
-      "hash": "db76234f585bc325"
+      "values_updated_at": "2026-10-12T23:41:17.000+02:00",
+      "hash": "fa1b64bed224ce2d"
     },
     "esios_543_prev_solar_termica": {
       "estado": "OK",
       "detalle": "2026-10-03 a 2026-10-21",
       "filas": 1728,
-      "values_updated_at": "2026-10-12T20:41:13.000+02:00",
-      "hash": "75e718a9939bd6d8"
+      "values_updated_at": "2026-10-12T23:41:14.000+02:00",
+      "hash": "521f409b9fb5022f"
     },
     "esios_catalogo": {
       "estado": "OK",
@@ -70,27 +70,27 @@
     },
     "esios_seguimiento_programas": {
       "estado": "OK",
-      "detalle": "19 indicadores (19 con datos), 15144 filas acumuladas · P48 FV hasta 2026-10-12T22:45 (publicado 2026-10-12T20:42:15)",
+      "detalle": "19 indicadores (19 con datos), 15163 filas acumuladas · P48 FV hasta 2026-10-12T22:45 (publicado 2026-10-12T23:46:53)",
       "filas": 19
     },
     "esios_previsiones": {
       "estado": "OK",
-      "detalle": "115 con datos, 26 vacíos, 2 fallidos (175 KB, 121s)",
-      "filas": 29915,
+      "detalle": "115 con datos, 26 vacíos, 2 fallidos (180 KB, 109s)",
+      "filas": 30671,
       "indicadores_ok": 115,
       "indicadores_vacios": 26,
       "indicadores_fallidos": 2,
-      "kb_comprimido": 175.4,
-      "segundos": 121,
+      "kb_comprimido": 179.9,
+      "segundos": 109,
       "cortado_en": null,
-      "fraccion_presupuesto": 0.072,
+      "fraccion_presupuesto": 0.065,
       "pedidos": 143
     },
     "entsoe_A65_prev_demanda_es": {
       "estado": "OK",
       "detalle": "hasta 2026-10-13 21:45:00+00:00",
       "filas": 952,
-      "hash": "dfd7faa38b4f7cee"
+      "hash": "d19bef3130bdb7e2"
     },
     "entsoe_A69_prev_renovable_es": {
       "estado": "OK",
@@ -120,7 +120,7 @@
       "detalle": "8 de 8 ciudades, hasta 2026-10-18",
       "filas": 56,
       "elaborado": [
-        "2026-10-12T14:01:09"
+        "2026-10-12T21:09:07"
       ],
       "ciudades": [
         "a_coruna",
@@ -141,7 +141,7 @@
       "detalle": "8 ciudades, 384 horas, hasta 2026-10-14",
       "filas": 384,
       "elaborado": [
-        "2026-10-12T14:01:09"
+        "2026-10-12T21:09:07"
       ]
     },
     "aemet_prediccion_periodos": {
@@ -151,12 +151,12 @@
     },
     "aemet_radiacion_observada": {
       "estado": "OMITIDA",
-      "detalle": "la última buena fue hace 9.0 h (mínimo 20 h: una vez al día)",
+      "detalle": "la última buena fue hace 12.0 h (mínimo 20 h: una vez al día)",
       "filas": null
     },
     "aemet_climatologico_diario": {
       "estado": "OMITIDA",
-      "detalle": "la última buena fue hace 9.0 h (mínimo 20 h: una vez al día)",
+      "detalle": "la última buena fue hace 12.0 h (mínimo 20 h: una vez al día)",
       "filas": null
     },
     "mibgas_gdaes": {
@@ -176,12 +176,12 @@
     }
   },
   "version": "v3.18",
-  "ejecucion_madrid": "2026-10-12T20:50:56+02:00",
-  "ejecucion_utc": "2026-10-12T18:50:56+00:00",
+  "ejecucion_madrid": "2026-10-12T23:50:56+02:00",
+  "ejecucion_utc": "2026-10-12T21:50:56+00:00",
   "fecha": "2026-10-12",
   "dia_objetivo": "2026-10-13",
   "disparo": "workflow_dispatch",
-  "run_id": "38293624837",
+  "run_id": "38313119298",
   "modo": "ligero",
   "resumen": {
     "ok": 20,
@@ -189,6 +189,6 @@
     "fallo": 0,
     "omitida": 2,
     "parcial": 0,
-    "kb_total": 386.2
+    "kb_total": 391.5
   }
 }
