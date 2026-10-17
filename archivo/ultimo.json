@@ -1,5 +1,5 @@
 {
-  "ruta": "archivo/2026/10/2026-10-17/0550",
+  "ruta": "archivo/2026/10/2026-10-17/0850",
   "fuentes": {
     "esios_600_precio_spot": {
       "estado": "OK",
@@ -19,22 +19,22 @@
       "estado": "OK",
       "detalle": "2026-10-08 a 2026-10-26",
       "filas": 1732,
-      "values_updated_at": "2026-10-17T05:39:32.000+02:00",
-      "hash": "e6cc53786f262029"
+      "values_updated_at": "2026-10-17T08:39:53.000+02:00",
+      "hash": "3651a85a762eb59a"
     },
     "esios_542_prev_solar_fv": {
       "estado": "OK",
       "detalle": "2026-10-08 a 2026-10-26",
       "filas": 1732,
-      "values_updated_at": "2026-10-17T05:41:11.000+02:00",
-      "hash": "243ef7e2c9da9161"
+      "values_updated_at": "2026-10-17T08:41:22.000+02:00",
+      "hash": "b1ca66488842994e"
     },
     "esios_543_prev_solar_termica": {
       "estado": "OK",
       "detalle": "2026-10-08 a 2026-10-26",
       "filas": 1732,
-      "values_updated_at": "2026-10-17T05:41:07.000+02:00",
-      "hash": "83518dfcb77eff38"
+      "values_updated_at": "2026-10-17T08:41:23.000+02:00",
+      "hash": "cc1294edab3f2f58"
     },
     "esios_catalogo": {
       "estado": "OK",
@@ -61,36 +61,36 @@
     },
     "esios_catalogo_fichero": {
       "estado": "OK",
-      "detalle": "1561 indicadores en archivo/catalogo.csv · 0 altas, 19 modificados, REESCRITO",
+      "detalle": "1561 indicadores en archivo/catalogo.csv · sin cambios, no se reescribe",
       "filas": null,
       "total": 1561,
       "altas": 0,
-      "cambios": 19,
-      "reescrito": true
+      "cambios": 0,
+      "reescrito": false
     },
     "esios_seguimiento_programas": {
       "estado": "OK",
-      "detalle": "19 indicadores (19 con datos), 15854 filas acumuladas · P48 FV hasta 2026-10-17T23:45 (publicado 2026-10-17T05:41:16)",
+      "detalle": "19 indicadores (19 con datos), 15873 filas acumuladas · P48 FV hasta 2026-10-17T23:45 (publicado 2026-10-17T08:31:51)",
       "filas": 19
     },
     "esios_previsiones": {
       "estado": "OK",
-      "detalle": "112 con datos, 28 vacíos, 3 fallidos (146 KB, 107s)",
-      "filas": 24958,
+      "detalle": "112 con datos, 28 vacíos, 3 fallidos (151 KB, 127s)",
+      "filas": 25983,
       "indicadores_ok": 112,
       "indicadores_vacios": 28,
       "indicadores_fallidos": 3,
-      "kb_comprimido": 145.9,
-      "segundos": 107,
+      "kb_comprimido": 151.5,
+      "segundos": 127,
       "cortado_en": null,
-      "fraccion_presupuesto": 0.064,
+      "fraccion_presupuesto": 0.076,
       "pedidos": 143
     },
     "entsoe_A65_prev_demanda_es": {
       "estado": "OK",
       "detalle": "hasta 2026-10-18 21:45:00+00:00",
       "filas": 952,
-      "hash": "d1d0d1fe2efed844"
+      "hash": "f20b59803119336b"
     },
     "entsoe_A69_prev_renovable_es": {
       "estado": "OK",
@@ -120,7 +120,8 @@
       "detalle": "8 de 8 ciudades, hasta 2026-10-22",
       "filas": 56,
       "elaborado": [
-        "2026-10-16T20:59:07"
+        "2026-10-16T20:59:07",
+        "2026-10-17T06:35:12"
       ],
       "ciudades": [
         "a_coruna",
@@ -141,7 +142,8 @@
       "detalle": "8 ciudades, 384 horas, hasta 2026-10-18",
       "filas": 384,
       "elaborado": [
-        "2026-10-16T20:59:07"
+        "2026-10-17T05:41:13",
+        "2026-10-17T06:35:12"
       ]
     },
     "aemet_prediccion_periodos": {
@@ -151,12 +153,12 @@
     },
     "aemet_radiacion_observada": {
       "estado": "OMITIDA",
-      "detalle": "la última buena fue hace 9.0 h (mínimo 20 h: una vez al día)",
+      "detalle": "la última buena fue hace 12.0 h (mínimo 20 h: una vez al día)",
       "filas": null
     },
     "aemet_climatologico_diario": {
       "estado": "OMITIDA",
-      "detalle": "la última buena fue hace 9.0 h (mínimo 20 h: una vez al día)",
+      "detalle": "la última buena fue hace 12.0 h (mínimo 20 h: una vez al día)",
       "filas": null
     },
     "mibgas_gdaes": {
@@ -176,12 +178,12 @@
     }
   },
   "version": "v3.18",
-  "ejecucion_madrid": "2026-10-17T05:50:52+02:00",
-  "ejecucion_utc": "2026-10-17T03:50:52+00:00",
+  "ejecucion_madrid": "2026-10-17T08:50:54+02:00",
+  "ejecucion_utc": "2026-10-17T06:50:54+00:00",
   "fecha": "2026-10-17",
   "dia_objetivo": "2026-10-18",
   "disparo": "workflow_dispatch",
-  "run_id": "39000310069",
+  "run_id": "39011391692",
   "modo": "ligero",
   "resumen": {
     "ok": 20,
@@ -189,6 +191,6 @@
     "fallo": 0,
     "omitida": 2,
     "parcial": 0,
-    "kb_total": 344.1
+    "kb_total": 349.7
   }
 }
