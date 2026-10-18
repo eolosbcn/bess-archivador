@@ -1,5 +1,5 @@
 {
-  "ruta": "archivo/2026/10/2026-10-18/0250",
+  "ruta": "archivo/2026/10/2026-10-18/0551",
   "fuentes": {
     "esios_600_precio_spot": {
       "estado": "OK",
@@ -18,44 +18,46 @@
     "esios_541_prev_eolica": {
       "estado": "OK",
       "detalle": "2026-10-09 a 2026-10-27",
-      "filas": 1728,
-      "values_updated_at": "2026-10-18T00:39:49.000+02:00",
-      "hash": "89fee370f282844b"
+      "filas": 1732,
+      "values_updated_at": "2026-10-18T05:39:30.000+02:00",
+      "hash": "0eb89fd7f09db1e6"
     },
     "esios_542_prev_solar_fv": {
       "estado": "OK",
-      "detalle": "2026-10-09 a 2026-10-26",
-      "filas": 1636,
-      "values_updated_at": "2026-10-18T00:41:02.000+02:00",
-      "hash": "5a8591d1eeea8ebd"
+      "detalle": "2026-10-09 a 2026-10-27",
+      "filas": 1732,
+      "values_updated_at": "2026-10-18T05:41:03.000+02:00",
+      "hash": "ec848ec2886d8a8d"
     },
     "esios_543_prev_solar_termica": {
       "estado": "OK",
-      "detalle": "2026-10-09 a 2026-10-26",
-      "filas": 1636,
-      "values_updated_at": "2026-10-18T00:41:01.000+02:00",
-      "hash": "1cb7c173536ebe07"
+      "detalle": "2026-10-09 a 2026-10-27",
+      "filas": 1732,
+      "values_updated_at": "2026-10-18T05:41:03.000+02:00",
+      "hash": "7ec45ee6b22d3b15"
     },
     "esios_catalogo": {
       "estado": "OK",
-      "detalle": "[completo] 1560 a archivar (prevision: 124/124 · capacidad: 69/69 · programa: 1367/1367)",
+      "detalle": "[ligero] 143 a archivar (prevision: 124/124 · capacidad: omitido · programa: omitido)",
       "filas": null,
-      "modo": "completo",
+      "modo": "ligero",
       "por_grupo": {
         "prevision": {
           "encontrados": 124,
           "archivados": 124
         },
         "capacidad": {
-          "encontrados": 69,
-          "archivados": 69
+          "encontrados": null,
+          "archivados": 0,
+          "omitido": true
         },
         "programa": {
-          "encontrados": 1367,
-          "archivados": 1367
+          "encontrados": null,
+          "archivados": 0,
+          "omitido": true
         }
       },
-      "total_archivados": 1560
+      "total_archivados": 143
     },
     "esios_catalogo_fichero": {
       "estado": "OK",
@@ -68,38 +70,27 @@
     },
     "esios_seguimiento_programas": {
       "estado": "OK",
-      "detalle": "28 indicadores (19 con datos), 15996 filas acumuladas · P48 FV hasta 2026-10-18T21:45 (publicado 2026-10-18T01:25:41)",
-      "filas": 28
+      "detalle": "19 indicadores (19 con datos), 16015 filas acumuladas · P48 FV hasta 2026-10-18T21:45 (publicado 2026-10-18T05:20:23)",
+      "filas": 19
     },
     "esios_previsiones": {
       "estado": "OK",
-      "detalle": "741 con datos, 807 vacíos, 12 fallidos (835 KB, 1154s)",
-      "filas": 176576,
-      "indicadores_ok": 741,
-      "indicadores_vacios": 807,
-      "indicadores_fallidos": 12,
-      "kb_comprimido": 834.7,
-      "segundos": 1154,
+      "detalle": "112 con datos, 28 vacíos, 3 fallidos (148 KB, 99s)",
+      "filas": 25447,
+      "indicadores_ok": 112,
+      "indicadores_vacios": 28,
+      "indicadores_fallidos": 3,
+      "kb_comprimido": 148.1,
+      "segundos": 99,
       "cortado_en": null,
-      "fraccion_presupuesto": 0.687,
-      "pedidos": 1560
-    },
-    "esios_capacidad_instalada": {
-      "estado": "OK",
-      "detalle": "53 con datos, 7 vacías, 9 fallidas (354s) · instalada: eólica 264 MW (2026-10) · FV 4 MW (2026-10)",
-      "filas": 5445,
-      "series_ok": 53,
-      "series_vacias": 7,
-      "series_fallidas": 9,
-      "pedidas": 69,
-      "segundos": 354,
-      "dias_atras": 400
+      "fraccion_presupuesto": 0.059,
+      "pedidos": 143
     },
     "entsoe_A65_prev_demanda_es": {
       "estado": "OK",
       "detalle": "hasta 2026-10-19 21:45:00+00:00",
       "filas": 952,
-      "hash": "fbbba8bdb8c62522"
+      "hash": "9dbf8fc8dbfe9d7a"
     },
     "entsoe_A69_prev_renovable_es": {
       "estado": "OK",
@@ -160,12 +151,12 @@
     },
     "aemet_radiacion_observada": {
       "estado": "OMITIDA",
-      "detalle": "la última buena fue hace 9.0 h (mínimo 20 h: una vez al día)",
+      "detalle": "la última buena fue hace 12.0 h (mínimo 20 h: una vez al día)",
       "filas": null
     },
     "aemet_climatologico_diario": {
       "estado": "OMITIDA",
-      "detalle": "la última buena fue hace 9.0 h (mínimo 20 h: una vez al día)",
+      "detalle": "la última buena fue hace 12.0 h (mínimo 20 h: una vez al día)",
       "filas": null
     },
     "mibgas_gdaes": {
@@ -185,19 +176,19 @@
     }
   },
   "version": "v3.18",
-  "ejecucion_madrid": "2026-10-18T02:50:51+02:00",
-  "ejecucion_utc": "2026-10-18T00:50:51+00:00",
+  "ejecucion_madrid": "2026-10-18T05:51:00+02:00",
+  "ejecucion_utc": "2026-10-18T03:51:00+00:00",
   "fecha": "2026-10-18",
   "dia_objetivo": "2026-10-19",
   "disparo": "workflow_dispatch",
-  "run_id": "39084250422",
-  "modo": "completo",
+  "run_id": "39095023857",
+  "modo": "ligero",
   "resumen": {
-    "ok": 21,
+    "ok": 20,
     "vacio": 0,
     "fallo": 0,
     "omitida": 2,
     "parcial": 0,
-    "kb_total": 1825.8
+    "kb_total": 346.0
   }
 }
