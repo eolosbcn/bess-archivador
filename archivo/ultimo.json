@@ -1,5 +1,5 @@
 {
-  "ruta": "archivo/2026/10/2026-10-19/0850",
+  "ruta": "archivo/2026/10/2026-10-19/1150",
   "fuentes": {
     "esios_600_precio_spot": {
       "estado": "OK",
@@ -19,22 +19,22 @@
       "estado": "OK",
       "detalle": "2026-10-10 a 2026-10-28",
       "filas": 1732,
-      "values_updated_at": "2026-10-19T08:39:55.000+02:00",
-      "hash": "a7b8c7430947b319"
+      "values_updated_at": "2026-10-19T11:39:53.000+02:00",
+      "hash": "a60a6bd6a2bbc1b1"
     },
     "esios_542_prev_solar_fv": {
       "estado": "OK",
       "detalle": "2026-10-10 a 2026-10-28",
       "filas": 1732,
-      "values_updated_at": "2026-10-19T08:41:16.000+02:00",
-      "hash": "5f0033557ae1e180"
+      "values_updated_at": "2026-10-19T11:41:14.000+02:00",
+      "hash": "296cb59a36fa37d9"
     },
     "esios_543_prev_solar_termica": {
       "estado": "OK",
       "detalle": "2026-10-10 a 2026-10-28",
       "filas": 1732,
-      "values_updated_at": "2026-10-19T08:41:16.000+02:00",
-      "hash": "9f84ed09ca6109d9"
+      "values_updated_at": "2026-10-19T11:41:13.000+02:00",
+      "hash": "0a810c31ff79959b"
     },
     "esios_catalogo": {
       "estado": "OK",
@@ -70,27 +70,27 @@
     },
     "esios_seguimiento_programas": {
       "estado": "OK",
-      "detalle": "19 indicadores (19 con datos), 16195 filas acumuladas · P48 FV hasta 2026-10-19T23:45 (publicado 2026-10-19T08:43:11)",
+      "detalle": "19 indicadores (19 con datos), 16214 filas acumuladas · P48 FV hasta 2026-10-19T23:15 (publicado 2026-10-19T11:25:38)",
       "filas": 19
     },
     "esios_previsiones": {
       "estado": "OK",
-      "detalle": "112 con datos, 28 vacíos, 3 fallidos (151 KB, 111s)",
-      "filas": 25855,
+      "detalle": "112 con datos, 28 vacíos, 3 fallidos (153 KB, 116s)",
+      "filas": 26139,
       "indicadores_ok": 112,
       "indicadores_vacios": 28,
       "indicadores_fallidos": 3,
-      "kb_comprimido": 151.5,
-      "segundos": 111,
+      "kb_comprimido": 153.4,
+      "segundos": 116,
       "cortado_en": null,
-      "fraccion_presupuesto": 0.066,
+      "fraccion_presupuesto": 0.069,
       "pedidos": 143
     },
     "entsoe_A65_prev_demanda_es": {
       "estado": "OK",
       "detalle": "hasta 2026-10-20 21:45:00+00:00",
       "filas": 952,
-      "hash": "5851ab10d3babd7d"
+      "hash": "42326da98aea878d"
     },
     "entsoe_A69_prev_renovable_es": {
       "estado": "OK",
@@ -116,11 +116,11 @@
       "filas": 3
     },
     "aemet_prediccion_diaria": {
-      "estado": "OK",
-      "detalle": "8 de 8 ciudades, hasta 2026-10-24",
-      "filas": 56,
+      "estado": "PARCIAL",
+      "detalle": "7 de 8 ciudades, hasta 2026-10-25 · fallan zaragoza: HTTP 429",
+      "filas": 49,
       "elaborado": [
-        "2026-10-18T20:59:08"
+        "2026-10-19T09:05:08"
       ],
       "ciudades": [
         "a_coruna",
@@ -129,45 +129,103 @@
         "madrid",
         "mataro",
         "sevilla",
-        "valencia",
+        "valencia"
+      ],
+      "franja_critica": true,
+      "ciudades_caidas": [
         "zaragoza"
       ],
-      "franja_critica": false,
-      "ciudades_caidas": [],
-      "reintento_diferido": "no hizo falta"
+      "reintento_diferido": "recuperadas 2 de 3: madrid, sevilla"
     },
     "aemet_prediccion_horaria": {
       "estado": "OK",
-      "detalle": "8 ciudades, 384 horas, hasta 2026-10-20",
+      "detalle": "8 ciudades, 384 horas, hasta 2026-10-21",
       "filas": 384,
       "elaborado": [
-        "2026-10-18T20:59:08"
+        "2026-10-19T09:05:08"
       ]
     },
     "aemet_prediccion_periodos": {
       "estado": "OK",
       "detalle": "7 variables por tramos",
-      "filas": 1112
+      "filas": 997
     },
     "aemet_radiacion_observada": {
-      "estado": "OMITIDA",
-      "detalle": "la última buena fue hace 18.0 h (mínimo 20 h: una vez al día)",
-      "filas": null
+      "estado": "OK",
+      "detalle": "35 estaciones · dato del 2026-10-18 · publicado con 1 día(s) de retraso · 19138 bytes en claro",
+      "filas": 35,
+      "version": "observacion",
+      "fecha_dato": "2026-10-18",
+      "fecha_captura": "2026-10-19",
+      "retraso_dias": 1,
+      "magnitudes": [
+        "DF",
+        "DT",
+        "GL",
+        "IR",
+        "UVB"
+      ],
+      "codificacion": "utf-8",
+      "bytes_en_claro": 19138
     },
     "aemet_climatologico_diario": {
-      "estado": "OMITIDA",
-      "detalle": "la última buena fue hace 18.0 h (mínimo 20 h: una vez al día)",
-      "filas": null
+      "estado": "OK",
+      "detalle": "1645 registros · 2 días (2026-10-14..2026-10-15) · 826 estaciones · el más reciente publicado con 4 día(s)",
+      "filas": 1645,
+      "version": "observacion",
+      "ventana_dias": 5,
+      "fecha_dato_min": "2026-10-14",
+      "fecha_dato_max": "2026-10-15",
+      "fecha_captura": "2026-10-19",
+      "retraso_dias": 4,
+      "estaciones": 826,
+      "estaciones_por_dia": {
+        "2026-10-14": 826,
+        "2026-10-15": 819
+      },
+      "con_prec_por_dia": {
+        "2026-10-14": 794,
+        "2026-10-15": 787
+      },
+      "columnas": [
+        "fecha",
+        "indicativo",
+        "nombre",
+        "provincia",
+        "altitud",
+        "tmed",
+        "prec",
+        "tmin",
+        "horatmin",
+        "tmax",
+        "horatmax",
+        "dir",
+        "velmedia",
+        "racha",
+        "horaracha",
+        "hrMedia",
+        "hrMax",
+        "horaHrMax",
+        "hrMin",
+        "horaHrMin",
+        "pintMax",
+        "presMax",
+        "horaPresMax",
+        "presMin",
+        "horaPresMin",
+        "sol",
+        "horaPIntMax"
+      ]
     },
     "mibgas_gdaes": {
       "estado": "OK",
-      "detalle": "hasta 2026-10-18",
-      "filas": 46
+      "detalle": "hasta 2026-10-19",
+      "filas": 49
     },
     "mibgas_curva": {
       "estado": "OK",
-      "detalle": "23 productos, hasta 2026-10-18",
-      "filas": 256
+      "detalle": "23 productos, hasta 2026-10-19",
+      "filas": 276
     },
     "sendeco2_eua": {
       "estado": "OK",
@@ -176,19 +234,19 @@
     }
   },
   "version": "v3.18",
-  "ejecucion_madrid": "2026-10-19T08:50:58+02:00",
-  "ejecucion_utc": "2026-10-19T06:50:58+00:00",
+  "ejecucion_madrid": "2026-10-19T11:50:58+02:00",
+  "ejecucion_utc": "2026-10-19T09:50:58+00:00",
   "fecha": "2026-10-19",
   "dia_objetivo": "2026-10-20",
   "disparo": "workflow_dispatch",
-  "run_id": "39212251703",
+  "run_id": "39233062888",
   "modo": "ligero",
   "resumen": {
-    "ok": 20,
+    "ok": 21,
     "vacio": 0,
     "fallo": 0,
-    "omitida": 2,
-    "parcial": 0,
-    "kb_total": 349.4
+    "omitida": 0,
+    "parcial": 1,
+    "kb_total": 425.0
   }
 }
