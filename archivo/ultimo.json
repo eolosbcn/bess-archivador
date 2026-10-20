@@ -1,5 +1,5 @@
 {
-  "ruta": "archivo/2026/10/2026-10-20/0250",
+  "ruta": "archivo/2026/10/2026-10-20/0550",
   "fuentes": {
     "esios_600_precio_spot": {
       "estado": "OK",
@@ -38,24 +38,26 @@
     },
     "esios_catalogo": {
       "estado": "OK",
-      "detalle": "[completo] 1560 a archivar (prevision: 124/124 · capacidad: 69/69 · programa: 1367/1367)",
+      "detalle": "[ligero] 143 a archivar (prevision: 124/124 · capacidad: omitido · programa: omitido)",
       "filas": null,
-      "modo": "completo",
+      "modo": "ligero",
       "por_grupo": {
         "prevision": {
           "encontrados": 124,
           "archivados": 124
         },
         "capacidad": {
-          "encontrados": 69,
-          "archivados": 69
+          "encontrados": null,
+          "archivados": 0,
+          "omitido": true
         },
         "programa": {
-          "encontrados": 1367,
-          "archivados": 1367
+          "encontrados": null,
+          "archivados": 0,
+          "omitido": true
         }
       },
-      "total_archivados": 1560
+      "total_archivados": 143
     },
     "esios_catalogo_fichero": {
       "estado": "OK",
@@ -68,38 +70,27 @@
     },
     "esios_seguimiento_programas": {
       "estado": "OK",
-      "detalle": "28 indicadores (19 con datos), 16318 filas acumuladas · P48 FV hasta 2026-10-20T21:45 (publicado 2026-10-20T00:59:29)",
-      "filas": 28
+      "detalle": "19 indicadores (19 con datos), 16337 filas acumuladas · P48 FV hasta 2026-10-20T21:45 (publicado 2026-10-20T00:59:29)",
+      "filas": 19
     },
     "esios_previsiones": {
       "estado": "OK",
-      "detalle": "782 con datos, 767 vacíos, 11 fallidos (845 KB, 1194s)",
-      "filas": 176659,
-      "indicadores_ok": 782,
-      "indicadores_vacios": 767,
-      "indicadores_fallidos": 11,
-      "kb_comprimido": 844.8,
-      "segundos": 1194,
+      "detalle": "113 con datos, 28 vacíos, 2 fallidos (145 KB, 133s)",
+      "filas": 24835,
+      "indicadores_ok": 113,
+      "indicadores_vacios": 28,
+      "indicadores_fallidos": 2,
+      "kb_comprimido": 145.3,
+      "segundos": 133,
       "cortado_en": null,
-      "fraccion_presupuesto": 0.711,
-      "pedidos": 1560
-    },
-    "esios_capacidad_instalada": {
-      "estado": "OK",
-      "detalle": "53 con datos, 7 vacías, 9 fallidas (354s) · instalada: eólica 264 MW (2026-10) · FV 4 MW (2026-10)",
-      "filas": 5452,
-      "series_ok": 53,
-      "series_vacias": 7,
-      "series_fallidas": 9,
-      "pedidas": 69,
-      "segundos": 354,
-      "dias_atras": 400
+      "fraccion_presupuesto": 0.079,
+      "pedidos": 143
     },
     "entsoe_A65_prev_demanda_es": {
       "estado": "OK",
       "detalle": "hasta 2026-10-21 21:45:00+00:00",
       "filas": 952,
-      "hash": "0afd340b116fa090"
+      "hash": "9c5eba8535de31ed"
     },
     "entsoe_A69_prev_renovable_es": {
       "estado": "OK",
@@ -160,12 +151,12 @@
     },
     "aemet_radiacion_observada": {
       "estado": "OMITIDA",
-      "detalle": "la última buena fue hace 15.0 h (mínimo 20 h: una vez al día)",
+      "detalle": "la última buena fue hace 18.0 h (mínimo 20 h: una vez al día)",
       "filas": null
     },
     "aemet_climatologico_diario": {
       "estado": "OMITIDA",
-      "detalle": "la última buena fue hace 15.0 h (mínimo 20 h: una vez al día)",
+      "detalle": "la última buena fue hace 18.0 h (mínimo 20 h: una vez al día)",
       "filas": null
     },
     "mibgas_gdaes": {
@@ -185,19 +176,19 @@
     }
   },
   "version": "v3.18",
-  "ejecucion_madrid": "2026-10-20T02:50:56+02:00",
-  "ejecucion_utc": "2026-10-20T00:50:56+00:00",
+  "ejecucion_madrid": "2026-10-20T05:50:59+02:00",
+  "ejecucion_utc": "2026-10-20T03:50:59+00:00",
   "fecha": "2026-10-20",
   "dia_objetivo": "2026-10-21",
   "disparo": "workflow_dispatch",
-  "run_id": "39350017610",
-  "modo": "completo",
+  "run_id": "39366390063",
+  "modo": "ligero",
   "resumen": {
-    "ok": 21,
+    "ok": 20,
     "vacio": 0,
     "fallo": 0,
     "omitida": 2,
     "parcial": 0,
-    "kb_total": 1836.8
+    "kb_total": 342.1
   }
 }
