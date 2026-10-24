@@ -1,9 +1,20 @@
 {
- "ejecucion_utc": "2026-10-24T07:30:02.548061+00:00",
+ "ejecucion_utc": "2026-10-24T12:00:02.225324+00:00",
  "primera_ejecucion_utc": "2026-10-24T07:30:02.548061+00:00",
  "pasadas": [
   {
    "utc": "2026-10-24T07:30:02.548061+00:00",
+   "confederacion": [
+    "duero",
+    "ebro",
+    "mino_sil"
+   ],
+   "ok": 5,
+   "vacio": 0,
+   "fallo": 2
+  },
+  {
+   "utc": "2026-10-24T12:00:02.225324+00:00",
    "confederacion": [
     "duero",
     "ebro",
@@ -25,44 +36,44 @@
   "saih_duero_situacion_embalses": {
    "estado": "FALLO",
    "detalle": "SSLError",
-   "de_pasada_utc": "2026-10-24T07:30:02.548061+00:00"
+   "de_pasada_utc": "2026-10-24T12:00:02.225324+00:00"
   },
   "saih_duero_tiempo_real_risr": {
    "estado": "FALLO",
    "detalle": "SSLError",
-   "de_pasada_utc": "2026-10-24T07:30:02.548061+00:00"
+   "de_pasada_utc": "2026-10-24T12:00:02.225324+00:00"
   },
   "saih_ebro_aforos_cuenca": {
    "estado": "OK",
-   "bytes": 87673,
-   "comprimido": 7645,
+   "bytes": 87674,
+   "comprimido": 7626,
    "elementos": 5,
-   "segundos": 1.14,
-   "de_pasada_utc": "2026-10-24T07:30:02.548061+00:00"
+   "segundos": 0.6,
+   "de_pasada_utc": "2026-10-24T12:00:02.225324+00:00"
   },
   "saih_ebro_volumenes_embalsados": {
    "estado": "OK",
-   "bytes": 91343,
-   "comprimido": 9569,
+   "bytes": 91378,
+   "comprimido": 9724,
    "elementos": 2,
-   "segundos": 0.83,
-   "de_pasada_utc": "2026-10-24T07:30:02.548061+00:00"
+   "segundos": 0.75,
+   "de_pasada_utc": "2026-10-24T12:00:02.225324+00:00"
   },
   "saih_mino_sil_resumen_niveles": {
    "estado": "OK",
-   "bytes": 84640,
-   "comprimido": 8909,
+   "bytes": 84632,
+   "comprimido": 8905,
    "elementos": 76,
-   "segundos": 1.23,
-   "de_pasada_utc": "2026-10-24T07:30:02.548061+00:00"
+   "segundos": 0.85,
+   "de_pasada_utc": "2026-10-24T12:00:02.225324+00:00"
   },
   "saih_mino_sil_situacion_embalses": {
    "estado": "OK",
-   "bytes": 53273,
-   "comprimido": 7899,
+   "bytes": 53272,
+   "comprimido": 7903,
    "elementos": 34,
    "segundos": 0.73,
-   "de_pasada_utc": "2026-10-24T07:30:02.548061+00:00"
+   "de_pasada_utc": "2026-10-24T12:00:02.225324+00:00"
   },
   "saih_ebro_qcent": {
    "estado": "OK",
@@ -73,8 +84,8 @@
    "senales": 6,
    "desde": "09/10/2026",
    "hasta": "24/10/2026",
-   "segundos": 7.64,
-   "de_pasada_utc": "2026-10-24T07:30:02.548061+00:00"
+   "segundos": 7.61,
+   "de_pasada_utc": "2026-10-24T12:00:02.225324+00:00"
   }
  }
 }
