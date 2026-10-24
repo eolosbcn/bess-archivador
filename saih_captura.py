@@ -74,6 +74,42 @@ ciego, que es justo lo que Xevi pidió evitar.
 
 HISTORIAL
 =========
+v1.04  24-oct-2026. **El Duero pasa a `https://sircaduero.es`**, y su risr
+    espera 60 s. Rutas, marcas y `contar`, los mismos.
+
+    ❌ LLEVABA SIN CAPTURARSE DESDE LA PASADA DE LAS 20:00 DEL 22-OCT-2026
+    (la última buena, la de las 14:00 de ese día): `SSLError` en sus dos
+    fuentes, 5 de 7 por pasada, siete pasadas perdidas que no se recuperan.
+    `www.saihduero.es` sirve ahora la web y el CERTIFICADO de
+    **`sircaduero.es`** (Let's Encrypt YE1, nombres `sircaduero.es` y
+    `www.sircaduero.es`, válido del 19-oct-2026 al 17-ene-2027), y `requests`
+    falla con *Hostname mismatch*. ✅ Comprobado el 24-oct-2026: con
+    `https://sircaduero.es` y verificación normal, `/situacion-embalses` es
+    idéntica byte a byte a la que sirve la dirección vieja (47.511 bytes, 38
+    `<tr>`, con «Volumen embalsado») y `/datos-tiempo-real/risr` tiene la
+    estructura de la última captura buena (`datosEA` 206 aforos, `datosEM` 57
+    embalses, `datosPL` 244 pluviómetros, los mismos campos).
+
+    ⚠️ **LA VERIFICACIÓN NO SE AFLOJA**: ni `verify=False` ni una excepción
+    para el nombre viejo. Si se aceptara el certificado de otro nombre, la
+    captura no distinguiría la web de la CHD de cualquiera que se pusiera en
+    medio. El paquete de CA sigue siendo certifi + el intermedio de la FNMT:
+    Let's Encrypt cuelga de las raíces ISRG, que ya vienen en certifi, y el
+    autotest lo comprueba.
+
+    ⚠️ **Y EL SERVIDOR NUEVO ES MÁS LENTO EN EL RISR**, cosa que el
+    diagnóstico no había visto. La primera captura de prueba de esta versión
+    dio 6 de 7: `datos-tiempo-real/risr` no envió nada en 15 s
+    (`ReadTimeout`). Repetida con margen: HTTP 200, 175.946 bytes en **33,9
+    s**, con la marca y 437 estaciones. En los 40 días de archivo anteriores
+    nunca había fallado por tiempo (mediana 3,6 s). Decisión de Xevi: ese
+    endpoint declara `timeout` 60 y los demás siguen en 15 s, para que una
+    caída no alargue toda la pasada.
+
+    ⚠️ **EL CENTINELA DE CASANDRA DIO `saih=OK` TODO ESE TIEMPO**: mira que la
+    captura CORRA, no cada fuente, y el `.bat` devuelve 0 aunque falle una (a
+    propósito: ver el final de `main`). Cambiar eso no es de esta versión.
+
 v1.03  12-sep-2026. **Entra el TURBINADO POR CENTRAL del Ebro y la hidrología
     de las otras dos cuencas** (decisión **D39** de Xevi, bloque B4), el
     manifiesto pasa a FUNDIRSE en vez de sobrescribirse (**M30**) y se
@@ -253,7 +289,7 @@ ESPERA_S = 3.0
 # estaba escrita a mano dentro del manifiesto, o sea en dos sitios que podían
 # descuadrarse — y el mismo 12-sep-2026 se comprobó que al archivador le había
 # pasado exactamente eso durante tres días.
-VERSION = "v1.03"
+VERSION = "v1.04"
 
 # ⚠️ `QCENT` va aparte de este diccionario A PROPÓSITO: no es una URL, son tres
 # llamadas encadenadas con parámetros de fecha (ver `capturar_qcent`). Meterlo
@@ -280,9 +316,11 @@ CONFEDERACIONES = {
     # captura hoy no se recupera, y lo que se parsea mal se vuelve a parsear.
     # ✅ La página se auto-fecha —«9 de septiembre de 2026»— así que nunca hay
     # que adivinar a qué día corresponde.
+    # ⚠️ v1.04: `sircaduero.es` y no `www.saihduero.es`, que desde el 22-oct-2026
+    # sirve el certificado de `sircaduero.es` y da `SSLError` (ver el historial).
     "duero": {
         "peso": 30.35,
-        "base": "https://www.saihduero.es",
+        "base": "https://sircaduero.es",
         "endpoints": {
             "situacion_embalses": {
                 "ruta": "/situacion-embalses",
@@ -298,11 +336,15 @@ CONFEDERACIONES = {
             # aunque no venga ni un dato, así que validaría una página vacía.
             # Y `contar` existe porque aquí `<tr>` no mide nada: la página
             # tiene 9 tablas y 32 celdas.
+            # ⚠️ v1.04: con 60 s de espera y no con los 15 del resto. Desde la
+            # mudanza a `sircaduero.es` tarda más de 15 s en EMPEZAR a contestar:
+            # el 24-oct-2026, `ReadTimeout` a los 15 s y, repetida, 33,9 s.
             "tiempo_real_risr": {
                 "ruta": "/datos-tiempo-real/risr",
                 "formato": "html",
                 "marca": "var datosEA = new Array(",
-                "contar": "station: '"},
+                "contar": "station: '",
+                "timeout": 60},
         },
     },
     # ⚠️ El Miño-Sil corre «WEBSAIH ws 2022», un producto de terceros, y da
@@ -414,8 +456,10 @@ def capturar(confederacion, ca, carpeta):
             # necesita dos minutos, y con 120 una pasada fallida tardaba
             # **279 s** en decir que había fallado. 15 s sigue siendo treinta
             # veces el tiempo de respuesta medido el 8-sep-2026.
+            # ⚠️ Un endpoint lento puede declarar el suyo (v1.04: el risr del
+            # Duero); así los demás no pagan su espera cuando algo se cae.
             r = requests.get(
-                url, timeout=15, verify=ca,
+                url, timeout=spec.get("timeout", 15), verify=ca,
                 cookies=cfg.get("cookies"),
                 headers={"Accept": ("application/json" if formato == "json"
                                     else "text/html"),
@@ -814,6 +858,36 @@ def autotest():
               "nada (9 tablas, 32 celdas, 290 estaciones en el JavaScript)")
     comprobar(DIAS_QCENT >= 2,
               "QCENT pide un RANGO: es la única fuente que recupera huecos")
+
+    # --- v1.04 · el Duero en `sircaduero.es`, sin aflojar el certificado ----
+    comprobar(all(c["base"].startswith("https://")
+                  for c in CONFEDERACIONES.values()),
+              "⚠️ toda base es HTTPS, no solo la del Ebro")
+    comprobar(CONFEDERACIONES["duero"]["base"] == "https://sircaduero.es",
+              "⚠️ v1.04 · el Duero va a `sircaduero.es`: `www.saihduero.es` "
+              "sirve desde el 22-oct-2026 un certificado de otro nombre")
+    # ⚠️ Se mira el paquete que de verdad se usa, sin red: certifi es su base.
+    # Let's Encrypt (YE1 → Root YE → ISRG Root X2 → X1) solo verifica si las
+    # raíces ISRG están ahí; si un certifi viejo no las trajera, el Duero
+    # volvería a dar `SSLError` y no por culpa de la CHD.
+    try:
+        import certifi
+        with io.open(certifi.where(), encoding="ascii") as g:
+            raices = g.read()
+    except Exception:
+        raices = ""
+    comprobar("ISRG Root X1" in raices and "ISRG Root X2" in raices,
+              "⚠️ v1.04 · certifi trae las raíces de Let's Encrypt (ISRG Root "
+              "X1 y X2): el certificado del Duero cuelga de ellas")
+    comprobar(CONFEDERACIONES["duero"]["endpoints"]["tiempo_real_risr"]
+              .get("timeout") == 60,
+              "⚠️ v1.04 · el risr del Duero espera 60 s: desde la mudanza "
+              "tarda más de 15 s en empezar a contestar")
+    comprobar([n for c in CONFEDERACIONES.values()
+               for n, e in c["endpoints"].items() if "timeout" in e]
+              == ["tiempo_real_risr"],
+              "v1.04 · ningún otro endpoint declara tiempo propio: los demás "
+              "siguen en 15 s")
 
     # --- v1.03 · M30: el manifiesto dice el veredicto del DÍA -------------
     ayer = "2026-09-12T09:30:00+00:00"
