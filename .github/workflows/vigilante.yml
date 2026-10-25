@@ -119,7 +119,12 @@ on:
   # Al tocar el propio vigilante, para que se pruebe solo al desplegarlo.
   # ⚠️ Estas rutas son las SUYAS. No incluyen `archivador_diario.py`: si lo
   # hicieran, cada despliegue del archivador dispararía también al vigilante.
+  # ⚠️ Y SOLO EN `main` (25-oct-2026): los filtros `paths` NO valen para las
+  # etiquetas. El push de la etiqueta `saih_captura-v1.04` (24-oct-2026) lanzó
+  # este workflow sobre la etiqueta, y corrió en balde.
   push:
+    branches:
+      - main
     paths:
       - "vigilante.py"
       - ".github/workflows/vigilante.yml"

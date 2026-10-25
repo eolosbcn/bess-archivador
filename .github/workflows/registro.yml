@@ -87,7 +87,12 @@ on:
           - "vigilante_mudo"
 
   # ⚠️ Incluye `vigilante.py` a propósito: ver «el autotest es un canario».
+  # ⚠️ Y SOLO EN `main` (25-oct-2026): los filtros `paths` NO valen para las
+  # etiquetas. El push de la etiqueta `saih_captura-v1.04` (24-oct-2026) lanzó
+  # este workflow sobre la etiqueta, sin rama, y falló al guardar.
   push:
+    branches:
+      - main
     paths:
       - "registro.py"
       - "vigilante.py"
