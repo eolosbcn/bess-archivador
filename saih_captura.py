@@ -74,6 +74,17 @@ ciego, que es justo lo que Xevi pidió evitar.
 
 HISTORIAL
 =========
+v1.05  25-oct-2026. **La tabla de embalses del Duero también espera 60 s**:
+    el Duero entero va a 60 s y el Ebro y el Miño-Sil siguen en 15 s.
+
+    ⚠️ La pasada programada de las 09:30 del 25-oct-2026, la primera de la
+    v1.04, dio 7 de 7, pero `situacion_embalses` tardó **18,0 s** con sus
+    15 s de espera (el 22-oct tardaba 2 s). Entró porque el `timeout` de
+    `requests` cuenta el silencio ENTRE lecturas, no el total: el primer byte
+    llegó antes de los 15 s. Es la misma lentitud de `sircaduero.es` que
+    obligó a darle 60 s al risr, y la siguiente vez podía no llegar a tiempo.
+    Decisión de Xevi (25-oct-2026).
+
 v1.04  24-oct-2026. **El Duero pasa a `https://sircaduero.es`**, y su risr
     espera 60 s. Rutas, marcas y `contar`, los mismos.
 
@@ -289,7 +300,7 @@ ESPERA_S = 3.0
 # estaba escrita a mano dentro del manifiesto, o sea en dos sitios que podían
 # descuadrarse — y el mismo 12-sep-2026 se comprobó que al archivador le había
 # pasado exactamente eso durante tres días.
-VERSION = "v1.04"
+VERSION = "v1.05"
 
 # ⚠️ `QCENT` va aparte de este diccionario A PROPÓSITO: no es una URL, son tres
 # llamadas encadenadas con parámetros de fecha (ver `capturar_qcent`). Meterlo
@@ -322,10 +333,12 @@ CONFEDERACIONES = {
         "peso": 30.35,
         "base": "https://sircaduero.es",
         "endpoints": {
+            # ⚠️ v1.05: también 60 s. El 25-oct-2026 tardó 18,0 s.
             "situacion_embalses": {
                 "ruta": "/situacion-embalses",
                 "formato": "html",
-                "marca": "Volumen embalsado"},
+                "marca": "Volumen embalsado",
+                "timeout": 60},
             # ✅ D39, 12-sep-2026: TODA la cuenca en una petición. El dato no
             # está en el HTML sino dentro del JavaScript —`datosEA` aforos con
             # caudal en m3/s, `datosEM` embalses, `datosPL` pluviómetros con
@@ -883,11 +896,13 @@ def autotest():
               .get("timeout") == 60,
               "⚠️ v1.04 · el risr del Duero espera 60 s: desde la mudanza "
               "tarda más de 15 s en empezar a contestar")
-    comprobar([n for c in CONFEDERACIONES.values()
-               for n, e in c["endpoints"].items() if "timeout" in e]
-              == ["tiempo_real_risr"],
-              "v1.04 · ningún otro endpoint declara tiempo propio: los demás "
-              "siguen en 15 s")
+    comprobar(sorted((k, n) for k, c in CONFEDERACIONES.items()
+                     for n, e in c["endpoints"].items()
+                     if e.get("timeout", 15) != 15)
+              == [("duero", "situacion_embalses"),
+                  ("duero", "tiempo_real_risr")],
+              "v1.05 · solo el Duero espera 60 s, en sus dos fuentes: el "
+              "Ebro y el Miño-Sil siguen en 15 s")
 
     # --- v1.03 · M30: el manifiesto dice el veredicto del DÍA -------------
     ayer = "2026-09-12T09:30:00+00:00"
