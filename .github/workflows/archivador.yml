@@ -28,7 +28,12 @@ on:
   # ejecuciones. El disparo lo hace cron-job.org por workflow_dispatch, que
   # entra por otra cola. Ver guia_cron_externo.
   workflow_dispatch:        # botón "Run workflow" (también desde el móvil)
+  # ⚠️ SOLO EN `main` (25-oct-2026): los filtros `paths` NO valen para las
+  # etiquetas. El push de la etiqueta `saih_captura-v1.04` (24-oct-2026) lanzó
+  # una captura sobre la etiqueta, sin rama, que falló al guardar.
   push:
+    branches:
+      - main
     paths:
       - "archivador_diario.py"
       - ".github/workflows/archivador.yml"
