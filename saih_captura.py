@@ -85,6 +85,13 @@ v1.05  25-oct-2026. **La tabla de embalses del Duero también espera 60 s**:
     obligó a darle 60 s al risr, y la siguiente vez podía no llegar a tiempo.
     Decisión de Xevi (25-oct-2026).
 
+    ⚠️ **SU ETIQUETA `saih_captura-v1.05` VIVE SOLO EN EL CLON LOCAL**, no en
+    GitHub, por decisión de Xevi (25-oct-2026). Subir una etiqueta disparaba
+    los workflows (los filtros `paths` no valen para las etiquetas), y GitHub
+    lee los workflows de la foto ETIQUETADA: ésta es anterior al arreglo
+    `branches: [main]` (`a9293050` y `b402079e`). La v1.05 es el commit
+    `3b1d26d8`, que sí está en GitHub. Las etiquetas futuras ya no disparan.
+
 v1.04  24-oct-2026. **El Duero pasa a `https://sircaduero.es`**, y su risr
     espera 60 s. Rutas, marcas y `contar`, los mismos.
 
