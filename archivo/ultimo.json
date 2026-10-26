@@ -1,5 +1,5 @@
 {
-  "ruta": "archivo/2026/10/2026-10-26/0251",
+  "ruta": "archivo/2026/10/2026-10-26/0551",
   "fuentes": {
     "esios_600_precio_spot": {
       "estado": "OK",
@@ -19,43 +19,45 @@
       "estado": "OK",
       "detalle": "2026-10-17 a 2026-11-04",
       "filas": 1732,
-      "values_updated_at": "2026-10-26T00:39:51.000+01:00",
-      "hash": "73c7aea0c99ec67f"
+      "values_updated_at": "2026-10-26T05:39:57.000+01:00",
+      "hash": "8b0d1c0af23e6275"
     },
     "esios_542_prev_solar_fv": {
       "estado": "OK",
       "detalle": "2026-10-17 a 2026-11-04",
       "filas": 1732,
-      "values_updated_at": "2026-10-26T00:41:35.000+01:00",
-      "hash": "e296f8e5a0bc88a5"
+      "values_updated_at": "2026-10-26T05:41:15.000+01:00",
+      "hash": "8a1b2c52e7dd9a8c"
     },
     "esios_543_prev_solar_termica": {
       "estado": "OK",
       "detalle": "2026-10-17 a 2026-11-04",
       "filas": 1732,
-      "values_updated_at": "2026-10-26T00:41:35.000+01:00",
-      "hash": "ae6b0e0c7cb62736"
+      "values_updated_at": "2026-10-26T05:41:14.000+01:00",
+      "hash": "f8d818529841d791"
     },
     "esios_catalogo": {
       "estado": "OK",
-      "detalle": "[completo] 1560 a archivar (prevision: 124/124 · capacidad: 69/69 · programa: 1367/1367)",
+      "detalle": "[ligero] 143 a archivar (prevision: 124/124 · capacidad: omitido · programa: omitido)",
       "filas": null,
-      "modo": "completo",
+      "modo": "ligero",
       "por_grupo": {
         "prevision": {
           "encontrados": 124,
           "archivados": 124
         },
         "capacidad": {
-          "encontrados": 69,
-          "archivados": 69
+          "encontrados": null,
+          "archivados": 0,
+          "omitido": true
         },
         "programa": {
-          "encontrados": 1367,
-          "archivados": 1367
+          "encontrados": null,
+          "archivados": 0,
+          "omitido": true
         }
       },
-      "total_archivados": 1560
+      "total_archivados": 143
     },
     "esios_catalogo_fichero": {
       "estado": "OK",
@@ -68,38 +70,27 @@
     },
     "esios_seguimiento_programas": {
       "estado": "OK",
-      "detalle": "28 indicadores (19 con datos), 17312 filas acumuladas · P48 FV hasta 2026-10-26T23:45 (publicado 2026-10-26T00:59:03)",
-      "filas": 28
+      "detalle": "19 indicadores (19 con datos), 17331 filas acumuladas · P48 FV hasta 2026-10-26T23:45 (publicado 2026-10-26T04:48:17)",
+      "filas": 19
     },
     "esios_previsiones": {
       "estado": "OK",
-      "detalle": "763 con datos, 788 vacíos, 9 fallidos (821 KB, 1091s)",
-      "filas": 173173,
-      "indicadores_ok": 763,
-      "indicadores_vacios": 788,
-      "indicadores_fallidos": 9,
-      "kb_comprimido": 820.6,
-      "segundos": 1091,
+      "detalle": "110 con datos, 31 vacíos, 2 fallidos (138 KB, 101s)",
+      "filas": 23822,
+      "indicadores_ok": 110,
+      "indicadores_vacios": 31,
+      "indicadores_fallidos": 2,
+      "kb_comprimido": 137.9,
+      "segundos": 101,
       "cortado_en": null,
-      "fraccion_presupuesto": 0.649,
-      "pedidos": 1560
-    },
-    "esios_capacidad_instalada": {
-      "estado": "OK",
-      "detalle": "53 con datos, 7 vacías, 9 fallidas (348s) · instalada: eólica 264 MW (2026-10) · FV 4 MW (2026-10)",
-      "filas": 5452,
-      "series_ok": 53,
-      "series_vacias": 7,
-      "series_fallidas": 9,
-      "pedidas": 69,
-      "segundos": 348,
-      "dias_atras": 400
+      "fraccion_presupuesto": 0.06,
+      "pedidos": 143
     },
     "entsoe_A65_prev_demanda_es": {
       "estado": "OK",
       "detalle": "hasta 2026-10-27 22:45:00+00:00",
       "filas": 956,
-      "hash": "aafeadc468f5dd16"
+      "hash": "1b6b3edb28e39173"
     },
     "entsoe_A69_prev_renovable_es": {
       "estado": "OK",
@@ -160,57 +151,13 @@
     },
     "aemet_radiacion_observada": {
       "estado": "OMITIDA",
-      "detalle": "la última buena fue hace 12.0 h (mínimo 20 h: una vez al día)",
+      "detalle": "la última buena fue hace 15.0 h (mínimo 20 h: una vez al día)",
       "filas": null
     },
     "aemet_climatologico_diario": {
-      "estado": "OK",
-      "detalle": "1636 registros · 2 días (2026-10-21..2026-10-22) · 822 estaciones · el más reciente publicado con 4 día(s)",
-      "filas": 1636,
-      "version": "observacion",
-      "ventana_dias": 5,
-      "fecha_dato_min": "2026-10-21",
-      "fecha_dato_max": "2026-10-22",
-      "fecha_captura": "2026-10-26",
-      "retraso_dias": 4,
-      "estaciones": 822,
-      "estaciones_por_dia": {
-        "2026-10-21": 820,
-        "2026-10-22": 816
-      },
-      "con_prec_por_dia": {
-        "2026-10-21": 787,
-        "2026-10-22": 785
-      },
-      "columnas": [
-        "fecha",
-        "indicativo",
-        "nombre",
-        "provincia",
-        "altitud",
-        "tmed",
-        "prec",
-        "tmin",
-        "horatmin",
-        "tmax",
-        "horatmax",
-        "dir",
-        "velmedia",
-        "racha",
-        "horaracha",
-        "hrMedia",
-        "hrMax",
-        "horaHrMax",
-        "hrMin",
-        "horaHrMin",
-        "pintMax",
-        "presMax",
-        "horaPresMax",
-        "presMin",
-        "horaPresMin",
-        "horaPIntMax",
-        "sol"
-      ]
+      "estado": "OMITIDA",
+      "detalle": "la última buena fue hace 3.0 h (mínimo 20 h: una vez al día)",
+      "filas": null
     },
     "mibgas_gdaes": {
       "estado": "OK",
@@ -229,19 +176,19 @@
     }
   },
   "version": "v3.18",
-  "ejecucion_madrid": "2026-10-26T02:51:03+01:00",
-  "ejecucion_utc": "2026-10-26T01:51:03+00:00",
+  "ejecucion_madrid": "2026-10-26T05:51:02+01:00",
+  "ejecucion_utc": "2026-10-26T04:51:02+00:00",
   "fecha": "2026-10-26",
   "dia_objetivo": "2026-10-27",
   "disparo": "workflow_dispatch",
-  "run_id": "40256167368",
-  "modo": "completo",
+  "run_id": "40271114669",
+  "modo": "ligero",
   "resumen": {
-    "ok": 22,
+    "ok": 20,
     "vacio": 0,
     "fallo": 0,
-    "omitida": 1,
+    "omitida": 2,
     "parcial": 0,
-    "kb_total": 1885.6
+    "kb_total": 335.2
   }
 }
