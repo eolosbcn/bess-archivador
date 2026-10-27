@@ -1,5 +1,5 @@
 {
-  "ruta": "archivo/2026/10/2026-10-27/2051",
+  "ruta": "archivo/2026/10/2026-10-27/2351",
   "fuentes": {
     "esios_600_precio_spot": {
       "estado": "OK",
@@ -70,27 +70,27 @@
     },
     "esios_seguimiento_programas": {
       "estado": "OK",
-      "detalle": "19 indicadores (19 con datos), 17587 filas acumuladas · P48 FV hasta 2026-10-27T23:15 (publicado 2026-10-27T20:42:43)",
+      "detalle": "19 indicadores (19 con datos), 17606 filas acumuladas · P48 FV hasta 2026-10-27T23:15 (publicado 2026-10-27T23:46:53)",
       "filas": 19
     },
     "esios_previsiones": {
       "estado": "OK",
-      "detalle": "115 con datos, 25 vacíos, 2 fallidos (172 KB, 106s)",
-      "filas": 28829,
+      "detalle": "115 con datos, 25 vacíos, 2 fallidos (174 KB, 109s)",
+      "filas": 29276,
       "indicadores_ok": 115,
       "indicadores_vacios": 25,
       "indicadores_fallidos": 2,
-      "kb_comprimido": 172.1,
-      "segundos": 106,
+      "kb_comprimido": 173.9,
+      "segundos": 109,
       "cortado_en": null,
-      "fraccion_presupuesto": 0.063,
+      "fraccion_presupuesto": 0.065,
       "pedidos": 142
     },
     "entsoe_A65_prev_demanda_es": {
       "estado": "OK",
       "detalle": "hasta 2026-10-28 22:45:00+00:00",
       "filas": 956,
-      "hash": "5bf0b76dda518cc9"
+      "hash": "b763d15468365f36"
     },
     "entsoe_A69_prev_renovable_es": {
       "estado": "OK",
@@ -120,7 +120,7 @@
       "detalle": "8 de 8 ciudades, hasta 2026-11-02",
       "filas": 56,
       "elaborado": [
-        "2026-10-27T19:09:08"
+        "2026-10-27T20:53:07"
       ],
       "ciudades": [
         "a_coruna",
@@ -141,7 +141,7 @@
       "detalle": "8 ciudades, 384 horas, hasta 2026-10-29",
       "filas": 384,
       "elaborado": [
-        "2026-10-27T19:09:08"
+        "2026-10-27T20:53:07"
       ]
     },
     "aemet_prediccion_periodos": {
@@ -151,59 +151,13 @@
     },
     "aemet_radiacion_observada": {
       "estado": "OMITIDA",
-      "detalle": "la última buena fue hace 12.0 h (mínimo 20 h: una vez al día)",
+      "detalle": "la última buena fue hace 15.0 h (mínimo 20 h: una vez al día)",
       "filas": null
     },
     "aemet_climatologico_diario": {
-      "estado": "OK",
-      "detalle": "2462 registros · 3 días (2026-10-22..2026-10-24) · 823 estaciones · el más reciente publicado con 3 día(s)",
-      "filas": 2462,
-      "version": "observacion",
-      "ventana_dias": 5,
-      "fecha_dato_min": "2026-10-22",
-      "fecha_dato_max": "2026-10-24",
-      "fecha_captura": "2026-10-27",
-      "retraso_dias": 3,
-      "estaciones": 823,
-      "estaciones_por_dia": {
-        "2026-10-22": 821,
-        "2026-10-23": 821,
-        "2026-10-24": 820
-      },
-      "con_prec_por_dia": {
-        "2026-10-22": 793,
-        "2026-10-23": 799,
-        "2026-10-24": 798
-      },
-      "columnas": [
-        "fecha",
-        "indicativo",
-        "nombre",
-        "provincia",
-        "altitud",
-        "tmed",
-        "prec",
-        "tmin",
-        "horatmin",
-        "tmax",
-        "horatmax",
-        "dir",
-        "velmedia",
-        "racha",
-        "horaracha",
-        "presMax",
-        "horaPresMax",
-        "presMin",
-        "horaPresMin",
-        "hrMedia",
-        "hrMax",
-        "horaHrMax",
-        "hrMin",
-        "horaHrMin",
-        "pintMax",
-        "horaPIntMax",
-        "sol"
-      ]
+      "estado": "OMITIDA",
+      "detalle": "la última buena fue hace 3.0 h (mínimo 20 h: una vez al día)",
+      "filas": null
     },
     "mibgas_gdaes": {
       "estado": "OK",
@@ -222,19 +176,19 @@
     }
   },
   "version": "v3.18",
-  "ejecucion_madrid": "2026-10-27T20:51:11+01:00",
-  "ejecucion_utc": "2026-10-27T19:51:11+00:00",
+  "ejecucion_madrid": "2026-10-27T23:51:06+01:00",
+  "ejecucion_utc": "2026-10-27T22:51:06+00:00",
   "fecha": "2026-10-27",
   "dia_objetivo": "2026-10-28",
   "disparo": "workflow_dispatch",
-  "run_id": "40572709528",
+  "run_id": "40597833238",
   "modo": "ligero",
   "resumen": {
-    "ok": 21,
+    "ok": 20,
     "vacio": 0,
     "fallo": 0,
-    "omitida": 1,
+    "omitida": 2,
     "parcial": 0,
-    "kb_total": 491.3
+    "kb_total": 385.4
   }
 }
