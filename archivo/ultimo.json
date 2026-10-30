@@ -1,11 +1,11 @@
 {
-  "ruta": "archivo/2026/10/2026-10-30/0551",
+  "ruta": "archivo/2026/10/2026-10-30/0851",
   "fuentes": {
     "esios_600_precio_spot": {
       "estado": "OK",
       "detalle": "2026-10-21 a 2026-10-30",
       "filas": 868,
-      "values_updated_at": "2026-10-29T15:31:55.000+01:00",
+      "values_updated_at": "2026-10-30T07:05:32.000+01:00",
       "hash": "e629301a30a7dd16"
     },
     "esios_602_energia_casada_diario": {
@@ -19,8 +19,8 @@
       "estado": "OK",
       "detalle": "2026-10-21 a 2026-11-08",
       "filas": 1732,
-      "values_updated_at": "2026-10-30T05:39:55.000+01:00",
-      "hash": "bc0514472558c6fd"
+      "values_updated_at": "2026-10-30T08:39:55.000+01:00",
+      "hash": "aba3d53a51badff0"
     },
     "esios_542_prev_solar_fv": {
       "estado": "OK",
@@ -61,36 +61,36 @@
     },
     "esios_catalogo_fichero": {
       "estado": "OK",
-      "detalle": "1561 indicadores en archivo/catalogo.csv · 0 altas, 19 modificados, REESCRITO",
+      "detalle": "1561 indicadores en archivo/catalogo.csv · sin cambios, no se reescribe",
       "filas": null,
       "total": 1561,
       "altas": 0,
-      "cambios": 19,
-      "reescrito": true
+      "cambios": 0,
+      "reescrito": false
     },
     "esios_seguimiento_programas": {
       "estado": "OK",
-      "detalle": "19 indicadores (19 con datos), 17975 filas acumuladas · P48 FV hasta 2026-10-30T21:45 (publicado 2026-10-30T02:59:01)",
+      "detalle": "19 indicadores (19 con datos), 17994 filas acumuladas · P48 FV hasta 2026-10-30T21:45 (publicado 2026-10-30T08:43:34)",
       "filas": 19
     },
     "esios_previsiones": {
       "estado": "OK",
-      "detalle": "110 con datos, 30 vacíos, 2 fallidos (136 KB, 104s)",
-      "filas": 23683,
+      "detalle": "110 con datos, 30 vacíos, 2 fallidos (138 KB, 103s)",
+      "filas": 24055,
       "indicadores_ok": 110,
       "indicadores_vacios": 30,
       "indicadores_fallidos": 2,
-      "kb_comprimido": 136.0,
-      "segundos": 104,
+      "kb_comprimido": 138.3,
+      "segundos": 103,
       "cortado_en": null,
-      "fraccion_presupuesto": 0.062,
+      "fraccion_presupuesto": 0.061,
       "pedidos": 142
     },
     "entsoe_A65_prev_demanda_es": {
       "estado": "OK",
       "detalle": "hasta 2026-10-31 22:45:00+00:00",
       "filas": 956,
-      "hash": "6317933c63cce3aa"
+      "hash": "dd958b66cbc4939b"
     },
     "entsoe_A69_prev_renovable_es": {
       "estado": "OK",
@@ -117,10 +117,10 @@
     },
     "aemet_prediccion_diaria": {
       "estado": "OK",
-      "detalle": "8 de 8 ciudades, hasta 2026-11-04",
+      "detalle": "8 de 8 ciudades, hasta 2026-11-05",
       "filas": 56,
       "elaborado": [
-        "2026-10-29T19:15:10"
+        "2026-10-30T07:15:09"
       ],
       "ciudades": [
         "a_coruna",
@@ -138,10 +138,10 @@
     },
     "aemet_prediccion_horaria": {
       "estado": "OK",
-      "detalle": "8 ciudades, 384 horas, hasta 2026-10-31",
+      "detalle": "8 ciudades, 384 horas, hasta 2026-11-01",
       "filas": 384,
       "elaborado": [
-        "2026-10-29T19:15:10"
+        "2026-10-30T07:15:09"
       ]
     },
     "aemet_prediccion_periodos": {
@@ -151,12 +151,12 @@
     },
     "aemet_radiacion_observada": {
       "estado": "OMITIDA",
-      "detalle": "la última buena fue hace 6.0 h (mínimo 20 h: una vez al día)",
+      "detalle": "la última buena fue hace 9.0 h (mínimo 20 h: una vez al día)",
       "filas": null
     },
     "aemet_climatologico_diario": {
       "estado": "OMITIDA",
-      "detalle": "la última buena fue hace 15.0 h (mínimo 20 h: una vez al día)",
+      "detalle": "la última buena fue hace 18.0 h (mínimo 20 h: una vez al día)",
       "filas": null
     },
     "mibgas_gdaes": {
@@ -176,12 +176,12 @@
     }
   },
   "version": "v3.18",
-  "ejecucion_madrid": "2026-10-30T05:51:08+01:00",
-  "ejecucion_utc": "2026-10-30T04:51:08+00:00",
+  "ejecucion_madrid": "2026-10-30T08:51:11+01:00",
+  "ejecucion_utc": "2026-10-30T07:51:11+00:00",
   "fecha": "2026-10-30",
   "dia_objetivo": "2026-10-31",
   "disparo": "workflow_dispatch",
-  "run_id": "41005114089",
+  "run_id": "41022556539",
   "modo": "ligero",
   "resumen": {
     "ok": 20,
@@ -189,6 +189,6 @@
     "fallo": 0,
     "omitida": 2,
     "parcial": 0,
-    "kb_total": 330.3
+    "kb_total": 333.0
   }
 }
