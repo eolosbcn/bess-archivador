@@ -74,6 +74,22 @@ ciego, que es justo lo que Xevi pidió evitar.
 
 HISTORIAL
 =========
+v1.06  1-nov-2026. **El risr del Duero espera 120 s y, si aun así falla, se
+    reintenta UNA vez al final de la pasada**, después de las demás fuentes.
+    La tabla de embalses sigue en 60 s y el resto, en 15 s.
+
+    ⚠️ Con la v1.05, del 25-oct al 1-nov, 6 `ReadTimeout` en 23 pasadas (el
+    27-oct las 3, y ese día se quedó sin risr; el 31-oct a las 20:00; el 1-nov
+    a las 09:30 y a las 14:00). Las 17 buenas: mediana de 22,4 s y máximo de
+    55,2 s. Una petición suelta del 1-nov a las 12:25 tardó 20,7 s: el fallo
+    parece pasajero, y por eso se reintenta al final y no enseguida. Decisión
+    de Xevi (1-nov-2026). Éxito: 14 días seguidos con algún risr bueno al día.
+
+    El coste, unos 4 minutos, solo en la pasada en que falle dos veces. El
+    peor caso ronda los 7 minutos y la tarea corta a los 10
+    (`saih_tarea_v1_03.xml`). La ficha dice en `reintento` qué pasó primero:
+    un reintento que sale bien no se esconde.
+
 v1.05  25-oct-2026. **La tabla de embalses del Duero también espera 60 s**:
     el Duero entero va a 60 s y el Ebro y el Miño-Sil siguen en 15 s.
 
@@ -307,7 +323,7 @@ ESPERA_S = 3.0
 # estaba escrita a mano dentro del manifiesto, o sea en dos sitios que podían
 # descuadrarse — y el mismo 12-sep-2026 se comprobó que al archivador le había
 # pasado exactamente eso durante tres días.
-VERSION = "v1.05"
+VERSION = "v1.06"
 
 # ⚠️ `QCENT` va aparte de este diccionario A PROPÓSITO: no es una URL, son tres
 # llamadas encadenadas con parámetros de fecha (ver `capturar_qcent`). Meterlo
@@ -359,12 +375,15 @@ CONFEDERACIONES = {
             # ⚠️ v1.04: con 60 s de espera y no con los 15 del resto. Desde la
             # mudanza a `sircaduero.es` tarda más de 15 s en EMPEZAR a contestar:
             # el 24-oct-2026, `ReadTimeout` a los 15 s y, repetida, 33,9 s.
+            # ⚠️ v1.06: 120 s y un reintento al final de la pasada (`reintento`,
+            # ver `reintentar`): con 60 s falló 6 de 23 pasadas.
             "tiempo_real_risr": {
                 "ruta": "/datos-tiempo-real/risr",
                 "formato": "html",
                 "marca": "var datosEA = new Array(",
                 "contar": "station: '",
-                "timeout": 60},
+                "timeout": 120,
+                "reintento": True},
         },
     },
     # ⚠️ El Miño-Sil corre «WEBSAIH ws 2022», un producto de terceros, y da
@@ -456,8 +475,10 @@ def paquete_de_ca(destino=None):
 # ============================================================================
 # LA CAPTURA
 # ============================================================================
-def capturar(confederacion, ca, carpeta):
+def capturar(confederacion, ca, carpeta, solo=None):
     """Baja los endpoints de una confederación. Devuelve la ficha de cada uno.
+
+    Con `solo`, únicamente ese endpoint: es lo que usa `reintentar`.
 
     ⚠️ NADA de `continue` mudo: cada endpoint deja su estado en la ficha, y el
     manifiesto los lleva todos. Un fallo que no aparece en el manifiesto es un
@@ -467,6 +488,8 @@ def capturar(confederacion, ca, carpeta):
     cfg = CONFEDERACIONES[confederacion]
     fichas = {}
     for nombre, spec in sorted(cfg["endpoints"].items()):
+        if solo is not None and nombre != solo:
+            continue
         clave = "saih_%s_%s" % (confederacion, nombre)
         url = cfg["base"] + spec["ruta"]
         formato = spec["formato"]
@@ -564,6 +587,38 @@ def capturar(confederacion, ca, carpeta):
                  os.path.getsize(ruta_f) / 1024, dur))
         time.sleep(ESPERA_S)
     return fichas
+
+
+def reintentar(fichas, ca, carpeta, capturador=capturar):
+    """v1.06. Repite UNA vez, al final de la pasada, lo que falló y lo declara.
+
+    Devuelve las fichas nuevas, para `fichas.update(...)`. Solo los endpoints
+    con `reintento` en su `spec` y en FALLO: un VACIO es que el servidor
+    contestó, y reintentarlo no es lo que se decidió.
+
+    ⚠️ AL FINAL Y NO ENSEGUIDA: el fallo del risr parece pasajero, y así el
+    tiempo que pasa entre medias es el de las demás fuentes.
+
+    ⚠️ El `capturador` se pasa como argumento para probar esto sin red, en
+    `--autotest`, igual que `fundir`.
+
+    ⚠️ Y NO ESCONDE NADA: la ficha lleva en `reintento` lo que dio el primer
+    intento, también cuando el segundo sale bien.
+    """
+    nuevas = {}
+    for conf, cfg in sorted(CONFEDERACIONES.items()):
+        for nombre, spec in sorted(cfg["endpoints"].items()):
+            clave = "saih_%s_%s" % (conf, nombre)
+            ficha = fichas.get(clave)
+            if (not spec.get("reintento") or not ficha
+                    or ficha.get("estado") != "FALLO"):
+                continue
+            print("    ↻ reintento de %s (el primero dio %s)"
+                  % (clave, ficha.get("detalle")))
+            nueva = capturador(conf, ca, carpeta, solo=nombre)[clave]
+            nuevas[clave] = dict(
+                nueva, reintento={"primer_intento": ficha.get("detalle")})
+    return nuevas
 
 
 def capturar_qcent(ca, carpeta):
@@ -900,16 +955,60 @@ def autotest():
               "⚠️ v1.04 · certifi trae las raíces de Let's Encrypt (ISRG Root "
               "X1 y X2): el certificado del Duero cuelga de ellas")
     comprobar(CONFEDERACIONES["duero"]["endpoints"]["tiempo_real_risr"]
-              .get("timeout") == 60,
-              "⚠️ v1.04 · el risr del Duero espera 60 s: desde la mudanza "
-              "tarda más de 15 s en empezar a contestar")
-    comprobar(sorted((k, n) for k, c in CONFEDERACIONES.items()
-                     for n, e in c["endpoints"].items()
-                     if e.get("timeout", 15) != 15)
-              == [("duero", "situacion_embalses"),
-                  ("duero", "tiempo_real_risr")],
-              "v1.05 · solo el Duero espera 60 s, en sus dos fuentes: el "
-              "Ebro y el Miño-Sil siguen en 15 s")
+              .get("timeout") == 120,
+              "⚠️ v1.06 · el risr del Duero espera 120 s: con 60 s falló 6 de "
+              "23 pasadas")
+    comprobar(sorted((k, n, e["timeout"]) for k, c in CONFEDERACIONES.items()
+                     for n, e in c["endpoints"].items() if "timeout" in e)
+              == [("duero", "situacion_embalses", 60),
+                  ("duero", "tiempo_real_risr", 120)],
+              "v1.06 · solo el Duero tiene espera propia, 60 s la tabla y 120 "
+              "s el risr: el Ebro y el Miño-Sil siguen en 15 s")
+
+    # --- v1.06 · el reintento al final de la pasada, sin red --------------
+    comprobar([(k, n) for k, c in sorted(CONFEDERACIONES.items())
+               for n, e in sorted(c["endpoints"].items()) if e.get("reintento")]
+              == [("duero", "tiempo_real_risr")],
+              "v1.06 · solo el risr declara reintento")
+    risr = "saih_duero_tiempo_real_risr"
+    tabla = "saih_duero_situacion_embalses"
+
+    def falso(respuesta):
+        """Un capturador sin red, que anota a quién le han pedido."""
+        llamadas = []
+
+        def capturador(conf, ca, carpeta, solo=None):
+            llamadas.append((conf, solo))
+            return {"saih_%s_%s" % (conf, solo): dict(respuesta)}
+        return capturador, llamadas
+
+    cap, llamadas = falso({"estado": "OK"})
+    reintentar({risr: {"estado": "OK"}}, None, None, capturador=cap)
+    comprobar(llamadas == [],
+              "⚠️ v1.06 · un risr bueno NO se reintenta: no se pide dos veces")
+    cap, llamadas = falso({"estado": "OK"})
+    reintentar({tabla: {"estado": "FALLO", "detalle": "ReadTimeout"}},
+               None, None, capturador=cap)
+    comprobar(llamadas == [],
+              "v1.06 · una fuente sin `reintento` no se repite aunque falle")
+    cap, llamadas = falso({"estado": "OK", "bytes": 5})
+    r6 = reintentar({risr: {"estado": "FALLO", "detalle": "ReadTimeout"}},
+                    None, None, capturador=cap)
+    comprobar(llamadas == [("duero", "tiempo_real_risr")],
+              "⚠️ v1.06 · un risr en FALLO se reintenta UNA sola vez")
+    comprobar(r6[risr].get("estado") == "OK"
+              and r6[risr].get("reintento", {}).get("primer_intento")
+              == "ReadTimeout",
+              "⚠️ v1.06 · si sale bien queda OK, y la ficha dice lo que dio "
+              "el primer intento: un reintento bueno no se esconde")
+    cap, llamadas = falso({"estado": "FALLO", "detalle": "ConnectTimeout"})
+    r7 = reintentar({risr: {"estado": "FALLO", "detalle": "ReadTimeout"}},
+                    None, None, capturador=cap)
+    comprobar(len(llamadas) == 1 and r7[risr].get("estado") == "FALLO"
+              and r7[risr].get("detalle") == "ConnectTimeout"
+              and r7[risr]["reintento"]["primer_intento"] == "ReadTimeout",
+              "v1.06 · si vuelve a fallar sigue en FALLO, sin más intentos y "
+              "con los dos motivos")
 
     # --- v1.03 · M30: el manifiesto dice el veredicto del DÍA -------------
     ayer = "2026-09-12T09:30:00+00:00"
@@ -1052,6 +1151,10 @@ def main():
     # ninguna de las otras dos cuencas publica turbinado por central.
     if "ebro" in a.confederacion:
         fichas.update(capturar_qcent(ca, carpeta))
+
+    # ⚠️ v1.06: lo último de la pasada, para que un servidor lento no retrase
+    # a las demás fuentes. Ver `reintentar`.
+    fichas.update(reintentar(fichas, ca, carpeta))
 
     # M30 · el manifiesto del día se FUNDE con el que ya hubiera.
     ruta_m = os.path.join(carpeta, "manifiesto.json")
