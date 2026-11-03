@@ -115,6 +115,9 @@ on:
           - "indicadores"
           - "degradacion"
           - "desaparecido_largo"
+          # v1.10 (B46, 3-nov-2026): la alarma de la captura de las 11:01, con
+          # su clave propia (`captura_1101:simulacro`).
+          - "captura_1101"
 
   # Al tocar el propio vigilante, para que se pruebe solo al desplegarlo.
   # ⚠️ Estas rutas son las SUYAS. No incluyen `archivador_diario.py`: si lo

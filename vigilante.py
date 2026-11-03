@@ -33,6 +33,29 @@ nadie volvería a mirarlas.
 
 HISTORIAL
 =========
+v1.10  3-nov-2026. **La captura de las 11:01** (primera entrega de B46 del plan
+    de Casandra; decisiones D96, D103, D108 y D109 de Xevi). Va con el
+    archivador v3.19, que la hace SIN AEMET por diseño. Dos cambios:
+
+    1. **D103 · una familia toda `OMITIDA` ya no es muda.** `familias_mudas`
+       llamaba muda a una familia sin ningún `OK`, y la de las 11:01 trae la
+       predicción y las dos observaciones de AEMET `OMITIDA` todos los días.
+       En verano el vigilante de las 09:25 UTC (11:25 de Madrid) la ve como la
+       última: sería una falsa alarma casi diaria, la trampa 7. Ahora hace
+       falta además que alguna fuente haya fallado de verdad.
+    2. **La alarma de la 11:01** (`captura_1101`): `alarma_captura_critica`
+       con la franja 10:50-11:15 y `aplica_desde`. Solo cuenta desde el primer
+       día posterior a `CAPTURA_1101_DESDE` que tenga una captura en la franja,
+       porque en agosto hubo capturas sueltas a esas horas, de cuando se
+       disparaba a mano: sin la fecha, daría por perdidos todos los días hasta
+       el disparo. **Su simulacro tiene clave propia** y el prefijo solo si se
+       ha forzado: los dos fallos que no se repiten (el de la v1.01 y el
+       `captura_critica` de la v3.18, P-6). El simulacro viejo no se toca:
+       va en la segunda entrega de B46.
+
+    Predicción, antes del código: `Casandra\Info Claude\
+    prediccion_puerta_archivador_v3_19.md`.
+
 v1.09  18-sep-2026. **El umbral de A19 pasa a una CONSTANTE, porque el de la
     v1.07 no llegó nunca a producción.** La v1.07 subió `horas` de 6 a 9 como
     DEFECTO de `alarma_vigilante_mudo`, con su medición. Pero a esa función no
@@ -463,7 +486,14 @@ ESTADOS_DEGRADADOS = ("FALLO", "VACIO", "PARCIAL")   # OMITIDA no es avería
 # v1.07 tenía dos alarmas cuyo simulacro no estaba aquí y nunca se vio saltar.
 SIMULACROS = ("antiguedad", "fuente_muda", "caducidad", "desaparecido",
               "congelado", "sustituto", "captura_critica", "indicadores",
-              "degradacion", "desaparecido_largo")
+              "degradacion", "desaparecido_largo", "captura_1101")
+# v1.10 · B46 · la captura de las 11:01 (D96). La franja va de las 10:50, cuando
+# se sella la D+1 de REE (✅ ninguna captura anterior la trae, 0 de 191; todas
+# desde las 10:55, 319), a las 11:15, el corte de Casandra (D55): lo que arranca
+# después ya no sirve para el día. Horas «HHMM», como las del índice.
+FRANJA_1101 = ("1050", "1115")
+# Antes de esta fecha no había disparo de las 11:01: ver `alarma_captura_critica`.
+CAPTURA_1101_DESDE = "2026-11-04"
 EXTENSIONES = (".csv", ".csv.gz", ".json", ".gz")
 
 # ⚠️ FUENTES RETIRADAS A PROPÓSITO — no son averías, y sin esta tabla la
@@ -540,6 +570,18 @@ def familias_mudas(fuentes, minimo=MINIMO_FUENTES_POR_FAMILIA):
     **23 capturas (5,6 %)**, y las 23 son `entsoe` entre el 30-ago y el 2-sep
     —el corte real de ENTSO-E, confirmado por ellos mismos por correo—. Cero
     disparos en las otras 386. La regla estaba probada antes de desplegarse.
+
+    v1.10 · D103: **una familia toda `OMITIDA` no es muda.** `OMITIDA` es «no se
+    pidió, a propósito»: la regla de las 2,5 h tras una buena, la de las 20 h
+    de las observaciones y, desde el archivador v3.19, la captura de las 11:01,
+    que va sin AEMET por diseño. Muda es que alguna fuente lo intentó y ninguna
+    salió `OK`. ⚠️ Desde la v3.19, `OMITIDA` ya no implica que hubo una buena
+    hace poco: la de las 11:01 la da siempre. Una caída real de AEMET la ven la
+    de las 08:5x y la de las 11:5x, que sí la piden. ✅ Sobre los 874
+    manifiestos del archivo (3-nov-2026): la regla vieja dispara en 35 capturas
+    y la nueva en 34. Solo difieren en la del 25-oct a las 02:51, la de la hora
+    repetida, con `aemet` toda `OMITIDA`
+    (`Casandra\analisis\b46_v3_19_20261103\p3_contraste_vigilante_salida.txt`).
     """
     por_familia = collections.defaultdict(list)
     for nombre, datos in fuentes.items():
@@ -547,7 +589,8 @@ def familias_mudas(fuentes, minimo=MINIMO_FUENTES_POR_FAMILIA):
 
     mudas = []
     for familia, estados in sorted(por_familia.items()):
-        if len(estados) >= minimo and all(e != "OK" for e in estados):
+        if (len(estados) >= minimo and all(e != "OK" for e in estados)
+                and any(e != "OMITIDA" for e in estados)):
             mudas.append((familia, len(estados)))
     return mudas
 
@@ -1061,7 +1104,8 @@ def capturas_por_dia(raiz):
     return {d: sorted(h) for d, h in dias.items()}
 
 
-def alarma_captura_critica(raiz, desde="1130", hasta="1200", dias_atras=30):
+def alarma_captura_critica(raiz, desde="1130", hasta="1200", dias_atras=30,
+                           aplica_desde=None):
     """¿Se ha perdido la captura de las 11:5x? (B4, 12-sep-2026)
 
     ⚠️⚠️ NO ES UNA CAPTURA MÁS. La de las 11:5x de D−1 es **el horizonte de
@@ -1103,6 +1147,15 @@ def alarma_captura_critica(raiz, desde="1130", hasta="1200", dias_atras=30):
     las 11:30 quedan dentro **33 de 33**; con 11:45 se escapaban 2 días que
     tenían captura válida, y habrían salido como pérdida sin serlo.
 
+    v1.10 · `aplica_desde` (B46, la captura de las 11:01). El autocalibrado mira
+    TODO el archivo, y en agosto hubo capturas sueltas entre las 10:00 y las
+    11:10, de cuando se disparaba a mano: con la franja de las 11:01 concluiría
+    que el archivo captura a esa hora y daría por perdidos todos los días
+    hasta el disparo. Con una fecha, la alarma aplica desde el PRIMER día,
+    a partir de ella, que tiene una captura en la franja, y solo cuenta los
+    días desde ese. ⚠️ No caduca con la ventana: si el disparo se para más de
+    `dias_atras` días, sigue avisando, en vez de darse por recuperada sola.
+
     Devuelve la lista de fechas a las que les falta.
     """
     dias = capturas_por_dia(raiz)
@@ -1110,12 +1163,20 @@ def alarma_captura_critica(raiz, desde="1130", hasta="1200", dias_atras=30):
         return []
     en_franja = {d: [h for h in hs if desde <= h < hasta]
                  for d, hs in dias.items()}
-    # ¿aplica aquí? Si nunca hubo una, este archivo no captura a esa hora.
-    if not any(en_franja.values()):
-        return []
+    if aplica_desde is not None:
+        con_ella = sorted(d for d, hs in en_franja.items()
+                          if hs and d >= aplica_desde)
+        if not con_ella:
+            return []
+        candidatos = [d for d in sorted(dias) if d >= con_ella[0]]
+    else:
+        # ¿aplica aquí? Si nunca hubo una, este archivo no captura a esa hora.
+        if not any(en_franja.values()):
+            return []
+        candidatos = sorted(dias)
 
     faltan = []
-    for fecha in sorted(dias)[-dias_atras:]:
+    for fecha in candidatos[-dias_atras:]:
         if en_franja.get(fecha):
             continue
         # ⚠️ Solo cuenta como PERDIDA si ese día siguió capturando después: si
@@ -1735,6 +1796,40 @@ def comprobar(raiz, ahora=None, token_aemet=None, simulacro=None,
             "perder ésta mide **6,00 h exactas** y el umbral era `> 6.0`."
             % ", ".join("`%s`" % d for d in perdidas)))
 
+    # ---- 7 bis. la captura de las 11:01 (v1.10, B46) ----------------------
+    # ⚠️ Clave propia y aparte de la 7: son capturas distintas, para lectores
+    # distintos. Y su simulacro, con SU clave y el prefijo SOLO si se ha
+    # forzado. Con la clave real, una pérdida de verdad iría como comentario
+    # dentro de un `[SIMULACRO]` abierto (v3.18, P-6); con el prefijo en una
+    # pérdida real, se descartaría de un vistazo (el fallo de la v1.01).
+    perdidas_1101 = alarma_captura_critica(raiz, desde=FRANJA_1101[0],
+                                           hasta=FRANJA_1101[1],
+                                           aplica_desde=CAPTURA_1101_DESDE)
+    forzada = simulacro == "captura_1101" and not perdidas_1101
+    if forzada:
+        perdidas_1101 = ["__simulacro__"]
+    if perdidas_1101:
+        incidencias.append(Incidencia(
+            "captura_1101:simulacro" if forzada else "captura_1101",
+            "%s⚠️ Falta la captura de las 11:01 en %d día(s)"
+            % ("[SIMULACRO] " if forzada else "", len(perdidas_1101)),
+            "Días sin captura en la franja **10:50-11:15** que sí tienen "
+            "capturas posteriores: %s.\n\n"
+            "Es la foto de lo publicado justo antes del corte de las 11:15, "
+            "con la D+1 de REE, que se sella de 10:50 a 10:53. La leerán los "
+            "candidatos de Casandra en B40, como vía principal y como testigo "
+            "de su foto local (D96). **El modelo que firma no la lee** "
+            "(D107): sigue con la de las 08:5x. Va sin AEMET por diseño "
+            "(D108).\n\n"
+            "Si falta, el candidato descarga lo que tenga sello ≤ 11:15, y si "
+            "tampoco, se queda sin fila ese día y avisa (D96). **No se "
+            "recupera**: lo que estaba publicado a esa hora ya no lo sirve "
+            "nadie. Lo primero que hay que mirar es el disparo de las 11:01 "
+            "en cron-job.org.\n\n"
+            "Solo cuenta desde el primer día posterior al %s con una captura "
+            "en la franja: antes no había disparo."
+            % (", ".join("`%s`" % d for d in perdidas_1101), CAPTURA_1101_DESDE)))
+
     return incidencias
 
 
@@ -1960,6 +2055,20 @@ def autotest():
     solitaria = {"mibgas_gdaes": {"estado": "FALLO"}}
     comprobar_que(familias_mudas(solitaria) == [],
                   "una familia de una sola fuente no salta")
+
+    # v1.10 · D103: la captura de las 11:01 trae AEMET toda OMITIDA por diseño.
+    toda_omitida = {"aemet_prediccion_diaria": {"estado": "OMITIDA"},
+                    "aemet_radiacion_observada": {"estado": "OMITIDA"},
+                    "aemet_climatologico_diario": {"estado": "OMITIDA"},
+                    "esios_a": {"estado": "OK"}}
+    comprobar_que(familias_mudas(toda_omitida) == [],
+                  "⚠️ v1.10 · una familia toda OMITIDA NO salta (D103: la de "
+                  "las 11:01 va sin AEMET por diseño)")
+    omitida_y_fallo = {"aemet_prediccion_diaria": {"estado": "FALLO"},
+                       "aemet_radiacion_observada": {"estado": "OMITIDA"},
+                       "esios_a": {"estado": "OK"}}
+    comprobar_que(familias_mudas(omitida_y_fallo) == [("aemet", 2)],
+                  "v1.10 · OMITIDA y un FALLO de verdad, sin ningún OK, SÍ salta")
 
     print("\n-- caducidad_del_jwt ----------------------------------------")
     futuro = int((dt.datetime.now(dt.timezone.utc)
@@ -2595,6 +2704,59 @@ def autotest():
                       "⚠️ v1.07 · un archivo que nunca captura a esa hora (el "
                       "del SAIH) NO dispara: la alarma se autocalibra")
 
+        print("\n-- v1.10 · la captura de las 11:01 ---------------------------")
+
+        def a1101():
+            return alarma_captura_critica(tmp, desde=FRANJA_1101[0],
+                                          hasta=FRANJA_1101[1],
+                                          aplica_desde=CAPTURA_1101_DESDE)
+
+        # Lo que hay hoy en el archivo: capturas sueltas en la franja en agosto
+        # y ninguna desde el 4-nov.
+        indice([("2026-08-23", "1101"), ("2026-11-04", "0851"),
+                ("2026-11-04", "1151"), ("2026-11-05", "0851"),
+                ("2026-11-05", "1151")])
+        comprobar_que(a1101() == [],
+                      "v1.10 · antes del disparo no aplica, aunque haya capturas "
+                      "sueltas en la franja en agosto")
+        comprobar_que(alarma_captura_critica(tmp, desde="1050", hasta="1115")
+                      == ["2026-11-04", "2026-11-05"],
+                      "⚠️ v1.10 · sin la fecha, las de agosto la harían saltar "
+                      "cada día hasta el disparo: por eso existe")
+
+        indice([("2026-11-05", "0851"), ("2026-11-05", "1102"),
+                ("2026-11-05", "1151"), ("2026-11-06", "0851"),
+                ("2026-11-06", "1151"), ("2026-11-07", "0851"),
+                ("2026-11-07", "1103"), ("2026-11-07", "1151")])
+        comprobar_que(a1101() == ["2026-11-06"],
+                      "⚠️⚠️ v1.10 · tras la primera, el día que falta la de las "
+                      "11:01 y sigue capturando, se avisa")
+
+        indice([("2026-11-05", "1102"), ("2026-11-05", "1151"),
+                ("2026-11-06", "0851")])
+        comprobar_que(a1101() == [],
+                      "v1.10 · un día que aún no ha llegado a las 11:15 no se acusa")
+
+        indice([("2026-11-05", "1102"), ("2026-11-06", "1115"),
+                ("2026-11-06", "1151")])
+        comprobar_que(a1101() == ["2026-11-06"],
+                      "v1.10 · las 11:15 ya no valen: es el corte de Casandra (D55)")
+
+        indice([("2026-11-05", "1050"), ("2026-11-05", "1151")])
+        comprobar_que(a1101() == [],
+                      "v1.10 · las 10:50 valen: la D+1 ya está sellada")
+
+        indice([("2026-11-05", "0930"), ("2026-11-05", "1400"),
+                ("2026-11-06", "0930"), ("2026-11-06", "2000")])
+        comprobar_que(a1101() == [],
+                      "v1.10 · el archivo del SAIH no dispara")
+
+        indice([("2026-11-05", "1102"), ("2026-11-05", "1151")]
+               + [("2026-12-%02d" % d, "1151") for d in range(1, 32)])
+        comprobar_que(len(a1101()) == 30,
+                      "⚠️ v1.10 · si el disparo se para, pasados 30 días sigue "
+                      "avisando: no se da por recuperada sola")
+
     print("\n-- v1.08 · los simulacros existen de verdad -------------------")
     import inspect as _inspect
     fuente_comprobar = _inspect.getsource(comprobar)
@@ -2686,6 +2848,40 @@ def autotest():
         claves9 = {i.clave for i in comprobar(tmp9, simulacro="degradacion")}
         comprobar_que("degradacion:__simulacro__" in claves9,
                       "el simulacro `degradacion` fabrica su incidencia sintética")
+
+    print("\n-- v1.10 · el simulacro de la 11:01, con clave propia --------")
+    with tempfile.TemporaryDirectory() as tmp10:
+        def indice10(filas):
+            ahora10 = dt.datetime.now(dt.timezone.utc).isoformat()
+            with io.open(os.path.join(tmp10, "indice.csv"), "w", encoding="utf-8",
+                         newline="") as f:
+                f.write("fecha,hora,ejecucion_utc,ok,vacio,fallo,kb_total,ruta\n")
+                for d, h in filas:
+                    f.write("%s,%s,%s,2,0,0,17.3,x/%s/%s\n" % (d, h, ahora10, d, h))
+
+        def por_clave10(simulacro):
+            return {i.clave: i for i in comprobar(tmp10, simulacro=simulacro)}
+
+        indice10([("2026-11-05", "0851"), ("2026-11-05", "1151")])
+        r10 = por_clave10("captura_1101")
+        comprobar_que("captura_1101:simulacro" in r10 and "captura_1101" not in r10
+                      and r10["captura_1101:simulacro"].titulo.startswith("[SIMULACRO]"),
+                      "⚠️ v1.10 · el simulacro abre `captura_1101:simulacro`, con la "
+                      "marca, y no toca la clave real")
+        comprobar_que(not any(k.startswith("captura_1101") for k in por_clave10(None)),
+                      "v1.10 · sin simulacro y sin disparo de las 11:01, nada")
+        # Una pérdida REAL durante ese simulacro: clave real y SIN la marca.
+        indice10([("2026-11-05", "1102"), ("2026-11-05", "1151"),
+                  ("2026-11-06", "0851"), ("2026-11-06", "1151")])
+        r10 = por_clave10("captura_1101")
+        comprobar_que("captura_1101" in r10 and "captura_1101:simulacro" not in r10
+                      and not r10["captura_1101"].titulo.startswith("[SIMULACRO]"),
+                      "⚠️⚠️ v1.10 · una pérdida real durante su simulacro sale con "
+                      "la clave real y SIN [SIMULACRO]")
+        r10 = por_clave10("captura_critica")
+        comprobar_que("captura_1101" in r10
+                      and not r10["captura_1101"].titulo.startswith("[SIMULACRO]"),
+                      "v1.10 · y durante el simulacro de OTRA alarma, también sin marca")
 
     print("\n-- v1.04 · la etiqueta llega a la issue ---------------------")
     inc = Incidencia("x", "titulo", "cuerpo")
