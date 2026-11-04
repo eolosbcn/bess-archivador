@@ -19,6 +19,37 @@ con:
 Ninguna de las dos cosas se puede arreglar mirando atrás. Sí se pueden
 arreglar hacia delante.
  
+QUÉ CAMBIA EN LA v3.19
+----------------------
+Primera entrega de **B46** del plan de Casandra (decisiones D96, D108 y D109
+de Xevi, 1 y 3-nov-2026), con el vigilante v1.10. Una sola cosa: **la captura
+de las 11:01 va SIN AEMET, por diseño.**
+
+Esa captura existe para guardar la D+1 de REE, que se sella de 10:50 a 10:53
+(✅ ninguna captura de la víspera anterior a las 10:50 trae el día, 0 de 191, y
+todas desde las 10:55 lo traen, 319; B37, 20-oct-2026). AEMET la alargaría
+—mediana 337 s y máximo 1.108 s con ella, 159 y 239 sin ella—, y ningún
+candidato de Casandra la lee: sigue a las 08:50 y a las 11:5x.
+
+⚠️ **La regla de 2,5 h NO bastaba**, y por eso la omisión es explícita.
+`horas_desde_ultima_ok` solo cuenta las `OK`, y ✅ desde el 14-sep, 13 de las 51
+capturas de las 08:5x salieron `PARCIAL` (429 y 503 de AEMET). Esos días la de
+las 11:01 habría pedido AEMET, y, si la traía, la de las 11:5x la habría omitido
+por haber una buena hacía 0,8 h. Medido en `Casandra\\analisis\\
+b46_decisiones_20261103\\` sobre las 874 capturas del archivo.
+
+Ahora, una captura que ARRANCA entre las 10:50 y las 11:30 (`FRANJA_SIN_AEMET`)
+registra `aemet_prediccion_diaria`, `aemet_radiacion_observada` y
+`aemet_climatologico_diario` como `OMITIDA` «por diseño», sin pedir nada a
+AEMET. El límite de arriba es el principio de la franja crítica de las 11:5x:
+si el disparo de las 11:01 llegara tarde, tampoco le quitaría la AEMET a la
+de las 11:5x. Fuera de la franja no cambia nada.
+
+⚠️ Va con el vigilante v1.10, que deja de llamar muda a una familia toda
+`OMITIDA` (D103): sin él, esta captura sería una falsa alarma diaria.
+Predicción, antes del código: `Casandra\\Info Claude\\
+prediccion_puerta_archivador_v3_19.md`.
+
 QUÉ CAMBIA EN LA v3.18
 ----------------------
 Bloque **B32** del plan de Casandra (`20260913-C`, decisión D54 de Xevi), en un
@@ -521,6 +552,8 @@ import re               # v3.14: solo lo usa --autotest, para leer la versión
                         # de la cabecera y del nombre del fichero
 import inspect          # v3.13: solo lo usa --autotest, para comprobar que la
                         # regla de clasificación no vuelve a estar duplicada
+import io               # v3.19: solo lo usa --autotest, para apartar lo que
+import contextlib       # imprimen las capturas de AEMET que prueba
 import datetime as dt
 import xml.etree.ElementTree as ET
 from zoneinfo import ZoneInfo
@@ -539,7 +572,7 @@ import pandas as pd
 # diciendo «v3.12» con el código de la v3.13 dentro. `--autotest` comprueba
 # ahora que esta constante concuerde con la cabecera y con el nombre del
 # fichero. Al subir versión se toca AQUÍ, y la prueba avisa si falta algo.
-VERSION = "v3.18"
+VERSION = "v3.19"
 
 TZ_MADRID = ZoneInfo("Europe/Madrid")
 CARPETA_RAIZ = "archivo"
@@ -749,6 +782,15 @@ PAUSA_429_CRITICA = 5     # en la franja crítica: 5, 10 en vez de 20, 40
 REINTENTO_DIFERIDO_S = 30 # espera antes del segundo intento de las ciudades caídas
 LIMITE_LOCAL_REINTENTO = "12:02:00"   # más tarde no se reintenta: la rutina lee a las 12:09:55
 HORAS_MINIMAS_OBSERVADO = 20.0        # radiación y climatológico: una vez al día
+
+# --- v3.19 · la captura de las 11:01 va sin AEMET (B46, D96 y D108) ----------
+# Arranque entre estas dos horas locales: ni la predicción ni las observaciones
+# de AEMET, por diseño. Abajo, las 10:50, cuando se sella la D+1 de REE; arriba,
+# las 11:30, donde empieza `FRANJA_CRITICA`. ⚠️ No se deja a la regla de 2,5 h:
+# solo cuenta las OK, y con una 08:5x PARCIAL la de las 11:01 pediría AEMET.
+FRANJA_SIN_AEMET = ("10:50:00", "11:30:00")
+SIN_AEMET_POR_DISENO = ("por diseño: la captura de las 11:01 va sin AEMET "
+                        "(D96, D108); se pide en la siguiente")
 DIAS_CLIMATOLOGICO = 5    # ventana D-5..D-1: el retraso varía (3-4 días) y los
 #                           días recientes traen menos estaciones; la ventana lo mide
  
@@ -1778,6 +1820,11 @@ def en_franja_critica(ahora_madrid, franja=FRANJA_CRITICA):
     return franja[0] <= hhmmss < franja[1]
 
 
+def en_franja_sin_aemet(ahora_madrid):
+    """v3.19 · ¿Es la captura de las 11:01, la que va sin AEMET por diseño?"""
+    return en_franja_critica(ahora_madrid, FRANJA_SIN_AEMET)
+
+
 def hay_margen_para_reintentar(ahora_local, limite=LIMITE_LOCAL_REINTENTO):
     """Solo se reintenta si aún no son las 12:02:00 locales."""
     return ahora_local.strftime("%H:%M:%S") < limite
@@ -1940,6 +1987,10 @@ def capturar_aemet(carpeta, ahora_madrid):
     print("  La API solo devuelve la predicción vigente: si no se guarda hoy,")
     print("  no hay forma de saber mañana qué decía. Es el motivo principal")
     print("  por el que existe este programa.")
+    # v3.19: antes que el token, porque a esta hora no se le pide nada a AEMET.
+    if en_franja_sin_aemet(ahora_madrid):
+        registrar("aemet_prediccion_diaria", "OMITIDA", SIN_AEMET_POR_DISENO)
+        return
     if not AEMET_TOKEN:
         registrar("aemet", "FALLO", "falta AEMET_TOKEN")
         return
@@ -2210,6 +2261,11 @@ def capturar_aemet_observado(carpeta, ahora_madrid):
     titulo("AEMET — OBSERVACIÓN: radiación y climatológico diario (D10a, D39)")
     print("  Dato EX POST, publicado con 1 y 3-4 días de retraso: sirve para")
     print("  entrenar y explicar, NUNCA para ofertar. Se declara `observacion`.")
+    # v3.19: antes que el token, como en `capturar_aemet`.
+    if en_franja_sin_aemet(ahora_madrid):
+        registrar("aemet_radiacion_observada", "OMITIDA", SIN_AEMET_POR_DISENO)
+        registrar("aemet_climatologico_diario", "OMITIDA", SIN_AEMET_POR_DISENO)
+        return
     if not AEMET_TOKEN:
         registrar("aemet_radiacion_observada", "FALLO", "falta AEMET_TOKEN")
         registrar("aemet_climatologico_diario", "FALLO", "falta AEMET_TOKEN")
@@ -2938,6 +2994,59 @@ def autotest():
           "/fechafin/2026-09-12T23:59:59UTC/todasestaciones",
        "la ventana del climatológico se construye con las fechas pedidas")
     ok(DIAS_CLIMATOLOGICO >= 4, "la ventana cubre al menos el retraso de publicación medido (3-4 días)")
+
+    # ⚠️ v3.19: la captura de las 11:01 va sin AEMET, por diseño (B46, D108).
+    print()
+    print("v3.19 — la captura de las 11:01, sin AEMET por diseño")
+    for h, mi, s, dentro in ((10, 49, 59, False), (10, 50, 0, True), (11, 2, 0, True),
+                             (11, 29, 59, True), (11, 30, 0, False), (8, 50, 0, False),
+                             (11, 50, 0, False)):
+        t = dt.datetime(2026, 11, 4, h, mi, s, tzinfo=madrid)
+        ok(en_franja_sin_aemet(t) == dentro,
+           f"las {t:%H:%M:%S} {'están' if dentro else 'no están'} en la franja sin AEMET")
+    # Los lectores de AEMET, sustituidos por uno que deja rastro: una llamada
+    # dentro de la franja es un fallo de la prueba, no una descarga.
+    llamadas = []
+    def prohibido(ruta, *a, **k):
+        llamadas.append(ruta)
+        return None, "v3.19: en la franja sin AEMET no se le pide nada"
+    g = globals()
+    guardados = {n: g[n] for n in ("_aemet_json", "_aemet_crudo", "AEMET_TOKEN")}
+    fuentes_antes = dict(MANIFIESTO["fuentes"])
+    try:
+        g["_aemet_json"] = g["_aemet_crudo"] = prohibido
+        # Con token: lo que tiene que parar la petición es la franja, no su falta.
+        g["AEMET_TOKEN"] = "token-de-prueba"
+        MANIFIESTO["fuentes"].clear()
+        t1102 = dt.datetime(2026, 11, 4, 11, 2, 0, tzinfo=madrid)
+        # Lo que imprimen las dos funciones se aparta: sus «[✗]» de registrar
+        # se leerían como fallos de esta prueba sin serlo.
+        with contextlib.redirect_stdout(io.StringIO()):
+            capturar_aemet("carpeta-que-no-existe", t1102)
+            capturar_aemet_observado("carpeta-que-no-existe", t1102)
+        f = dict(MANIFIESTO["fuentes"])
+        ok(sorted(f) == ["aemet_climatologico_diario", "aemet_prediccion_diaria",
+                         "aemet_radiacion_observada"]
+           and all(v["estado"] == "OMITIDA" and v["detalle"].startswith("por diseño")
+                   for v in f.values()),
+           "a las 11:02, la predicción y las dos observaciones salen OMITIDA «por diseño»")
+        ok(not llamadas, "y sin una sola petición a AEMET (%d)" % len(llamadas))
+        # Fuera de la franja, la ruta de siempre: sin token, FALLO por su falta.
+        g["AEMET_TOKEN"] = ""
+        MANIFIESTO["fuentes"].clear()
+        t1152 = dt.datetime(2026, 11, 4, 11, 52, 0, tzinfo=madrid)
+        with contextlib.redirect_stdout(io.StringIO()):
+            capturar_aemet("carpeta-que-no-existe", t1152)
+            capturar_aemet_observado("carpeta-que-no-existe", t1152)
+        f = dict(MANIFIESTO["fuentes"])
+        ok(sorted(f) == ["aemet", "aemet_climatologico_diario", "aemet_radiacion_observada"]
+           and all(v["estado"] == "FALLO" and v["detalle"] == "falta AEMET_TOKEN"
+                   for v in f.values()),
+           "a las 11:52 sigue la ruta de siempre (sin token, FALLO «falta AEMET_TOKEN»)")
+    finally:
+        g.update(guardados)
+        MANIFIESTO["fuentes"].clear()
+        MANIFIESTO["fuentes"].update(fuentes_antes)
 
     print()
     print("AUTOTEST: TODO CORRECTO" if not fallos
