@@ -1,26 +1,26 @@
 {
-  "ruta": "archivo/2026/11/2026-11-05/1151",
+  "ruta": "archivo/2026/11/2026-11-05/1451",
   "fuentes": {
     "esios_600_precio_spot": {
       "estado": "OK",
-      "detalle": "2026-10-27 a 2026-11-05",
-      "filas": 864,
-      "values_updated_at": "2026-11-04T15:35:51.000+01:00",
-      "hash": "f337380337014bf7"
+      "detalle": "2026-10-27 a 2026-11-06",
+      "filas": 960,
+      "values_updated_at": "2026-11-05T14:46:50.000+01:00",
+      "hash": "63672d7d09eb9023"
     },
     "esios_602_energia_casada_diario": {
       "estado": "OK",
-      "detalle": "2026-10-27 a 2026-11-05",
-      "filas": 855,
-      "values_updated_at": "2026-11-04T14:58:25.000+01:00",
-      "hash": "c93b06372adab777"
+      "detalle": "2026-10-27 a 2026-11-06",
+      "filas": 950,
+      "values_updated_at": "2026-11-05T14:45:45.000+01:00",
+      "hash": "c8ed4bdcdb54c2b9"
     },
     "esios_541_prev_eolica": {
       "estado": "OK",
       "detalle": "2026-10-27 a 2026-11-14",
       "filas": 1728,
-      "values_updated_at": "2026-11-05T11:39:58.000+01:00",
-      "hash": "0ca18862320dbe36"
+      "values_updated_at": "2026-11-05T14:39:36.000+01:00",
+      "hash": "9a39b1060f558015"
     },
     "esios_542_prev_solar_fv": {
       "estado": "OK",
@@ -70,18 +70,18 @@
     },
     "esios_seguimiento_programas": {
       "estado": "OK",
-      "detalle": "19 indicadores (19 con datos), 18998 filas acumuladas · P48 FV hasta 2026-11-05T23:15 (publicado 2026-11-05T11:26:18)",
+      "detalle": "19 indicadores (19 con datos), 19017 filas acumuladas · P48 FV hasta 2026-11-05T23:15 (publicado 2026-11-05T12:50:11)",
       "filas": 19
     },
     "esios_previsiones": {
       "estado": "OK",
-      "detalle": "118 con datos, 22 vacíos, 2 fallidos (123 KB, 102s)",
-      "filas": 21952,
-      "indicadores_ok": 118,
-      "indicadores_vacios": 22,
+      "detalle": "126 con datos, 14 vacíos, 2 fallidos (135 KB, 103s)",
+      "filas": 23799,
+      "indicadores_ok": 126,
+      "indicadores_vacios": 14,
       "indicadores_fallidos": 2,
-      "kb_comprimido": 123.0,
-      "segundos": 102,
+      "kb_comprimido": 135.5,
+      "segundos": 103,
       "cortado_en": null,
       "fraccion_presupuesto": 0.061,
       "pedidos": 142
@@ -90,7 +90,7 @@
       "estado": "OK",
       "detalle": "hasta 2026-11-06 22:45:00+00:00",
       "filas": 956,
-      "hash": "ca49bdda3455096b"
+      "hash": "bdc911d43fdc6bf8"
     },
     "entsoe_A69_prev_renovable_es": {
       "estado": "OK",
@@ -100,15 +100,15 @@
     },
     "entsoe_A44_precio_francia": {
       "estado": "OK",
-      "detalle": "hasta 2026-11-05 22:45:00+00:00",
-      "filas": 864,
-      "hash": "3d68b81d8157872b"
+      "detalle": "hasta 2026-11-06 22:45:00+00:00",
+      "filas": 960,
+      "hash": "721687b1fb6e72fb"
     },
     "entsoe_A44_precio_es": {
       "estado": "OK",
-      "detalle": "hasta 2026-11-05 22:45:00+00:00",
-      "filas": 864,
-      "hash": "f1f58c02a36c54c1"
+      "detalle": "hasta 2026-11-06 22:45:00+00:00",
+      "filas": 960,
+      "hash": "516d00d01667b87b"
     },
     "entsoe_A72_reserva_hidraulica": {
       "estado": "OK",
@@ -120,7 +120,7 @@
       "detalle": "8 de 8 ciudades, hasta 2026-11-11",
       "filas": 56,
       "elaborado": [
-        "2026-11-05T08:59:09"
+        "2026-11-05T13:27:09"
       ],
       "ciudades": [
         "a_coruna",
@@ -132,7 +132,7 @@
         "valencia",
         "zaragoza"
       ],
-      "franja_critica": true,
+      "franja_critica": false,
       "ciudades_caidas": [],
       "reintento_diferido": "no hizo falta"
     },
@@ -141,7 +141,7 @@
       "detalle": "8 ciudades, 384 horas, hasta 2026-11-07",
       "filas": 384,
       "elaborado": [
-        "2026-11-05T08:59:09"
+        "2026-11-05T13:27:09"
       ]
     },
     "aemet_prediccion_periodos": {
@@ -151,13 +151,57 @@
     },
     "aemet_radiacion_observada": {
       "estado": "OMITIDA",
-      "detalle": "la última buena fue hace 9.0 h (mínimo 20 h: una vez al día)",
+      "detalle": "la última buena fue hace 12.0 h (mínimo 20 h: una vez al día)",
       "filas": null
     },
     "aemet_climatologico_diario": {
-      "estado": "OMITIDA",
-      "detalle": "la última buena fue hace 18.0 h (mínimo 20 h: una vez al día)",
-      "filas": null
+      "estado": "OK",
+      "detalle": "1655 registros · 2 días (2026-10-31..2026-11-01) · 831 estaciones · el más reciente publicado con 4 día(s)",
+      "filas": 1655,
+      "version": "observacion",
+      "ventana_dias": 5,
+      "fecha_dato_min": "2026-10-31",
+      "fecha_dato_max": "2026-11-01",
+      "fecha_captura": "2026-11-05",
+      "retraso_dias": 4,
+      "estaciones": 831,
+      "estaciones_por_dia": {
+        "2026-10-31": 831,
+        "2026-11-01": 824
+      },
+      "con_prec_por_dia": {
+        "2026-10-31": 805,
+        "2026-11-01": 801
+      },
+      "columnas": [
+        "fecha",
+        "indicativo",
+        "nombre",
+        "provincia",
+        "altitud",
+        "tmed",
+        "prec",
+        "tmin",
+        "horatmin",
+        "tmax",
+        "horatmax",
+        "dir",
+        "velmedia",
+        "racha",
+        "horaracha",
+        "hrMedia",
+        "hrMax",
+        "horaHrMax",
+        "hrMin",
+        "horaHrMin",
+        "pintMax",
+        "presMax",
+        "horaPresMax",
+        "presMin",
+        "horaPresMin",
+        "horaPIntMax",
+        "sol"
+      ]
     },
     "mibgas_gdaes": {
       "estado": "OK",
@@ -176,19 +220,19 @@
     }
   },
   "version": "v3.19",
-  "ejecucion_madrid": "2026-11-05T11:51:01+01:00",
-  "ejecucion_utc": "2026-11-05T10:51:01+00:00",
+  "ejecucion_madrid": "2026-11-05T14:51:11+01:00",
+  "ejecucion_utc": "2026-11-05T13:51:11+00:00",
   "fecha": "2026-11-05",
   "dia_objetivo": "2026-11-06",
   "disparo": "workflow_dispatch",
-  "run_id": "42014025471",
+  "run_id": "42039341485",
   "modo": "ligero",
   "resumen": {
-    "ok": 20,
+    "ok": 21,
     "vacio": 0,
     "fallo": 0,
-    "omitida": 2,
+    "omitida": 1,
     "parcial": 0,
-    "kb_total": 310.0
+    "kb_total": 407.5
   }
 }
