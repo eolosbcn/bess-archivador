@@ -1,5 +1,5 @@
 {
-  "ruta": "archivo/2026/11/2026-11-10/1101",
+  "ruta": "archivo/2026/11/2026-11-10/1151",
   "fuentes": {
     "esios_600_precio_spot": {
       "estado": "OK",
@@ -19,8 +19,8 @@
       "estado": "OK",
       "detalle": "2026-11-01 a 2026-11-19",
       "filas": 1728,
-      "values_updated_at": "2026-11-10T10:39:57.000+01:00",
-      "hash": "a080fd5641f24c79"
+      "values_updated_at": "2026-11-10T11:39:57.000+01:00",
+      "hash": "353125101f067be4"
     },
     "esios_542_prev_solar_fv": {
       "estado": "OK",
@@ -70,20 +70,20 @@
     },
     "esios_seguimiento_programas": {
       "estado": "OK",
-      "detalle": "19 indicadores (19 con datos), 19879 filas acumuladas · P48 FV hasta 2026-11-10T23:45 (publicado 2026-11-10T10:42:46)",
+      "detalle": "19 indicadores (19 con datos), 19898 filas acumuladas · P48 FV hasta 2026-11-10T23:45 (publicado 2026-11-10T11:23:30)",
       "filas": 19
     },
     "esios_previsiones": {
       "estado": "OK",
-      "detalle": "110 con datos, 30 vacíos, 2 fallidos (133 KB, 111s)",
-      "filas": 23409,
-      "indicadores_ok": 110,
-      "indicadores_vacios": 30,
+      "detalle": "120 con datos, 20 vacíos, 2 fallidos (134 KB, 113s)",
+      "filas": 23478,
+      "indicadores_ok": 120,
+      "indicadores_vacios": 20,
       "indicadores_fallidos": 2,
-      "kb_comprimido": 133.4,
-      "segundos": 111,
+      "kb_comprimido": 133.8,
+      "segundos": 113,
       "cortado_en": null,
-      "fraccion_presupuesto": 0.066,
+      "fraccion_presupuesto": 0.067,
       "pedidos": 142
     },
     "entsoe_A65_prev_demanda_es": {
@@ -116,18 +116,47 @@
       "filas": 4
     },
     "aemet_prediccion_diaria": {
-      "estado": "OMITIDA",
-      "detalle": "por diseño: la captura de las 11:01 va sin AEMET (D96, D108); se pide en la siguiente",
-      "filas": null
+      "estado": "OK",
+      "detalle": "8 de 8 ciudades, hasta 2026-11-16",
+      "filas": 56,
+      "elaborado": [
+        "2026-11-10T09:05:09"
+      ],
+      "ciudades": [
+        "a_coruna",
+        "barcelona",
+        "bilbao",
+        "madrid",
+        "mataro",
+        "sevilla",
+        "valencia",
+        "zaragoza"
+      ],
+      "franja_critica": true,
+      "ciudades_caidas": [],
+      "reintento_diferido": "no hizo falta"
+    },
+    "aemet_prediccion_horaria": {
+      "estado": "OK",
+      "detalle": "8 ciudades, 384 horas, hasta 2026-11-12",
+      "filas": 384,
+      "elaborado": [
+        "2026-11-10T09:05:09"
+      ]
+    },
+    "aemet_prediccion_periodos": {
+      "estado": "OK",
+      "detalle": "7 variables por tramos",
+      "filas": 1112
     },
     "aemet_radiacion_observada": {
       "estado": "OMITIDA",
-      "detalle": "por diseño: la captura de las 11:01 va sin AEMET (D96, D108); se pide en la siguiente",
+      "detalle": "la última buena fue hace 3.0 h (mínimo 20 h: una vez al día)",
       "filas": null
     },
     "aemet_climatologico_diario": {
       "estado": "OMITIDA",
-      "detalle": "por diseño: la captura de las 11:01 va sin AEMET (D96, D108); se pide en la siguiente",
+      "detalle": "la última buena fue hace 12.0 h (mínimo 20 h: una vez al día)",
       "filas": null
     },
     "mibgas_gdaes": {
@@ -142,24 +171,24 @@
     },
     "sendeco2_eua": {
       "estado": "OK",
-      "detalle": "EUA 86.42 EUR/t, cierre del 2026-11-06",
+      "detalle": "EUA 87.41 EUR/t, cierre del 2026-11-09",
       "filas": 1
     }
   },
   "version": "v3.19",
-  "ejecucion_madrid": "2026-11-10T11:01:48+01:00",
-  "ejecucion_utc": "2026-11-10T10:01:48+00:00",
+  "ejecucion_madrid": "2026-11-10T11:51:02+01:00",
+  "ejecucion_utc": "2026-11-10T10:51:02+00:00",
   "fecha": "2026-11-10",
   "dia_objetivo": "2026-11-11",
   "disparo": "workflow_dispatch",
-  "run_id": "42795558131",
+  "run_id": "42802515227",
   "modo": "ligero",
   "resumen": {
-    "ok": 17,
+    "ok": 20,
     "vacio": 0,
     "fallo": 0,
-    "omitida": 3,
+    "omitida": 2,
     "parcial": 0,
-    "kb_total": 294.3
+    "kb_total": 311.0
   }
 }
