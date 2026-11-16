@@ -1,12 +1,12 @@
 {
-  "ruta": "archivo/2026/11/2026-11-16/1151",
+  "ruta": "archivo/2026/11/2026-11-16/1451",
   "fuentes": {
     "esios_600_precio_spot": {
       "estado": "OK",
-      "detalle": "2026-11-07 a 2026-11-16",
-      "filas": 864,
-      "values_updated_at": "2026-11-15T14:49:56.000+01:00",
-      "hash": "593fe943da1c628b"
+      "detalle": "2026-11-07 a 2026-11-17",
+      "filas": 960,
+      "values_updated_at": "2026-11-16T14:01:01.000+01:00",
+      "hash": "2eebeab9e13057bb"
     },
     "esios_602_energia_casada_diario": {
       "estado": "OK",
@@ -19,22 +19,22 @@
       "estado": "OK",
       "detalle": "2026-11-07 a 2026-11-25",
       "filas": 1728,
-      "values_updated_at": "2026-11-16T11:39:55.000+01:00",
-      "hash": "57a45cfdc96d0fef"
+      "values_updated_at": "2026-11-16T14:42:39.000+01:00",
+      "hash": "d33f42b7e528b33b"
     },
     "esios_542_prev_solar_fv": {
       "estado": "OK",
       "detalle": "2026-11-12 a 2026-11-25",
       "filas": 1276,
-      "values_updated_at": "2026-11-16T11:41:19.000+01:00",
-      "hash": "f509d2f015a610a6"
+      "values_updated_at": "2026-11-16T14:41:20.000+01:00",
+      "hash": "f71b39c16d6d1b27"
     },
     "esios_543_prev_solar_termica": {
       "estado": "OK",
       "detalle": "2026-11-12 a 2026-11-25",
       "filas": 1276,
-      "values_updated_at": "2026-11-16T11:41:19.000+01:00",
-      "hash": "5c79f15792e2278c"
+      "values_updated_at": "2026-11-16T14:41:21.000+01:00",
+      "hash": "d7a42864d3357db4"
     },
     "esios_catalogo": {
       "estado": "OK",
@@ -70,45 +70,44 @@
     },
     "esios_seguimiento_programas": {
       "estado": "OK",
-      "detalle": "19 indicadores (19 con datos), 20978 filas acumuladas · P48 FV hasta 2026-11-16T21:45 (publicado 2026-11-16T11:40:52)",
+      "detalle": "19 indicadores (19 con datos), 20997 filas acumuladas · P48 FV hasta 2026-11-16T21:45 (publicado 2026-11-16T13:02:36)",
       "filas": 19
     },
     "esios_previsiones": {
       "estado": "OK",
-      "detalle": "123 con datos, 17 vacíos, 2 fallidos (155 KB, 105s)",
-      "filas": 26401,
-      "indicadores_ok": 123,
-      "indicadores_vacios": 17,
+      "detalle": "126 con datos, 14 vacíos, 2 fallidos (158 KB, 123s)",
+      "filas": 26930,
+      "indicadores_ok": 126,
+      "indicadores_vacios": 14,
       "indicadores_fallidos": 2,
-      "kb_comprimido": 154.6,
-      "segundos": 105,
+      "kb_comprimido": 158.2,
+      "segundos": 123,
       "cortado_en": null,
-      "fraccion_presupuesto": 0.062,
+      "fraccion_presupuesto": 0.073,
       "pedidos": 142
     },
     "entsoe_A65_prev_demanda_es": {
       "estado": "OK",
       "detalle": "hasta 2026-11-17 22:45:00+00:00",
       "filas": 956,
-      "hash": "ad8d57d77d178509"
+      "hash": "142670f6950e841d"
     },
     "entsoe_A69_prev_renovable_es": {
-      "estado": "OK",
-      "detalle": "hasta 2026-11-16 22:45:00+00:00",
-      "filas": 768,
-      "hash": "5d64671f1d5d8385"
+      "estado": "FALLO",
+      "detalle": "HTTP 599",
+      "filas": null
     },
     "entsoe_A44_precio_francia": {
       "estado": "OK",
-      "detalle": "hasta 2026-11-16 22:45:00+00:00",
-      "filas": 864,
-      "hash": "7ba1c348b57af15e"
+      "detalle": "hasta 2026-11-17 22:45:00+00:00",
+      "filas": 960,
+      "hash": "ad20ca354283dc98"
     },
     "entsoe_A44_precio_es": {
       "estado": "OK",
-      "detalle": "hasta 2026-11-16 22:45:00+00:00",
-      "filas": 864,
-      "hash": "900ae45ae60333aa"
+      "detalle": "hasta 2026-11-17 22:45:00+00:00",
+      "filas": 960,
+      "hash": "9596f5283e7ddff9"
     },
     "entsoe_A72_reserva_hidraulica": {
       "estado": "OK",
@@ -120,7 +119,9 @@
       "detalle": "8 de 8 ciudades, hasta 2026-11-22",
       "filas": 56,
       "elaborado": [
-        "2026-11-16T08:59:07"
+        "2026-11-16T13:27:09",
+        "2026-11-16T13:31:09",
+        "2026-11-16T13:39:09"
       ],
       "ciudades": [
         "a_coruna",
@@ -132,7 +133,7 @@
         "valencia",
         "zaragoza"
       ],
-      "franja_critica": true,
+      "franja_critica": false,
       "ciudades_caidas": [],
       "reintento_diferido": "no hizo falta"
     },
@@ -141,8 +142,9 @@
       "detalle": "8 ciudades, 384 horas, hasta 2026-11-18",
       "filas": 384,
       "elaborado": [
-        "2026-11-16T08:59:07",
-        "2026-11-16T10:43:08"
+        "2026-11-16T13:01:10",
+        "2026-11-16T13:27:09",
+        "2026-11-16T13:39:09"
       ]
     },
     "aemet_prediccion_periodos": {
@@ -151,26 +153,13 @@
       "filas": 1112
     },
     "aemet_radiacion_observada": {
-      "estado": "OK",
-      "detalle": "35 estaciones · dato del 2026-11-15 · publicado con 1 día(s) de retraso · 19134 bytes en claro",
-      "filas": 35,
-      "version": "observacion",
-      "fecha_dato": "2026-11-15",
-      "fecha_captura": "2026-11-16",
-      "retraso_dias": 1,
-      "magnitudes": [
-        "DF",
-        "DT",
-        "GL",
-        "IR",
-        "UVB"
-      ],
-      "codificacion": "utf-8",
-      "bytes_en_claro": 19134
+      "estado": "OMITIDA",
+      "detalle": "la última buena fue hace 3.0 h (mínimo 20 h: una vez al día)",
+      "filas": null
     },
     "aemet_climatologico_diario": {
       "estado": "OMITIDA",
-      "detalle": "la última buena fue hace 9.0 h (mínimo 20 h: una vez al día)",
+      "detalle": "la última buena fue hace 12.0 h (mínimo 20 h: una vez al día)",
       "filas": null
     },
     "mibgas_gdaes": {
@@ -190,19 +179,19 @@
     }
   },
   "version": "v3.19",
-  "ejecucion_madrid": "2026-11-16T11:51:07+01:00",
-  "ejecucion_utc": "2026-11-16T10:51:07+00:00",
+  "ejecucion_madrid": "2026-11-16T14:51:02+01:00",
+  "ejecucion_utc": "2026-11-16T13:51:02+00:00",
   "fecha": "2026-11-16",
   "dia_objetivo": "2026-11-17",
   "disparo": "workflow_dispatch",
-  "run_id": "43852415818",
+  "run_id": "43879662212",
   "modo": "ligero",
   "resumen": {
-    "ok": 21,
+    "ok": 19,
     "vacio": 0,
-    "fallo": 0,
-    "omitida": 1,
+    "fallo": 1,
+    "omitida": 2,
     "parcial": 0,
-    "kb_total": 346.1
+    "kb_total": 348.5
   }
 }
