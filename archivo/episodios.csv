@@ -85,13 +85,13 @@ entsoe_A72_reserva_hidraulica,2026-09-09-1619,2026-09-09-1619,1
 aemet_prediccion_diaria,2026-09-12-2127,2026-09-12-2127,1
 aemet_prediccion_horaria,2026-09-12-2127,2026-09-12-2127,1
 aemet_prediccion_periodos,2026-09-12-2127,2026-09-12-2127,1
-aemet_climatologico_diario,2026-09-17-2051,2026-11-17-1451,432
-aemet_radiacion_observada,2026-09-17-2051,2026-11-17-1451,431
-esios_capacidad_instalada,2026-09-17-2051,2026-10-24-2351,261
+aemet_climatologico_diario,2026-09-18-2350,2026-11-18-1451,432
+aemet_radiacion_observada,2026-09-18-2350,2026-11-18-1451,431
+esios_capacidad_instalada,2026-09-18-2350,2026-10-24-2351,253
 aemet_prediccion_diaria,2026-09-23-1151,2026-09-23-1151,1
 aemet_prediccion_horaria,2026-09-23-1151,2026-09-23-1151,1
 aemet_prediccion_periodos,2026-09-23-1151,2026-09-23-1151,1
-esios_capacidad_instalada,2026-10-25-0851,2026-11-17-1451,177
+esios_capacidad_instalada,2026-10-25-0851,2026-11-18-1451,185
 aemet_prediccion_diaria,2026-11-04-2050,2026-11-04-2050,1
 aemet_prediccion_horaria,2026-11-04-2050,2026-11-04-2050,1
 aemet_prediccion_periodos,2026-11-04-2050,2026-11-04-2050,1
@@ -132,3 +132,6 @@ entsoe_A69_prev_renovable_es,2026-11-16-1451,2026-11-16-1451,1
 aemet_prediccion_diaria,2026-11-17-1102,2026-11-17-1102,1
 aemet_prediccion_horaria,2026-11-17-1102,2026-11-17-1102,1
 aemet_prediccion_periodos,2026-11-17-1102,2026-11-17-1102,1
+aemet_prediccion_diaria,2026-11-18-1101,2026-11-18-1101,1
+aemet_prediccion_horaria,2026-11-18-1101,2026-11-18-1101,1
+aemet_prediccion_periodos,2026-11-18-1101,2026-11-18-1101,1
