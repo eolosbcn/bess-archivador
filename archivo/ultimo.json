@@ -1,5 +1,5 @@
 {
-  "ruta": "archivo/2026/11/2026-11-23/0850",
+  "ruta": "archivo/2026/11/2026-11-23/1101",
   "fuentes": {
     "esios_600_precio_spot": {
       "estado": "OK",
@@ -19,22 +19,22 @@
       "estado": "OK",
       "detalle": "2026-11-14 a 2026-12-02",
       "filas": 1728,
-      "values_updated_at": "2026-11-23T08:39:52.000+01:00",
-      "hash": "5cd2deda328bdca3"
+      "values_updated_at": "2026-11-23T10:39:58.000+01:00",
+      "hash": "e2478561e0ab2383"
     },
     "esios_542_prev_solar_fv": {
       "estado": "OK",
       "detalle": "2026-11-14 a 2026-12-02",
       "filas": 1728,
-      "values_updated_at": "2026-11-23T08:41:13.000+01:00",
-      "hash": "a4ab412b4f417254"
+      "values_updated_at": "2026-11-23T10:41:23.000+01:00",
+      "hash": "790899c75592e047"
     },
     "esios_543_prev_solar_termica": {
       "estado": "OK",
       "detalle": "2026-11-14 a 2026-12-02",
       "filas": 1728,
-      "values_updated_at": "2026-11-23T08:41:13.000+01:00",
-      "hash": "09551d97acf64d4a"
+      "values_updated_at": "2026-11-23T10:41:23.000+01:00",
+      "hash": "d41dacf14e8ff8c2"
     },
     "esios_catalogo": {
       "estado": "OK",
@@ -70,27 +70,27 @@
     },
     "esios_seguimiento_programas": {
       "estado": "OK",
-      "detalle": "19 indicadores (19 con datos), 22200 filas acumuladas · P48 FV hasta 2026-11-23T22:45 (publicado 2026-11-23T08:43:01)",
+      "detalle": "19 indicadores (19 con datos), 22219 filas acumuladas · P48 FV hasta 2026-11-23T22:45 (publicado 2026-11-23T10:43:25)",
       "filas": 19
     },
     "esios_previsiones": {
       "estado": "OK",
-      "detalle": "114 con datos, 26 vacíos, 2 fallidos (152 KB, 107s)",
-      "filas": 26218,
+      "detalle": "114 con datos, 26 vacíos, 2 fallidos (154 KB, 114s)",
+      "filas": 26473,
       "indicadores_ok": 114,
       "indicadores_vacios": 26,
       "indicadores_fallidos": 2,
-      "kb_comprimido": 152.4,
-      "segundos": 107,
+      "kb_comprimido": 154.2,
+      "segundos": 114,
       "cortado_en": null,
-      "fraccion_presupuesto": 0.064,
+      "fraccion_presupuesto": 0.068,
       "pedidos": 142
     },
     "entsoe_A65_prev_demanda_es": {
       "estado": "OK",
       "detalle": "hasta 2026-11-24 22:45:00+00:00",
       "filas": 956,
-      "hash": "2dca2183df5ca02f"
+      "hash": "0dbe3a14a69f231e"
     },
     "entsoe_A69_prev_renovable_es": {
       "estado": "OK",
@@ -116,58 +116,26 @@
       "filas": 4
     },
     "aemet_prediccion_diaria": {
-      "estado": "OK",
-      "detalle": "8 de 8 ciudades, hasta 2026-11-29",
-      "filas": 56,
-      "elaborado": [
-        "2026-11-23T07:27:08"
-      ],
-      "ciudades": [
-        "a_coruna",
-        "barcelona",
-        "bilbao",
-        "madrid",
-        "mataro",
-        "sevilla",
-        "valencia",
-        "zaragoza"
-      ],
-      "franja_critica": false,
-      "ciudades_caidas": [],
-      "reintento_diferido": "no hizo falta"
-    },
-    "aemet_prediccion_horaria": {
-      "estado": "OK",
-      "detalle": "8 ciudades, 384 horas, hasta 2026-11-25",
-      "filas": 384,
-      "elaborado": [
-        "2026-11-23T07:27:08"
-      ]
-    },
-    "aemet_prediccion_periodos": {
-      "estado": "OK",
-      "detalle": "7 variables por tramos",
-      "filas": 1112
+      "estado": "OMITIDA",
+      "detalle": "por diseño: la captura de las 11:01 va sin AEMET (D96, D108); se pide en la siguiente",
+      "filas": null
     },
     "aemet_radiacion_observada": {
       "estado": "OMITIDA",
-      "detalle": "la última buena fue hace 18.0 h (mínimo 20 h: una vez al día)",
+      "detalle": "por diseño: la captura de las 11:01 va sin AEMET (D96, D108); se pide en la siguiente",
       "filas": null
     },
     "aemet_climatologico_diario": {
       "estado": "OMITIDA",
-      "detalle": "la última buena fue hace 6.0 h (mínimo 20 h: una vez al día)",
+      "detalle": "por diseño: la captura de las 11:01 va sin AEMET (D96, D108); se pide en la siguiente",
       "filas": null
     },
-    "mibgas_gdaes": {
-      "estado": "OK",
-      "detalle": "hasta 2026-11-22",
-      "filas": 45
-    },
-    "mibgas_curva": {
-      "estado": "OK",
-      "detalle": "30 productos, hasta 2026-11-22",
-      "filas": 335
+    "mibgas": {
+      "estado": "FALLO",
+      "detalle": "HTTP 502, 585 bytes (no parece un XLSX)",
+      "filas": null,
+      "tipo_contenido": "text/html",
+      "muestra_respuesta": "<html>\r\n<head><title>502 Bad Gateway</title></head>\r\n<body>\r\n<center><h1>502 Bad Gateway</h1></center>\r\n<hr><center>Microsoft-Azure-Application-Gateway/v2</center>\r\n</body>\r\n</html>\r\n<!-- a padding to disable MSIE and Chrome friendly error page -->\r\n<!-- a padding to disable MSIE and Chrome friendly error page -->\r\n<!-- a padding to disable MSIE and Chrome friendly error page -->\r\n<!-- a padding t"
     },
     "sendeco2_eua": {
       "estado": "OK",
@@ -176,19 +144,19 @@
     }
   },
   "version": "v3.19",
-  "ejecucion_madrid": "2026-11-23T08:50:57+01:00",
-  "ejecucion_utc": "2026-11-23T07:50:57+00:00",
+  "ejecucion_madrid": "2026-11-23T11:01:34+01:00",
+  "ejecucion_utc": "2026-11-23T10:01:34+00:00",
   "fecha": "2026-11-23",
   "dia_objetivo": "2026-11-24",
   "disparo": "workflow_dispatch",
-  "run_id": "45134020665",
+  "run_id": "45152240123",
   "modo": "ligero",
   "resumen": {
-    "ok": 20,
+    "ok": 15,
     "vacio": 0,
-    "fallo": 0,
-    "omitida": 2,
+    "fallo": 1,
+    "omitida": 3,
     "parcial": 0,
-    "kb_total": 348.8
+    "kb_total": 328.3
   }
 }
