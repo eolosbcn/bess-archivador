@@ -1,5 +1,5 @@
 {
-  "ruta": "archivo/2026/11/2026-11-24/0851",
+  "ruta": "archivo/2026/11/2026-11-24/1101",
   "fuentes": {
     "esios_600_precio_spot": {
       "estado": "OK",
@@ -19,22 +19,22 @@
       "estado": "OK",
       "detalle": "2026-11-15 a 2026-12-03",
       "filas": 1728,
-      "values_updated_at": "2026-11-24T08:39:52.000+01:00",
-      "hash": "747ec15b2098e9dc"
+      "values_updated_at": "2026-11-24T09:39:54.000+01:00",
+      "hash": "b823ac0ee2256333"
     },
     "esios_542_prev_solar_fv": {
       "estado": "OK",
       "detalle": "2026-11-15 a 2026-12-03",
       "filas": 1728,
-      "values_updated_at": "2026-11-24T08:41:21.000+01:00",
-      "hash": "c532355ef21d3086"
+      "values_updated_at": "2026-11-24T09:41:11.000+01:00",
+      "hash": "0c284dd9c03add92"
     },
     "esios_543_prev_solar_termica": {
       "estado": "OK",
       "detalle": "2026-11-15 a 2026-12-03",
       "filas": 1728,
-      "values_updated_at": "2026-11-24T08:41:20.000+01:00",
-      "hash": "48bce2a5103404ee"
+      "values_updated_at": "2026-11-24T09:41:11.000+01:00",
+      "hash": "c332fd5c9ab5b1e4"
     },
     "esios_catalogo": {
       "estado": "OK",
@@ -70,27 +70,27 @@
     },
     "esios_seguimiento_programas": {
       "estado": "OK",
-      "detalle": "19 indicadores (19 con datos), 22380 filas acumuladas · P48 FV hasta 2026-11-24T22:45 (publicado 2026-11-24T08:38:24)",
+      "detalle": "19 indicadores (19 con datos), 22399 filas acumuladas · P48 FV hasta 2026-11-24T21:45 (publicado 2026-11-24T10:53:55)",
       "filas": 19
     },
     "esios_previsiones": {
       "estado": "OK",
-      "detalle": "114 con datos, 26 vacíos, 2 fallidos (153 KB, 114s)",
-      "filas": 26322,
+      "detalle": "114 con datos, 26 vacíos, 2 fallidos (155 KB, 113s)",
+      "filas": 26583,
       "indicadores_ok": 114,
       "indicadores_vacios": 26,
       "indicadores_fallidos": 2,
-      "kb_comprimido": 153.0,
-      "segundos": 114,
+      "kb_comprimido": 154.7,
+      "segundos": 113,
       "cortado_en": null,
-      "fraccion_presupuesto": 0.068,
+      "fraccion_presupuesto": 0.067,
       "pedidos": 142
     },
     "entsoe_A65_prev_demanda_es": {
       "estado": "OK",
       "detalle": "hasta 2026-11-25 22:45:00+00:00",
       "filas": 956,
-      "hash": "ae992a732d8b5ad9"
+      "hash": "90d8f891e8bf28ca"
     },
     "entsoe_A69_prev_renovable_es": {
       "estado": "OK",
@@ -116,71 +116,29 @@
       "filas": 4
     },
     "aemet_prediccion_diaria": {
-      "estado": "OK",
-      "detalle": "8 de 8 ciudades, hasta 2026-11-30",
-      "filas": 56,
-      "elaborado": [
-        "2026-11-24T07:05:10"
-      ],
-      "ciudades": [
-        "a_coruna",
-        "barcelona",
-        "bilbao",
-        "madrid",
-        "mataro",
-        "sevilla",
-        "valencia",
-        "zaragoza"
-      ],
-      "franja_critica": false,
-      "ciudades_caidas": [],
-      "reintento_diferido": "no hizo falta"
-    },
-    "aemet_prediccion_horaria": {
-      "estado": "OK",
-      "detalle": "8 ciudades, 384 horas, hasta 2026-11-26",
-      "filas": 384,
-      "elaborado": [
-        "2026-11-24T07:05:10"
-      ]
-    },
-    "aemet_prediccion_periodos": {
-      "estado": "OK",
-      "detalle": "7 variables por tramos",
-      "filas": 1112
+      "estado": "OMITIDA",
+      "detalle": "por diseño: la captura de las 11:01 va sin AEMET (D96, D108); se pide en la siguiente",
+      "filas": null
     },
     "aemet_radiacion_observada": {
-      "estado": "OK",
-      "detalle": "35 estaciones · dato del 2026-11-23 · publicado con 1 día(s) de retraso · 19318 bytes en claro",
-      "filas": 35,
-      "version": "observacion",
-      "fecha_dato": "2026-11-23",
-      "fecha_captura": "2026-11-24",
-      "retraso_dias": 1,
-      "magnitudes": [
-        "DF",
-        "DT",
-        "GL",
-        "IR",
-        "UVB"
-      ],
-      "codificacion": "utf-8",
-      "bytes_en_claro": 19318
+      "estado": "OMITIDA",
+      "detalle": "por diseño: la captura de las 11:01 va sin AEMET (D96, D108); se pide en la siguiente",
+      "filas": null
     },
     "aemet_climatologico_diario": {
       "estado": "OMITIDA",
-      "detalle": "la última buena fue hace 9.0 h (mínimo 20 h: una vez al día)",
+      "detalle": "por diseño: la captura de las 11:01 va sin AEMET (D96, D108); se pide en la siguiente",
       "filas": null
     },
     "mibgas_gdaes": {
       "estado": "OK",
-      "detalle": "hasta 2026-11-23",
-      "filas": 45
+      "detalle": "hasta 2026-11-24",
+      "filas": 48
     },
     "mibgas_curva": {
       "estado": "OK",
-      "detalle": "30 productos, hasta 2026-11-23",
-      "filas": 361
+      "detalle": "30 productos, hasta 2026-11-24",
+      "filas": 381
     },
     "sendeco2_eua": {
       "estado": "OK",
@@ -189,19 +147,19 @@
     }
   },
   "version": "v3.19",
-  "ejecucion_madrid": "2026-11-24T08:51:10+01:00",
-  "ejecucion_utc": "2026-11-24T07:51:10+00:00",
+  "ejecucion_madrid": "2026-11-24T11:01:39+01:00",
+  "ejecucion_utc": "2026-11-24T10:01:39+00:00",
   "fecha": "2026-11-24",
   "dia_objetivo": "2026-11-25",
   "disparo": "workflow_dispatch",
-  "run_id": "45351107320",
+  "run_id": "45370690061",
   "modo": "ligero",
   "resumen": {
-    "ok": 21,
+    "ok": 17,
     "vacio": 0,
     "fallo": 0,
-    "omitida": 1,
+    "omitida": 3,
     "parcial": 0,
-    "kb_total": 354.1
+    "kb_total": 335.9
   }
 }
