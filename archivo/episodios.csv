@@ -88,10 +88,10 @@ aemet_prediccion_periodos,2026-09-12-2127,2026-09-12-2127,1
 aemet_prediccion_diaria,2026-09-23-1151,2026-09-23-1151,1
 aemet_prediccion_horaria,2026-09-23-1151,2026-09-23-1151,1
 aemet_prediccion_periodos,2026-09-23-1151,2026-09-23-1151,1
-aemet_climatologico_diario,2026-09-27-2351,2026-11-26-1150,432
-aemet_radiacion_observada,2026-09-27-2351,2026-11-26-1450,432
-esios_capacidad_instalada,2026-09-27-2351,2026-10-24-2351,190
-esios_capacidad_instalada,2026-10-25-0851,2026-11-26-1450,249
+aemet_climatologico_diario,2026-09-29-0550,2026-11-27-1450,432
+aemet_radiacion_observada,2026-09-29-0550,2026-11-27-1450,432
+esios_capacidad_instalada,2026-09-29-0550,2026-10-24-2351,182
+esios_capacidad_instalada,2026-10-25-0851,2026-11-27-1450,257
 aemet_prediccion_diaria,2026-11-04-2050,2026-11-04-2050,1
 aemet_prediccion_horaria,2026-11-04-2050,2026-11-04-2050,1
 aemet_prediccion_periodos,2026-11-04-2050,2026-11-04-2050,1
@@ -161,3 +161,6 @@ aemet_prediccion_periodos,2026-11-25-1101,2026-11-25-1101,1
 aemet_prediccion_diaria,2026-11-26-1101,2026-11-26-1101,1
 aemet_prediccion_horaria,2026-11-26-1101,2026-11-26-1101,1
 aemet_prediccion_periodos,2026-11-26-1101,2026-11-26-1101,1
+aemet_prediccion_diaria,2026-11-27-1101,2026-11-27-1101,1
+aemet_prediccion_horaria,2026-11-27-1101,2026-11-27-1101,1
+aemet_prediccion_periodos,2026-11-27-1101,2026-11-27-1101,1
